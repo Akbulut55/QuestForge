@@ -67,3 +67,21 @@
   - `npx tsc --noEmit`
 - Screenshot: Capture after saving a quest, closing the app, and confirming it still appears after reopening
 - Commit: Use the assignment commit format after verifying persistence locally
+
+## Iteration 5 - XP And Rank Progression
+- Date: 2026-03-31
+- Goal: Add quest completion, XP awards, and rank progression while keeping the current quest flow simple
+- Implemented:
+  - Added a `Mark Completed` action for active quests on the Quest Board
+  - Awarded XP on completion using difficulty-based values: Easy `10`, Medium `20`, Hard `35`, Epic `50`
+  - Moved completed quests into the existing Completed Quests section
+  - Updated the hero card to show live XP and rank title progression
+  - Added simple rank milestones: `Novice`, `Adventurer`, `Knight`, `Champion`
+  - Persisted hero progress together with quests in local storage
+  - Added migration support for the previous quest-only storage format from Iteration 4
+- Verification:
+  - `npm test -- --runInBand`
+  - `npx eslint App.tsx __tests__/App.test.tsx src/storage/questStorage.ts`
+  - `npx tsc --noEmit`
+- Screenshot: Capture after completing a quest and seeing XP and rank update on the board
+- Commit: Use the assignment commit format after verifying the progression flow locally

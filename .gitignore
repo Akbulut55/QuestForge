@@ -27,12 +27,18 @@ DerivedData
 build/
 .idea
 .gradle
+.gradle-home/
+/android/.gradle-home/
 local.properties
 *.iml
 *.hprof
 .cxx/
 *.keystore
 !debug.keystore
+*.jks
+*.p12
+*.pem
+*.key
 .kotlin/
 
 # node.js
@@ -80,3 +86,5 @@ yarn-error.log
 .env.*.local
 !.env.example
 !.env.sample
+google-services.json
+GoogleService-Info.plist

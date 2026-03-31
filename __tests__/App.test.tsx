@@ -38,8 +38,10 @@ jest.mock('@react-native-async-storage/async-storage', () => {
 
 import App from '../App';
 import {
-  loadStoredQuests,
-  QUESTS_STORAGE_KEY,
+  GAME_STATE_STORAGE_KEY,
+  LEGACY_QUESTS_STORAGE_KEY,
+  loadLegacyStoredQuests,
+  loadStoredGameState,
 } from '../src/storage/questStorage';
 
 const mockAsyncStorage =
@@ -57,34 +59,67 @@ beforeEach(() => {
   mockAsyncStorage.setItem.mockResolvedValue(undefined);
 });
 
-test('loads persisted quests from AsyncStorage', async () => {
-  mockAsyncStorage.getItem.mockResolvedValue(
-    JSON.stringify([
-      {
-        title: 'Persisted Raid Plan',
-        difficulty: 'Hard',
-        xpReward: 80,
-        status: 'Ready',
-        category: 'Main Quest',
-      },
-    ]),
+test('loads persisted game state from AsyncStorage', async () => {
+  mockAsyncStorage.getItem.mockImplementation(async (key: string) => {
+    if (key === GAME_STATE_STORAGE_KEY) {
+      return JSON.stringify({
+        hero: {
+          xp: 55,
+          rankTitle: 'Knight',
+        },
+        quests: [],
+      });
+    }
+
+    return null;
+  });
+
+  const storedGameState = await loadStoredGameState();
+
+  expect(mockAsyncStorage.getItem).toHaveBeenCalledWith(GAME_STATE_STORAGE_KEY);
+  expect(storedGameState).toEqual({
+    hero: {
+      xp: 55,
+      rankTitle: 'Knight',
+    },
+    quests: [],
+  });
+});
+
+test('loads legacy quests when old persistence exists', async () => {
+  mockAsyncStorage.getItem.mockImplementation(async (key: string) => {
+    if (key === LEGACY_QUESTS_STORAGE_KEY) {
+      return JSON.stringify([
+        {
+          title: 'Legacy Quest',
+          difficulty: 'Easy',
+          xpReward: 10,
+          status: 'Ready',
+          category: 'Side Quest',
+        },
+      ]);
+    }
+
+    return null;
+  });
+
+  const storedQuests = await loadLegacyStoredQuests();
+
+  expect(mockAsyncStorage.getItem).toHaveBeenCalledWith(
+    LEGACY_QUESTS_STORAGE_KEY,
   );
-
-  const storedQuests = await loadStoredQuests();
-
-  expect(mockAsyncStorage.getItem).toHaveBeenCalledWith(QUESTS_STORAGE_KEY);
   expect(storedQuests).toEqual([
     {
-      title: 'Persisted Raid Plan',
-      difficulty: 'Hard',
-      xpReward: 80,
+      title: 'Legacy Quest',
+      difficulty: 'Easy',
+      xpReward: 10,
       status: 'Ready',
-      category: 'Main Quest',
+      category: 'Side Quest',
     },
   ]);
 });
 
-test('saves new quests back to storage after adding them in the app', async () => {
+test('completing a quest awards XP, updates rank, and saves game state', async () => {
   let tree: ReactTestRenderer.ReactTestRenderer;
 
   await ReactTestRenderer.act(async () => {
@@ -96,35 +131,28 @@ test('saves new quests back to storage after adding them in the app', async () =
   });
 
   let root = tree!.root;
+  const initialRender = JSON.stringify(tree!.toJSON());
+
+  expect(initialRender).toContain('"Novice"');
 
   await ReactTestRenderer.act(async () => {
-    root.findByProps({ testID: 'navigate-to-add-quest' }).props.onPress();
+    root.findByProps({ testID: 'complete-quest-quest-1' }).props.onPress();
   });
 
   root = tree!.root;
+  const completedRender = JSON.stringify(tree!.toJSON());
 
-  await ReactTestRenderer.act(async () => {
-    root.findByProps({ testID: 'quest-title-input' }).props.onChangeText(
-      'Prepare final demo',
-    );
-  });
-
-  await ReactTestRenderer.act(async () => {
-    root.findByProps({ testID: 'difficulty-option-epic' }).props.onPress();
-    root.findByProps({ testID: 'category-option-main-quest' }).props.onPress();
-  });
-
-  await ReactTestRenderer.act(async () => {
-    root.findByProps({ testID: 'save-quest-button' }).props.onPress();
-  });
-
-  root = tree!.root;
-
-  expect(
-    root.findAll(node => node.props.children === 'Prepare final demo').length,
-  ).toBeGreaterThan(0);
+  expect(completedRender).toContain('"Knight"');
+  expect(completedRender).toContain('"60"');
+  expect(() =>
+    root.findByProps({ testID: 'complete-quest-quest-1' }),
+  ).toThrow();
   expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
-    QUESTS_STORAGE_KEY,
-    expect.stringContaining('Prepare final demo'),
+    GAME_STATE_STORAGE_KEY,
+    expect.stringContaining('"xp":60'),
+  );
+  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
+    GAME_STATE_STORAGE_KEY,
+    expect.stringContaining('"rankTitle":"Knight"'),
   );
 });

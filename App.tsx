@@ -13,21 +13,34 @@ import {
   SafeAreaView,
 } from 'react-native-safe-area-context';
 import {
-  loadStoredQuests,
-  saveStoredQuests,
+  loadLegacyStoredQuests,
+  loadStoredGameState,
+  saveStoredGameState,
 } from './src/storage/questStorage';
 
 type Difficulty = 'Easy' | 'Medium' | 'Hard' | 'Epic';
 type Category = 'Main Quest' | 'Side Quest';
 type Status = 'Ready' | 'In Progress' | 'Completed';
 type ScreenName = 'quest-board' | 'add-quest';
+type RankTitle = 'Novice' | 'Adventurer' | 'Knight' | 'Champion';
 
 type Quest = {
+  id: string;
   title: string;
   difficulty: Difficulty;
   xpReward: number;
   status: Status;
   category: Category;
+};
+
+type HeroProgress = {
+  xp: number;
+  rankTitle: RankTitle;
+};
+
+type GameState = {
+  hero: HeroProgress;
+  quests: Quest[];
 };
 
 const theme = {
@@ -49,36 +62,133 @@ const theme = {
 const difficultyOptions: Difficulty[] = ['Easy', 'Medium', 'Hard', 'Epic'];
 const categoryOptions: Category[] = ['Main Quest', 'Side Quest'];
 
-const difficultyXpReward: Record<Difficulty, number> = {
-  Easy: 20,
-  Medium: 45,
-  Hard: 80,
-  Epic: 120,
+const completionXpByDifficulty: Record<Difficulty, number> = {
+  Easy: 10,
+  Medium: 20,
+  Hard: 35,
+  Epic: 50,
 };
 
 const initialQuests: Quest[] = [
   {
+    id: 'quest-1',
     title: 'Defeat the Laundry Dragon',
     difficulty: 'Epic',
-    xpReward: 120,
+    xpReward: 50,
     status: 'In Progress',
     category: 'Main Quest',
   },
   {
+    id: 'quest-2',
     title: 'Brew a Focus Potion',
     difficulty: 'Medium',
-    xpReward: 45,
+    xpReward: 20,
     status: 'Ready',
     category: 'Side Quest',
   },
   {
+    id: 'quest-3',
     title: 'Sharpen the Study Blade',
     difficulty: 'Easy',
-    xpReward: 30,
+    xpReward: 10,
     status: 'Completed',
     category: 'Side Quest',
   },
 ];
+
+const rankThresholds: Array<{ minimumXp: number; title: RankTitle }> = [
+  { minimumXp: 100, title: 'Champion' },
+  { minimumXp: 50, title: 'Knight' },
+  { minimumXp: 20, title: 'Adventurer' },
+  { minimumXp: 0, title: 'Novice' },
+];
+
+function createQuestId() {
+  return `quest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function getRankTitleForXp(xp: number): RankTitle {
+  return (
+    rankThresholds.find(threshold => xp >= threshold.minimumXp)?.title ??
+    'Novice'
+  );
+}
+
+function getLevelForXp(xp: number) {
+  if (xp >= 100) {
+    return '04';
+  }
+
+  if (xp >= 50) {
+    return '03';
+  }
+
+  if (xp >= 20) {
+    return '02';
+  }
+
+  return '01';
+}
+
+function createHeroProgress(xp: number): HeroProgress {
+  return {
+    xp,
+    rankTitle: getRankTitleForXp(xp),
+  };
+}
+
+function calculateCompletedQuestXp(quests: Quest[]) {
+  return quests.reduce((totalXp, quest) => {
+    if (quest.status !== 'Completed') {
+      return totalXp;
+    }
+
+    return totalXp + completionXpByDifficulty[quest.difficulty];
+  }, 0);
+}
+
+function normalizeQuest(quest: Omit<Quest, 'id'> & Partial<Pick<Quest, 'id'>>) {
+  const xpReward = completionXpByDifficulty[quest.difficulty];
+
+  return {
+    ...quest,
+    id: quest.id ?? createQuestId(),
+    xpReward,
+  };
+}
+
+function createInitialGameState(): GameState {
+  const normalizedQuests = initialQuests.map(normalizeQuest);
+  const startingXp = calculateCompletedQuestXp(normalizedQuests);
+
+  return {
+    hero: createHeroProgress(startingXp),
+    quests: normalizedQuests,
+  };
+}
+
+function migrateLegacyQuests(quests: Quest[]): GameState {
+  const normalizedQuests = quests.map(normalizeQuest);
+  const heroXp = calculateCompletedQuestXp(normalizedQuests);
+
+  return {
+    hero: createHeroProgress(heroXp),
+    quests: normalizedQuests,
+  };
+}
+
+function normalizeStoredGameState(state: GameState): GameState {
+  const normalizedQuests = state.quests.map(normalizeQuest);
+  const normalizedXp =
+    typeof state.hero?.xp === 'number'
+      ? state.hero.xp
+      : calculateCompletedQuestXp(normalizedQuests);
+
+  return {
+    hero: createHeroProgress(normalizedXp),
+    quests: normalizedQuests,
+  };
+}
 
 function HeroStat({
   label,
@@ -141,7 +251,13 @@ function SectionPicker({
   );
 }
 
-function QuestCard({ quest }: { quest: Quest }) {
+function QuestCard({
+  quest,
+  onComplete,
+}: {
+  quest: Quest;
+  onComplete?: (questId: string) => void;
+}) {
   const isComplete = quest.status === 'Completed';
 
   return (
@@ -175,15 +291,28 @@ function QuestCard({ quest }: { quest: Quest }) {
           </Text>
         </View>
       </View>
+
+      {!isComplete && onComplete ? (
+        <Pressable
+          onPress={() => onComplete(quest.id)}
+          style={styles.completeButton}
+          testID={`complete-quest-${quest.id}`}>
+          <Text style={styles.completeButtonText}>Mark Completed</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
 
 function QuestBoardScreen({
+  hero,
   quests,
+  onCompleteQuest,
   onNavigateToAddQuest,
 }: {
+  hero: HeroProgress;
   quests: Quest[];
+  onCompleteQuest: (questId: string) => void;
   onNavigateToAddQuest: () => void;
 }) {
   const mainQuests = quests.filter(
@@ -208,16 +337,22 @@ function QuestBoardScreen({
         <View style={styles.heroHeader}>
           <View>
             <Text style={styles.heroEyebrow}>Hero Overview</Text>
-            <Text style={styles.heroTitle}>Rank Title: Iron Vanguard</Text>
+            <Text style={styles.heroTitle}>
+              Rank Title: {hero.rankTitle}
+            </Text>
           </View>
           <View style={styles.heroOrb} />
         </View>
 
         <View style={styles.heroStatsRow}>
-          <HeroStat label="Level" value="07" accentStyle={styles.levelAccent} />
+          <HeroStat
+            label="Level"
+            value={getLevelForXp(hero.xp)}
+            accentStyle={styles.levelAccent}
+          />
           <HeroStat
             label="XP"
-            value="430 / 600"
+            value={`${hero.xp}`}
             accentStyle={styles.xpAccent}
           />
         </View>
@@ -240,21 +375,29 @@ function QuestBoardScreen({
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Main Quest</Text>
         {mainQuests.map(quest => (
-          <QuestCard key={`${quest.category}-${quest.title}`} quest={quest} />
+          <QuestCard
+            key={quest.id}
+            onComplete={onCompleteQuest}
+            quest={quest}
+          />
         ))}
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Side Quests</Text>
         {sideQuests.map(quest => (
-          <QuestCard key={`${quest.category}-${quest.title}`} quest={quest} />
+          <QuestCard
+            key={quest.id}
+            onComplete={onCompleteQuest}
+            quest={quest}
+          />
         ))}
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Completed Quests</Text>
         {completedQuests.map(quest => (
-          <QuestCard key={`${quest.category}-${quest.title}`} quest={quest} />
+          <QuestCard key={quest.id} quest={quest} />
         ))}
       </View>
     </ScrollView>
@@ -284,9 +427,10 @@ function AddQuestScreen({
     }
 
     onSave({
+      id: createQuestId(),
       title,
       difficulty: selectedDifficulty,
-      xpReward: difficultyXpReward[selectedDifficulty],
+      xpReward: completionXpByDifficulty[selectedDifficulty],
       status: 'Ready',
       category: selectedCategory,
     });
@@ -366,28 +510,33 @@ function AddQuestScreen({
 }
 
 function App() {
-  const [quests, setQuests] = useState<Quest[]>(initialQuests);
+  const [gameState, setGameState] = useState<GameState>(createInitialGameState);
   const [currentScreen, setCurrentScreen] = useState<ScreenName>('quest-board');
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
 
-    const hydrateQuests = async () => {
-      const storedQuests = await loadStoredQuests<Quest>();
+    const hydrateGameState = async () => {
+      const storedGameState = await loadStoredGameState<GameState>();
+      const legacyQuests = storedGameState
+        ? null
+        : await loadLegacyStoredQuests<Quest>();
 
       if (!isMounted) {
         return;
       }
 
-      if (storedQuests !== null) {
-        setQuests(storedQuests);
+      if (storedGameState !== null) {
+        setGameState(normalizeStoredGameState(storedGameState));
+      } else if (legacyQuests !== null) {
+        setGameState(migrateLegacyQuests(legacyQuests));
       }
 
       setIsHydrated(true);
     };
 
-    hydrateQuests();
+    hydrateGameState();
 
     return () => {
       isMounted = false;
@@ -399,12 +548,37 @@ function App() {
       return;
     }
 
-    saveStoredQuests(quests);
-  }, [isHydrated, quests]);
+    saveStoredGameState(gameState);
+  }, [gameState, isHydrated]);
 
   const handleSaveQuest = (quest: Quest) => {
-    setQuests(currentQuests => [quest, ...currentQuests]);
+    setGameState(currentState => ({
+      ...currentState,
+      quests: [normalizeQuest(quest), ...currentState.quests],
+    }));
     setCurrentScreen('quest-board');
+  };
+
+  const handleCompleteQuest = (questId: string) => {
+    setGameState(currentState => {
+      const questToComplete = currentState.quests.find(
+        quest => quest.id === questId,
+      );
+
+      if (!questToComplete || questToComplete.status === 'Completed') {
+        return currentState;
+      }
+
+      const updatedXp =
+        currentState.hero.xp + completionXpByDifficulty[questToComplete.difficulty];
+
+      return {
+        hero: createHeroProgress(updatedXp),
+        quests: currentState.quests.map(quest =>
+          quest.id === questId ? { ...quest, status: 'Completed' } : quest,
+        ),
+      };
+    });
   };
 
   return (
@@ -420,8 +594,10 @@ function App() {
           <>
             {currentScreen === 'quest-board' ? (
               <QuestBoardScreen
+                hero={gameState.hero}
+                onCompleteQuest={handleCompleteQuest}
                 onNavigateToAddQuest={() => setCurrentScreen('add-quest')}
-                quests={quests}
+                quests={gameState.quests}
               />
             ) : (
               <AddQuestScreen
@@ -761,6 +937,21 @@ const styles = StyleSheet.create({
   },
   metaValueHighlight: {
     color: theme.blueSoft,
+  },
+  completeButton: {
+    alignItems: 'center',
+    backgroundColor: theme.surfaceHigh,
+    borderColor: theme.ghostBorder,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  completeButtonText: {
+    color: theme.textPrimary,
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
 
