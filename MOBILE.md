@@ -50,3 +50,20 @@
   - `npx tsc --noEmit`
 - Screenshot: Capture after navigating to Add Quest, saving a quest, and returning to the board
 - Commit: Use the assignment commit format after verifying the flow locally
+
+## Iteration 4 - Local Quest Persistence
+- Date: 2026-03-31
+- Goal: Persist the quest list locally on the device while preserving the current UI flow
+- Storage approach: `@react-native-async-storage/async-storage`
+- Implemented:
+  - Added a minimal storage helper for loading and saving quests
+  - Loaded persisted quests when the app starts
+  - Saved quest changes locally whenever the quest list changes
+  - Kept the current Quest Board and Add Quest screens unchanged in behavior
+  - Preserved in-memory quest creation while adding local device persistence underneath it
+- Verification:
+  - `npm test -- --runInBand`
+  - `npx eslint App.tsx __tests__/App.test.tsx src/storage/questStorage.ts`
+  - `npx tsc --noEmit`
+- Screenshot: Capture after saving a quest, closing the app, and confirming it still appears after reopening
+- Commit: Use the assignment commit format after verifying persistence locally

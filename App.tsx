@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -12,6 +12,10 @@ import {
   SafeAreaProvider,
   SafeAreaView,
 } from 'react-native-safe-area-context';
+import {
+  loadStoredQuests,
+  saveStoredQuests,
+} from './src/storage/questStorage';
 
 type Difficulty = 'Easy' | 'Medium' | 'Hard' | 'Epic';
 type Category = 'Main Quest' | 'Side Quest';
@@ -364,6 +368,39 @@ function AddQuestScreen({
 function App() {
   const [quests, setQuests] = useState<Quest[]>(initialQuests);
   const [currentScreen, setCurrentScreen] = useState<ScreenName>('quest-board');
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const hydrateQuests = async () => {
+      const storedQuests = await loadStoredQuests<Quest>();
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (storedQuests !== null) {
+        setQuests(storedQuests);
+      }
+
+      setIsHydrated(true);
+    };
+
+    hydrateQuests();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+
+    saveStoredQuests(quests);
+  }, [isHydrated, quests]);
 
   const handleSaveQuest = (quest: Quest) => {
     setQuests(currentQuests => [quest, ...currentQuests]);
@@ -374,16 +411,25 @@ function App() {
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
         <StatusBar barStyle="light-content" backgroundColor={theme.background} />
-        {currentScreen === 'quest-board' ? (
-          <QuestBoardScreen
-            onNavigateToAddQuest={() => setCurrentScreen('add-quest')}
-            quests={quests}
-          />
+        {!isHydrated ? (
+          <View style={styles.loadingState}>
+            <Text style={styles.loadingKicker}>Restoring Quest Log</Text>
+            <Text style={styles.loadingTitle}>Quest Forge</Text>
+          </View>
         ) : (
-          <AddQuestScreen
-            onBack={() => setCurrentScreen('quest-board')}
-            onSave={handleSaveQuest}
-          />
+          <>
+            {currentScreen === 'quest-board' ? (
+              <QuestBoardScreen
+                onNavigateToAddQuest={() => setCurrentScreen('add-quest')}
+                quests={quests}
+              />
+            ) : (
+              <AddQuestScreen
+                onBack={() => setCurrentScreen('quest-board')}
+                onSave={handleSaveQuest}
+              />
+            )}
+          </>
         )}
       </SafeAreaView>
     </SafeAreaProvider>
@@ -399,6 +445,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 36,
+  },
+  loadingState: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  loadingKicker: {
+    color: theme.textMuted,
+    fontSize: 12,
+    letterSpacing: 2,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+  },
+  loadingTitle: {
+    color: theme.textPrimary,
+    fontSize: 30,
+    fontWeight: '700',
+    letterSpacing: -0.8,
   },
   screenHeader: {
     alignItems: 'center',
