@@ -32,3 +32,21 @@
   - `npx tsc --noEmit`
 - Screenshot: Capture after creating a quest successfully in the running app
 - Commit: Use the assignment commit format after verifying the flow locally
+
+## Iteration 3 - Multi-Screen Navigation
+- Date: 2026-03-31
+- Design source: Stitch project `4285400526736348128`, screens `Quest Board` and `Add Quest`
+- Goal: Separate the board and quest creation flow into dedicated screens while keeping the in-memory quest flow working
+- Implemented:
+  - Kept Quest Board as the home screen
+  - Moved the quest creation form into a dedicated Add Quest screen
+  - Added navigation from Quest Board to Add Quest
+  - Added a back action from Add Quest to Quest Board
+  - Kept quest creation in memory and returned to the board after saving
+  - Confirmed saved quests appear immediately on the Quest Board
+- Verification:
+  - `npm test -- --runInBand`
+  - `npx eslint App.tsx __tests__/App.test.tsx`
+  - `npx tsc --noEmit`
+- Screenshot: Capture after navigating to Add Quest, saving a quest, and returning to the board
+- Commit: Use the assignment commit format after verifying the flow locally

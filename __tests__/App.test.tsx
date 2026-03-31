@@ -24,38 +24,66 @@ jest.mock('react-native-safe-area-context', () => {
 
 import App from '../App';
 
-test('renders the board and lets a new quest be added', async () => {
+test('navigates to add quest, returns, and saves a quest back to the board', async () => {
   let tree: ReactTestRenderer.ReactTestRenderer;
 
   await ReactTestRenderer.act(() => {
     tree = ReactTestRenderer.create(<App />);
   });
 
-  const root = tree!.root;
-  const input = root.findByProps({ testID: 'quest-title-input' });
-  const difficulty = root.findByProps({ testID: 'difficulty-option-epic' });
-  const category = root.findByProps({ testID: 'category-option-main-quest' });
-  const saveButton = root.findByProps({ testID: 'save-quest-button' });
+  let root = tree!.root;
+
+  expect(
+    root.findAll(node => node.props.children === 'Open Add Quest').length,
+  ).toBeGreaterThan(0);
 
   await ReactTestRenderer.act(() => {
-    input.props.onChangeText('Prepare final demo');
+    root.findByProps({ testID: 'navigate-to-add-quest' }).props.onPress();
+  });
+
+  root = tree!.root;
+
+  expect(
+    root.findAll(node => node.props.children === 'Forge New Quest').length,
+  ).toBeGreaterThan(0);
+
+  await ReactTestRenderer.act(() => {
+    root.findByProps({ testID: 'back-to-quest-board' }).props.onPress();
+  });
+
+  root = tree!.root;
+
+  expect(
+    root.findAll(node => node.props.children === 'Open Add Quest').length,
+  ).toBeGreaterThan(0);
+
+  await ReactTestRenderer.act(() => {
+    root.findByProps({ testID: 'navigate-to-add-quest' }).props.onPress();
+  });
+
+  root = tree!.root;
+
+  await ReactTestRenderer.act(() => {
+    root.findByProps({ testID: 'quest-title-input' }).props.onChangeText(
+      'Prepare final demo',
+    );
   });
 
   await ReactTestRenderer.act(() => {
-    difficulty.props.onPress();
-    category.props.onPress();
+    root.findByProps({ testID: 'difficulty-option-epic' }).props.onPress();
+    root.findByProps({ testID: 'category-option-main-quest' }).props.onPress();
   });
 
   await ReactTestRenderer.act(() => {
-    saveButton.props.onPress();
+    root.findByProps({ testID: 'save-quest-button' }).props.onPress();
   });
 
-  const newQuestNodes = tree!.root.findAll(
-    node => node.props.children === 'Prepare final demo',
-  );
+  root = tree!.root;
 
-  expect(newQuestNodes.length).toBeGreaterThan(0);
-  expect(tree!.root.findByProps({ testID: 'quest-title-input' }).props.value).toBe(
-    '',
-  );
+  expect(
+    root.findAll(node => node.props.children === 'Prepare final demo').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Open Add Quest').length,
+  ).toBeGreaterThan(0);
 });

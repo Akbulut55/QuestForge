@@ -16,6 +16,7 @@ import {
 type Difficulty = 'Easy' | 'Medium' | 'Hard' | 'Epic';
 type Category = 'Main Quest' | 'Side Quest';
 type Status = 'Ready' | 'In Progress' | 'Completed';
+type ScreenName = 'quest-board' | 'add-quest';
 
 type Quest = {
   title: string;
@@ -174,14 +175,13 @@ function QuestCard({ quest }: { quest: Quest }) {
   );
 }
 
-function App() {
-  const [quests, setQuests] = useState<Quest[]>(initialQuests);
-  const [questTitle, setQuestTitle] = useState('');
-  const [selectedDifficulty, setSelectedDifficulty] =
-    useState<Difficulty>('Easy');
-  const [selectedCategory, setSelectedCategory] =
-    useState<Category>('Side Quest');
-
+function QuestBoardScreen({
+  quests,
+  onNavigateToAddQuest,
+}: {
+  quests: Quest[];
+  onNavigateToAddQuest: () => void;
+}) {
   const mainQuests = quests.filter(
     quest => quest.category === 'Main Quest' && quest.status !== 'Completed',
   );
@@ -189,6 +189,86 @@ function App() {
     quest => quest.category === 'Side Quest' && quest.status !== 'Completed',
   );
   const completedQuests = quests.filter(quest => quest.status === 'Completed');
+
+  return (
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}>
+      <Text style={styles.kicker}>Daily Quest Log</Text>
+      <Text style={styles.title}>Quest Forge</Text>
+      <Text style={styles.subtitle}>
+        Turn your everyday tasks into a progression path worth chasing.
+      </Text>
+
+      <View style={styles.heroCard}>
+        <View style={styles.heroHeader}>
+          <View>
+            <Text style={styles.heroEyebrow}>Hero Overview</Text>
+            <Text style={styles.heroTitle}>Rank Title: Iron Vanguard</Text>
+          </View>
+          <View style={styles.heroOrb} />
+        </View>
+
+        <View style={styles.heroStatsRow}>
+          <HeroStat label="Level" value="07" accentStyle={styles.levelAccent} />
+          <HeroStat
+            label="XP"
+            value="430 / 600"
+            accentStyle={styles.xpAccent}
+          />
+        </View>
+      </View>
+
+      <View style={styles.boardActionCard}>
+        <Text style={styles.sectionTitle}>Forge New Quest</Text>
+        <Text style={styles.formIntro}>
+          Open the dedicated Add Quest screen to create a new mission for your
+          quest log.
+        </Text>
+        <Pressable
+          onPress={onNavigateToAddQuest}
+          style={styles.primaryActionButton}
+          testID="navigate-to-add-quest">
+          <Text style={styles.primaryActionText}>Open Add Quest</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Main Quest</Text>
+        {mainQuests.map(quest => (
+          <QuestCard key={`${quest.category}-${quest.title}`} quest={quest} />
+        ))}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Side Quests</Text>
+        {sideQuests.map(quest => (
+          <QuestCard key={`${quest.category}-${quest.title}`} quest={quest} />
+        ))}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Completed Quests</Text>
+        {completedQuests.map(quest => (
+          <QuestCard key={`${quest.category}-${quest.title}`} quest={quest} />
+        ))}
+      </View>
+    </ScrollView>
+  );
+}
+
+function AddQuestScreen({
+  onBack,
+  onSave,
+}: {
+  onBack: () => void;
+  onSave: (quest: Quest) => void;
+}) {
+  const [questTitle, setQuestTitle] = useState('');
+  const [selectedDifficulty, setSelectedDifficulty] =
+    useState<Difficulty>('Easy');
+  const [selectedCategory, setSelectedCategory] =
+    useState<Category>('Side Quest');
 
   const canSaveQuest = questTitle.trim().length > 0;
 
@@ -199,125 +279,112 @@ function App() {
       return;
     }
 
-    setQuests(currentQuests => [
-      {
-        title,
-        difficulty: selectedDifficulty,
-        xpReward: difficultyXpReward[selectedDifficulty],
-        status: 'Ready',
-        category: selectedCategory,
-      },
-      ...currentQuests,
-    ]);
+    onSave({
+      title,
+      difficulty: selectedDifficulty,
+      xpReward: difficultyXpReward[selectedDifficulty],
+      status: 'Ready',
+      category: selectedCategory,
+    });
+
     setQuestTitle('');
     setSelectedDifficulty('Easy');
     setSelectedCategory('Side Quest');
   };
 
   return (
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}>
+      <View style={styles.screenHeader}>
+        <Pressable
+          onPress={onBack}
+          style={styles.backButton}
+          testID="back-to-quest-board">
+          <Text style={styles.backButtonText}>Back</Text>
+        </Pressable>
+        <Text style={styles.screenLabel}>Quest Board</Text>
+      </View>
+
+      <Text style={styles.kicker}>Add Quest</Text>
+      <Text style={styles.title}>Forge New Quest</Text>
+      <Text style={styles.subtitle}>
+        Create a new mission and send it back to the Quest Board instantly.
+      </Text>
+
+      <View style={styles.formCard}>
+        <Text style={styles.sectionTitle}>Quest Details</Text>
+        <Text style={styles.formIntro}>
+          Keep this screen focused on creating one new quest at a time.
+        </Text>
+
+        <View style={styles.formField}>
+          <Text style={styles.formLabel}>Quest Title</Text>
+          <TextInput
+            onChangeText={setQuestTitle}
+            placeholder="Enter a new quest title"
+            placeholderTextColor="#7e766b"
+            style={styles.titleInput}
+            testID="quest-title-input"
+            value={questTitle}
+          />
+        </View>
+
+        <SectionPicker
+          label="Difficulty"
+          onSelect={value => setSelectedDifficulty(value as Difficulty)}
+          options={difficultyOptions}
+          selectedValue={selectedDifficulty}
+          testIdPrefix="difficulty-option"
+        />
+
+        <SectionPicker
+          label="Category"
+          onSelect={value => setSelectedCategory(value as Category)}
+          options={categoryOptions}
+          selectedValue={selectedCategory}
+          testIdPrefix="category-option"
+        />
+
+        <Pressable
+          disabled={!canSaveQuest}
+          onPress={handleSaveQuest}
+          style={[
+            styles.saveButton,
+            !canSaveQuest && styles.saveButtonDisabled,
+          ]}
+          testID="save-quest-button">
+          <Text style={styles.saveButtonText}>Save Quest</Text>
+        </Pressable>
+      </View>
+    </ScrollView>
+  );
+}
+
+function App() {
+  const [quests, setQuests] = useState<Quest[]>(initialQuests);
+  const [currentScreen, setCurrentScreen] = useState<ScreenName>('quest-board');
+
+  const handleSaveQuest = (quest: Quest) => {
+    setQuests(currentQuests => [quest, ...currentQuests]);
+    setCurrentScreen('quest-board');
+  };
+
+  return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
         <StatusBar barStyle="light-content" backgroundColor={theme.background} />
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}>
-          <Text style={styles.kicker}>Daily Quest Log</Text>
-          <Text style={styles.title}>Quest Forge</Text>
-          <Text style={styles.subtitle}>
-            Turn your everyday tasks into a progression path worth chasing.
-          </Text>
-
-          <View style={styles.heroCard}>
-            <View style={styles.heroHeader}>
-              <View>
-                <Text style={styles.heroEyebrow}>Hero Overview</Text>
-                <Text style={styles.heroTitle}>Rank Title: Iron Vanguard</Text>
-              </View>
-              <View style={styles.heroOrb} />
-            </View>
-
-            <View style={styles.heroStatsRow}>
-              <HeroStat
-                label="Level"
-                value="07"
-                accentStyle={styles.levelAccent}
-              />
-              <HeroStat
-                label="XP"
-                value="430 / 600"
-                accentStyle={styles.xpAccent}
-              />
-            </View>
-          </View>
-
-          <View style={styles.formCard}>
-            <Text style={styles.sectionTitle}>Forge New Quest</Text>
-            <Text style={styles.formIntro}>
-              Use the Add Quest flow from the current board and keep the quest
-              log growing.
-            </Text>
-
-            <View style={styles.formField}>
-              <Text style={styles.formLabel}>Quest Title</Text>
-              <TextInput
-                onChangeText={setQuestTitle}
-                placeholder="Enter a new quest title"
-                placeholderTextColor="#7e766b"
-                style={styles.titleInput}
-                testID="quest-title-input"
-                value={questTitle}
-              />
-            </View>
-
-            <SectionPicker
-              label="Difficulty"
-              onSelect={value => setSelectedDifficulty(value as Difficulty)}
-              options={difficultyOptions}
-              selectedValue={selectedDifficulty}
-              testIdPrefix="difficulty-option"
-            />
-
-            <SectionPicker
-              label="Category"
-              onSelect={value => setSelectedCategory(value as Category)}
-              options={categoryOptions}
-              selectedValue={selectedCategory}
-              testIdPrefix="category-option"
-            />
-
-            <Pressable
-              disabled={!canSaveQuest}
-              onPress={handleSaveQuest}
-              style={[
-                styles.saveButton,
-                !canSaveQuest && styles.saveButtonDisabled,
-              ]}
-              testID="save-quest-button">
-              <Text style={styles.saveButtonText}>Save Quest</Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Main Quest</Text>
-            {mainQuests.map(quest => (
-              <QuestCard key={`${quest.category}-${quest.title}`} quest={quest} />
-            ))}
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Side Quests</Text>
-            {sideQuests.map(quest => (
-              <QuestCard key={`${quest.category}-${quest.title}`} quest={quest} />
-            ))}
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Completed Quests</Text>
-            {completedQuests.map(quest => (
-              <QuestCard key={`${quest.category}-${quest.title}`} quest={quest} />
-            ))}
-          </View>
-        </ScrollView>
+        {currentScreen === 'quest-board' ? (
+          <QuestBoardScreen
+            onNavigateToAddQuest={() => setCurrentScreen('add-quest')}
+            quests={quests}
+          />
+        ) : (
+          <AddQuestScreen
+            onBack={() => setCurrentScreen('quest-board')}
+            onSave={handleSaveQuest}
+          />
+        )}
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -332,6 +399,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 36,
+  },
+  screenHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  backButton: {
+    backgroundColor: theme.surfaceHigh,
+    borderColor: theme.ghostBorder,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  backButtonText: {
+    color: theme.textPrimary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  screenLabel: {
+    color: theme.textMuted,
+    fontSize: 12,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
   },
   kicker: {
     color: theme.textMuted,
@@ -422,6 +514,28 @@ const styles = StyleSheet.create({
   xpAccent: {
     color: theme.blueSoft,
     fontSize: 20,
+  },
+  boardActionCard: {
+    backgroundColor: theme.surface,
+    borderColor: theme.ghostBorder,
+    borderRadius: 24,
+    borderWidth: 1,
+    marginTop: 28,
+    padding: 20,
+  },
+  primaryActionButton: {
+    alignItems: 'center',
+    backgroundColor: theme.amber,
+    borderRadius: 18,
+    marginTop: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+  },
+  primaryActionText: {
+    color: '#402d00',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.4,
   },
   formCard: {
     backgroundColor: theme.surface,
