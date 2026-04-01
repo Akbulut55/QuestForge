@@ -218,6 +218,90 @@ test('search and filters work together on the quest board', async () => {
   ).toBe(0);
 });
 
+test('sorting works with the current search and filter flow and persists selection', async () => {
+  mockAsyncStorage.getItem.mockImplementation(async (key: string) => {
+    if (key === GAME_STATE_STORAGE_KEY) {
+      return JSON.stringify({
+        hero: {
+          xp: 0,
+          rankTitle: 'Novice',
+          streakCount: 0,
+          lastCompletedDate: null,
+        },
+        quests: [
+          {
+            id: 'quest-a',
+            title: 'Zephyr Trial',
+            difficulty: 'Medium',
+            xpReward: 20,
+            status: 'Ready',
+            category: 'Side Quest',
+            createdAt: 3,
+          },
+          {
+            id: 'quest-b',
+            title: 'Arcane Brew',
+            difficulty: 'Easy',
+            xpReward: 10,
+            status: 'In Progress',
+            category: 'Side Quest',
+            createdAt: 1,
+          },
+          {
+            id: 'quest-c',
+            title: 'Mystic Notes',
+            difficulty: 'Hard',
+            xpReward: 35,
+            status: 'Ready',
+            category: 'Side Quest',
+            createdAt: 2,
+          },
+        ],
+        themeMode: 'dark',
+        unlockedAchievementIds: ['first-quest'],
+        sortOption: 'Newest first',
+      });
+    }
+
+    return null;
+  });
+
+  let tree: ReactTestRenderer.ReactTestRenderer;
+
+  await ReactTestRenderer.act(async () => {
+    tree = ReactTestRenderer.create(<App />);
+  });
+
+  await ReactTestRenderer.act(async () => {
+    await flushAsyncWork();
+  });
+
+  let root = tree!.root;
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'quest-search-input' }).props.onChangeText('r');
+  });
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'category-filter-side-quest' }).props.onPress();
+    root.findByProps({ testID: 'status-filter-active' }).props.onPress();
+    root.findByProps({ testID: 'sort-option-title-a-z' }).props.onPress();
+  });
+
+  root = tree!.root;
+  const sortedRender = JSON.stringify(tree!.toJSON());
+  const arcaneIndex = sortedRender.indexOf('Arcane Brew');
+  const zephyrIndex = sortedRender.indexOf('Zephyr Trial');
+
+  expect(arcaneIndex).toBeGreaterThan(-1);
+  expect(zephyrIndex).toBeGreaterThan(-1);
+  expect(arcaneIndex).toBeLessThan(zephyrIndex);
+  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
+    GAME_STATE_STORAGE_KEY,
+    expect.stringContaining('"sortOption":"Title A-Z"'),
+  );
+});
+
 test('theme toggle switches modes and persists the selected theme', async () => {
   let tree: ReactTestRenderer.ReactTestRenderer;
 

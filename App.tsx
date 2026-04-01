@@ -24,6 +24,12 @@ type Category = 'Main Quest' | 'Side Quest';
 type Status = 'Ready' | 'In Progress' | 'Completed';
 type ScreenName = 'quest-board' | 'add-quest' | 'progress';
 type RankTitle = 'Novice' | 'Adventurer' | 'Knight' | 'Champion';
+type SortOption =
+  | 'Newest first'
+  | 'Oldest first'
+  | 'Difficulty ascending'
+  | 'Difficulty descending'
+  | 'Title A-Z';
 type AchievementId =
   | 'first-quest'
   | 'quest-finisher'
@@ -42,6 +48,7 @@ type Quest = {
   xpReward: number;
   status: Status;
   category: Category;
+  createdAt: number;
 };
 
 type HeroProgress = {
@@ -56,6 +63,7 @@ type GameState = {
   quests: Quest[];
   themeMode: ThemeMode;
   unlockedAchievementIds: AchievementId[];
+  sortOption: SortOption;
 };
 
 type ProgressStats = {
@@ -158,6 +166,13 @@ const categoryFilterOptions: CategoryFilter[] = [
   'Side Quest',
 ];
 const statusFilterOptions: StatusFilter[] = ['All', 'Active', 'Completed'];
+const sortOptions: SortOption[] = [
+  'Newest first',
+  'Oldest first',
+  'Difficulty ascending',
+  'Difficulty descending',
+  'Title A-Z',
+];
 
 const completionXpByDifficulty: Record<Difficulty, number> = {
   Easy: 10,
@@ -174,6 +189,7 @@ const initialQuests: Quest[] = [
     xpReward: 50,
     status: 'In Progress',
     category: 'Main Quest',
+    createdAt: 1,
   },
   {
     id: 'quest-2',
@@ -182,6 +198,7 @@ const initialQuests: Quest[] = [
     xpReward: 20,
     status: 'Ready',
     category: 'Side Quest',
+    createdAt: 2,
   },
   {
     id: 'quest-3',
@@ -190,6 +207,7 @@ const initialQuests: Quest[] = [
     xpReward: 10,
     status: 'Completed',
     category: 'Side Quest',
+    createdAt: 3,
   },
 ];
 
@@ -229,6 +247,12 @@ const rankThresholds: Array<{ minimumXp: number; title: RankTitle }> = [
 ];
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
+const difficultySortRank: Record<Difficulty, number> = {
+  Easy: 1,
+  Medium: 2,
+  Hard: 3,
+  Epic: 4,
+};
 
 function createQuestId() {
   return `quest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -400,6 +424,7 @@ function normalizeQuest(quest: Omit<Quest, 'id'> & Partial<Pick<Quest, 'id'>>) {
   return {
     ...quest,
     id: quest.id ?? createQuestId(),
+    createdAt: typeof quest.createdAt === 'number' ? quest.createdAt : Date.now(),
     xpReward,
   };
 }
@@ -412,6 +437,7 @@ function createInitialGameState(): GameState {
     hero,
     quests: normalizedQuests,
     themeMode: 'dark',
+    sortOption: 'Newest first',
     unlockedAchievementIds: getUnlockedAchievementIds({
       hero,
       quests: normalizedQuests,
@@ -427,6 +453,7 @@ function migrateLegacyQuests(quests: Quest[]): GameState {
     hero,
     quests: normalizedQuests,
     themeMode: 'dark',
+    sortOption: 'Newest first',
     unlockedAchievementIds: getUnlockedAchievementIds({
       hero,
       quests: normalizedQuests,
@@ -451,6 +478,7 @@ function normalizeStoredGameState(state: GameState): GameState {
     hero,
     quests: normalizedQuests,
     themeMode: state.themeMode === 'light' ? 'light' : 'dark',
+    sortOption: sortOptions.includes(state.sortOption) ? state.sortOption : 'Newest first',
     unlockedAchievementIds: getUnlockedAchievementIds({
       hero,
       quests: normalizedQuests,
@@ -557,6 +585,36 @@ function getUnlockedAchievementIds({
   return achievementDefinitions
     .map(achievement => achievement.id)
     .filter(achievementId => unlockedAchievementIds.has(achievementId));
+}
+
+function sortQuests(quests: Quest[], sortOption: SortOption) {
+  const sortedQuests = [...quests];
+
+  sortedQuests.sort((leftQuest, rightQuest) => {
+    switch (sortOption) {
+      case 'Oldest first':
+        return leftQuest.createdAt - rightQuest.createdAt;
+      case 'Difficulty ascending':
+        return (
+          difficultySortRank[leftQuest.difficulty] -
+            difficultySortRank[rightQuest.difficulty] ||
+          leftQuest.title.localeCompare(rightQuest.title)
+        );
+      case 'Difficulty descending':
+        return (
+          difficultySortRank[rightQuest.difficulty] -
+            difficultySortRank[leftQuest.difficulty] ||
+          leftQuest.title.localeCompare(rightQuest.title)
+        );
+      case 'Title A-Z':
+        return leftQuest.title.localeCompare(rightQuest.title);
+      case 'Newest first':
+      default:
+        return rightQuest.createdAt - leftQuest.createdAt;
+    }
+  });
+
+  return sortedQuests;
 }
 
 function HeroStat({
@@ -780,6 +838,7 @@ function QuestCard({
 function QuestBoardScreen({
   hero,
   quests,
+  selectedSortOption,
   styles,
   themeMode,
   onToggleTheme,
@@ -787,10 +846,12 @@ function QuestBoardScreen({
   onEditQuest,
   onNavigateToAddQuest,
   onNavigateToProgress,
+  onSelectSortOption,
   completionFeedback,
 }: {
   hero: HeroProgress;
   quests: Quest[];
+  selectedSortOption: SortOption;
   styles: ReturnType<typeof createStyles>;
   themeMode: ThemeMode;
   onToggleTheme: () => void;
@@ -798,6 +859,7 @@ function QuestBoardScreen({
   onEditQuest: (questId: string) => void;
   onNavigateToAddQuest: () => void;
   onNavigateToProgress: () => void;
+  onSelectSortOption: (sortOption: SortOption) => void;
   completionFeedback: CompletionFeedback | null;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -833,14 +895,17 @@ function QuestBoardScreen({
     ]).start();
   }, [completionFeedback, feedbackOpacity, feedbackTranslateY]);
 
-  const visibleQuests = quests.filter(quest =>
-    questMatchesFilters({
-      quest,
-      searchQuery,
-      selectedCategoryFilter,
-      selectedDifficultyFilter,
-      selectedStatusFilter,
-    }),
+  const visibleQuests = sortQuests(
+    quests.filter(quest =>
+      questMatchesFilters({
+        quest,
+        searchQuery,
+        selectedCategoryFilter,
+        selectedDifficultyFilter,
+        selectedStatusFilter,
+      }),
+    ),
+    selectedSortOption,
   );
 
   const mainQuests = visibleQuests.filter(
@@ -991,6 +1056,15 @@ function QuestBoardScreen({
           selectedValue={selectedStatusFilter}
           styles={styles}
           testIdPrefix="status-filter"
+        />
+
+        <SectionPicker
+          label="Sort Quests"
+          onSelect={value => onSelectSortOption(value as SortOption)}
+          options={sortOptions}
+          selectedValue={selectedSortOption}
+          styles={styles}
+          testIdPrefix="sort-option"
         />
       </View>
 
@@ -1231,6 +1305,7 @@ function AddQuestScreen({
       xpReward: completionXpByDifficulty[selectedDifficulty],
       status: questToEdit?.status ?? 'Ready',
       category: selectedCategory,
+      createdAt: questToEdit?.createdAt ?? Date.now(),
     });
   };
 
@@ -1493,6 +1568,13 @@ function App() {
     }));
   };
 
+  const handleSelectSortOption = (sortOption: SortOption) => {
+    setGameState(currentState => ({
+      ...currentState,
+      sortOption,
+    }));
+  };
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
@@ -1523,8 +1605,10 @@ function App() {
                   setCurrentScreen('add-quest');
                 }}
                 onNavigateToProgress={() => setCurrentScreen('progress')}
+                onSelectSortOption={handleSelectSortOption}
                 onToggleTheme={handleToggleTheme}
                 quests={gameState.quests}
+                selectedSortOption={gameState.sortOption}
                 styles={styles}
                 themeMode={gameState.themeMode}
               />

@@ -18,8 +18,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 12 |
-| Total Weight (kg) | 130 |
+| Total Iterations | 13 |
+| Total Weight (kg) | 140 |
 | Total Time (min) | Not tracked |
 | Failed Attempts | Not tracked |
 
@@ -588,6 +588,59 @@ Add an achievement badge system.
 **Screenshot:** `iteration-12-achievement-badges.png`
 
 **Commit:** `[NAIM: Quest Blacksmith] Add achievement badge system - 10kg`
+
+---
+
+### Iteration 13
+
+| Field | Value |
+|-------|-------|
+| Feature | `Quest sorting options` |
+| Weight | `10 kg` |
+| Tool Used | `Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+You are continuing my local React Native project called QuestForge.
+
+Important assignment constraints:
+- This is for a NAIM-style iterative mobile app assignment
+- I must build one small feature per iteration
+- I must document each iteration in MOBILE.md
+- I must take a screenshot after each successful iteration
+- I must commit after each iteration
+- So do NOT build extra features beyond this iteration
+
+Current state:
+- Iteration 1 is done: Quest Board UI
+- Iteration 2 is done: add quest input flow
+- Iteration 3 is done: multi-screen navigation
+- Iteration 4 is done: local persistence
+- Iteration 5 is done: XP and rank progression
+- Iteration 6 is done: search and filter quests
+- Iteration 7 is done: manual theme toggle
+- Iteration 8 is done: profile progress screen
+- Iteration 9 is done: quest completion animation
+- Iteration 10 is done: daily streak system
+- Iteration 11 is done: edit and delete quest management
+- Iteration 12 is done: achievement badge system
+
+Task: Implement ONLY Iteration 13.
+
+Iteration 13 goal:
+Add quest sorting options.
+```
+
+**What happened:**
+- Added a simple sort control on the Quest Board for newest, oldest, difficulty, and title ordering.
+- The sort runs after the existing search and filter logic, and the selected sort option is persisted in the saved game state so the board keeps the same ordering after restart.
+
+**Screenshot:** `iteration-13-quest-sorting.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add quest sorting options - 10kg`
 
 ---
 
