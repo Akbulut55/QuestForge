@@ -18,8 +18,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 9 |
-| Total Weight (kg) | 100 |
+| Total Iterations | 10 |
+| Total Weight (kg) | 110 |
 | Total Time (min) | Not tracked |
 | Failed Attempts | Not tracked |
 
@@ -435,6 +435,56 @@ Add a custom quest completion animation / visual feedback.
 **Screenshot:** `iteration-9-completion-feedback.png`
 
 **Commit:** `[NAIM: Quest Blacksmith] Add quest completion animation - 10kg`
+
+---
+
+### Iteration 10
+
+| Field | Value |
+|-------|-------|
+| Feature | `Daily streak system` |
+| Weight | `10 kg` |
+| Tool Used | `Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+You are continuing my local React Native project called QuestForge.
+
+Important assignment constraints:
+- This is for a NAIM-style iterative mobile app assignment
+- I must build one small feature per iteration
+- I must document each iteration in MOBILE.md
+- I must take a screenshot after each successful iteration
+- I must commit after each iteration
+- So do NOT build extra features beyond this iteration
+
+Current state:
+- Iteration 1 is done: Quest Board UI
+- Iteration 2 is done: add quest input flow
+- Iteration 3 is done: multi-screen navigation
+- Iteration 4 is done: local persistence
+- Iteration 5 is done: XP and rank progression
+- Iteration 6 is done: search and filter quests
+- Iteration 7 is done: manual theme toggle
+- Iteration 8 is done: profile progress screen
+- Iteration 9 is done: quest completion animation
+
+Task: Implement ONLY Iteration 10.
+
+Iteration 10 goal:
+Add a daily streak system.
+```
+
+**What happened:**
+- Added a simple date-based daily streak system that stores the last quest-completion day and current streak count in local state.
+- The streak increases only once per day, grows on consecutive days, resets after a missed day during hydration, and is shown in both the hero summary and the Progress screen.
+
+**Screenshot:** `iteration-10-daily-streak.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add daily streak system - 10kg`
 
 ---
 

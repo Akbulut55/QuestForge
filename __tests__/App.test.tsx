@@ -52,6 +52,11 @@ const flushAsyncWork = () =>
     setTimeout(() => resolve(), 0);
   });
 
+const flushMicrotasks = async () => {
+  await Promise.resolve();
+  await Promise.resolve();
+};
+
 beforeEach(() => {
   mockAsyncStorage.getItem.mockReset();
   mockAsyncStorage.setItem.mockReset();
@@ -164,6 +169,10 @@ test('completing a quest awards XP, updates rank, and saves game state', async (
   expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
     GAME_STATE_STORAGE_KEY,
     expect.stringContaining('"rankTitle":"Knight"'),
+  );
+  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
+    GAME_STATE_STORAGE_KEY,
+    expect.stringContaining('"streakCount":1'),
   );
 });
 
@@ -304,4 +313,138 @@ test('progress screen shows derived hero and quest summary stats', async () => {
   expect(
     root.findAll(node => node.props.children === 'Open Add Quest').length,
   ).toBeGreaterThan(0);
+});
+
+test('completing multiple quests on the same day only increases the streak once', async () => {
+  let tree: ReactTestRenderer.ReactTestRenderer;
+
+  await ReactTestRenderer.act(async () => {
+    tree = ReactTestRenderer.create(<App />);
+  });
+
+  await ReactTestRenderer.act(async () => {
+    await flushAsyncWork();
+  });
+
+  let root = tree!.root;
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'complete-quest-quest-1' }).props.onPress();
+  });
+
+  root = tree!.root;
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'complete-quest-quest-2' }).props.onPress();
+  });
+
+  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
+    GAME_STATE_STORAGE_KEY,
+    expect.stringContaining('"streakCount":1'),
+  );
+});
+
+test('streak resets on load after a missed day', async () => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date('2026-04-03T09:00:00'));
+
+  mockAsyncStorage.getItem.mockImplementation(async (key: string) => {
+    if (key === GAME_STATE_STORAGE_KEY) {
+      return JSON.stringify({
+        hero: {
+          xp: 35,
+          rankTitle: 'Adventurer',
+          streakCount: 3,
+          lastCompletedDate: '2026-04-01',
+        },
+        quests: [],
+        themeMode: 'dark',
+      });
+    }
+
+    return null;
+  });
+
+  try {
+    await ReactTestRenderer.act(async () => {
+      ReactTestRenderer.create(<App />);
+    });
+
+    await ReactTestRenderer.act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
+      GAME_STATE_STORAGE_KEY,
+      expect.stringContaining('"streakCount":0'),
+    );
+    expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
+      GAME_STATE_STORAGE_KEY,
+      expect.stringContaining('"lastCompletedDate":null'),
+    );
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test('completing a quest on the next day increases the streak', async () => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date('2026-04-02T09:00:00'));
+
+  mockAsyncStorage.getItem.mockImplementation(async (key: string) => {
+    if (key === GAME_STATE_STORAGE_KEY) {
+      return JSON.stringify({
+        hero: {
+          xp: 10,
+          rankTitle: 'Novice',
+          streakCount: 1,
+          lastCompletedDate: '2026-04-01',
+        },
+        quests: [
+          {
+            id: 'quest-next-day',
+            title: 'Train at Dawn',
+            difficulty: 'Easy',
+            xpReward: 10,
+            status: 'Ready',
+            category: 'Side Quest',
+          },
+        ],
+        themeMode: 'dark',
+      });
+    }
+
+    return null;
+  });
+
+  try {
+    let tree: ReactTestRenderer.ReactTestRenderer;
+
+    await ReactTestRenderer.act(async () => {
+      tree = ReactTestRenderer.create(<App />);
+    });
+
+    await ReactTestRenderer.act(async () => {
+      await flushMicrotasks();
+    });
+
+    const root = tree!.root;
+
+    await ReactTestRenderer.act(async () => {
+      root
+        .findByProps({ testID: 'complete-quest-quest-next-day' })
+        .props.onPress();
+    });
+
+    expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
+      GAME_STATE_STORAGE_KEY,
+      expect.stringContaining('"streakCount":2'),
+    );
+    expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
+      GAME_STATE_STORAGE_KEY,
+      expect.stringContaining('"lastCompletedDate":"2026-04-02"'),
+    );
+  } finally {
+    jest.useRealTimers();
+  }
 });

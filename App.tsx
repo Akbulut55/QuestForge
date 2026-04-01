@@ -41,6 +41,8 @@ type Quest = {
 type HeroProgress = {
   xp: number;
   rankTitle: RankTitle;
+  streakCount: number;
+  lastCompletedDate: string | null;
 };
 
 type GameState = {
@@ -185,6 +187,8 @@ const rankThresholds: Array<{ minimumXp: number; title: RankTitle }> = [
   { minimumXp: 0, title: 'Novice' },
 ];
 
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
 function createQuestId() {
   return `quest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -212,10 +216,130 @@ function getLevelForXp(xp: number) {
   return '01';
 }
 
-function createHeroProgress(xp: number): HeroProgress {
+function getDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+function parseDateKey(dateKey: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+    return null;
+  }
+
+  const [year, month, day] = dateKey.split('-').map(Number);
+  const parsedDate = new Date(year, month - 1, day);
+
+  if (
+    parsedDate.getFullYear() !== year ||
+    parsedDate.getMonth() !== month - 1 ||
+    parsedDate.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return parsedDate;
+}
+
+function getDateDifferenceInDays(fromDateKey: string, toDateKey: string) {
+  const fromDate = parseDateKey(fromDateKey);
+  const toDate = parseDateKey(toDateKey);
+
+  if (!fromDate || !toDate) {
+    return null;
+  }
+
+  return Math.round((toDate.getTime() - fromDate.getTime()) / DAY_IN_MS);
+}
+
+function normalizeStreakProgress(
+  streakCount: number,
+  lastCompletedDate: string | null,
+) {
+  if (!lastCompletedDate) {
+    return {
+      streakCount: 0,
+      lastCompletedDate: null,
+    };
+  }
+
+  const todayKey = getDateKey();
+  const dateDifference = getDateDifferenceInDays(lastCompletedDate, todayKey);
+
+  if (dateDifference === null || dateDifference < 0) {
+    return {
+      streakCount: 0,
+      lastCompletedDate: null,
+    };
+  }
+
+  if (dateDifference <= 1) {
+    return {
+      streakCount: Math.max(0, streakCount),
+      lastCompletedDate,
+    };
+  }
+
+  return {
+    streakCount: 0,
+    lastCompletedDate: null,
+  };
+}
+
+function getNextStreakProgress(
+  streakCount: number,
+  lastCompletedDate: string | null,
+  completedDateKey: string,
+) {
+  if (lastCompletedDate === completedDateKey) {
+    return {
+      streakCount: Math.max(1, streakCount),
+      lastCompletedDate: completedDateKey,
+    };
+  }
+
+  if (!lastCompletedDate) {
+    return {
+      streakCount: 1,
+      lastCompletedDate: completedDateKey,
+    };
+  }
+
+  const dateDifference = getDateDifferenceInDays(
+    lastCompletedDate,
+    completedDateKey,
+  );
+
+  if (dateDifference === 1) {
+    return {
+      streakCount: Math.max(1, streakCount) + 1,
+      lastCompletedDate: completedDateKey,
+    };
+  }
+
+  return {
+    streakCount: 1,
+    lastCompletedDate: completedDateKey,
+  };
+}
+
+function createHeroProgress(
+  xp: number,
+  streakCount = 0,
+  lastCompletedDate: string | null = null,
+): HeroProgress {
+  const normalizedStreak = normalizeStreakProgress(
+    streakCount,
+    lastCompletedDate,
+  );
+
   return {
     xp,
     rankTitle: getRankTitleForXp(xp),
+    streakCount: normalizedStreak.streakCount,
+    lastCompletedDate: normalizedStreak.lastCompletedDate,
   };
 }
 
@@ -269,7 +393,11 @@ function normalizeStoredGameState(state: GameState): GameState {
       : calculateCompletedQuestXp(normalizedQuests);
 
   return {
-    hero: createHeroProgress(normalizedXp),
+    hero: createHeroProgress(
+      normalizedXp,
+      state.hero?.streakCount,
+      state.hero?.lastCompletedDate ?? null,
+    ),
     quests: normalizedQuests,
     themeMode: state.themeMode === 'light' ? 'light' : 'dark',
   };
@@ -592,6 +720,12 @@ function QuestBoardScreen({
             styles={styles}
             value={`${hero.xp}`}
           />
+          <HeroStat
+            accentStyle={styles.streakAccent}
+            label="Streak"
+            styles={styles}
+            value={`${hero.streakCount}d`}
+          />
         </View>
       </View>
 
@@ -792,6 +926,12 @@ function ProgressScreen({
             styles={styles}
             value={`${hero.xp}`}
           />
+          <HeroStat
+            accentStyle={styles.streakAccent}
+            label="Streak"
+            styles={styles}
+            value={`${hero.streakCount}d`}
+          />
         </View>
       </View>
 
@@ -822,6 +962,11 @@ function ProgressScreen({
             label="Completed Quests"
             styles={styles}
             value={`${stats.completedCount}`}
+          />
+          <ProgressMetric
+            label="Current Streak"
+            styles={styles}
+            value={`${hero.streakCount} days`}
           />
         </View>
       </View>
@@ -1015,6 +1160,11 @@ function App() {
       const updatedXp =
         currentState.hero.xp +
         completionXpByDifficulty[questToComplete.difficulty];
+      const updatedStreak = getNextStreakProgress(
+        currentState.hero.streakCount,
+        currentState.hero.lastCompletedDate,
+        getDateKey(),
+      );
 
       setCompletionFeedback({
         questTitle: questToComplete.title,
@@ -1023,7 +1173,11 @@ function App() {
 
       return {
         ...currentState,
-        hero: createHeroProgress(updatedXp),
+        hero: createHeroProgress(
+          updatedXp,
+          updatedStreak.streakCount,
+          updatedStreak.lastCompletedDate,
+        ),
         quests: currentState.quests.map(quest =>
           quest.id === questId ? { ...quest, status: 'Completed' } : quest,
         ),
@@ -1228,13 +1382,15 @@ function createStyles(theme: ThemePalette) {
     },
     heroStatsRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: 12,
       marginTop: 22,
     },
     heroStat: {
       backgroundColor: theme.surfaceHigh,
       borderRadius: 18,
-      flex: 1,
+      flexGrow: 1,
+      flexBasis: '30%',
       paddingHorizontal: 14,
       paddingVertical: 16,
     },
@@ -1254,6 +1410,10 @@ function createStyles(theme: ThemePalette) {
     },
     xpAccent: {
       color: theme.blueSoft,
+      fontSize: 20,
+    },
+    streakAccent: {
+      color: theme.success,
       fontSize: 20,
     },
     boardActionCard: {
