@@ -23,6 +23,9 @@ type Category = 'Main Quest' | 'Side Quest';
 type Status = 'Ready' | 'In Progress' | 'Completed';
 type ScreenName = 'quest-board' | 'add-quest';
 type RankTitle = 'Novice' | 'Adventurer' | 'Knight' | 'Champion';
+type DifficultyFilter = 'All' | Difficulty;
+type CategoryFilter = 'All' | Category;
+type StatusFilter = 'All' | 'Active' | 'Completed';
 
 type Quest = {
   id: string;
@@ -61,6 +64,19 @@ const theme = {
 
 const difficultyOptions: Difficulty[] = ['Easy', 'Medium', 'Hard', 'Epic'];
 const categoryOptions: Category[] = ['Main Quest', 'Side Quest'];
+const difficultyFilterOptions: DifficultyFilter[] = [
+  'All',
+  'Easy',
+  'Medium',
+  'Hard',
+  'Epic',
+];
+const categoryFilterOptions: CategoryFilter[] = [
+  'All',
+  'Main Quest',
+  'Side Quest',
+];
+const statusFilterOptions: StatusFilter[] = ['All', 'Active', 'Completed'];
 
 const completionXpByDifficulty: Record<Difficulty, number> = {
   Easy: 10,
@@ -190,6 +206,38 @@ function normalizeStoredGameState(state: GameState): GameState {
   };
 }
 
+function questMatchesFilters({
+  quest,
+  searchQuery,
+  selectedCategoryFilter,
+  selectedDifficultyFilter,
+  selectedStatusFilter,
+}: {
+  quest: Quest;
+  searchQuery: string;
+  selectedCategoryFilter: CategoryFilter;
+  selectedDifficultyFilter: DifficultyFilter;
+  selectedStatusFilter: StatusFilter;
+}) {
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const matchesSearch =
+    normalizedQuery.length === 0 ||
+    quest.title.toLowerCase().includes(normalizedQuery);
+  const matchesDifficulty =
+    selectedDifficultyFilter === 'All' ||
+    quest.difficulty === selectedDifficultyFilter;
+  const matchesCategory =
+    selectedCategoryFilter === 'All' || quest.category === selectedCategoryFilter;
+  const matchesStatus =
+    selectedStatusFilter === 'All' ||
+    (selectedStatusFilter === 'Completed' && quest.status === 'Completed') ||
+    (selectedStatusFilter === 'Active' && quest.status !== 'Completed');
+
+  return (
+    matchesSearch && matchesDifficulty && matchesCategory && matchesStatus
+  );
+}
+
 function HeroStat({
   label,
   value,
@@ -315,13 +363,34 @@ function QuestBoardScreen({
   onCompleteQuest: (questId: string) => void;
   onNavigateToAddQuest: () => void;
 }) {
-  const mainQuests = quests.filter(
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDifficultyFilter, setSelectedDifficultyFilter] =
+    useState<DifficultyFilter>('All');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] =
+    useState<CategoryFilter>('All');
+  const [selectedStatusFilter, setSelectedStatusFilter] =
+    useState<StatusFilter>('All');
+
+  const visibleQuests = quests.filter(quest =>
+    questMatchesFilters({
+      quest,
+      searchQuery,
+      selectedCategoryFilter,
+      selectedDifficultyFilter,
+      selectedStatusFilter,
+    }),
+  );
+
+  const mainQuests = visibleQuests.filter(
     quest => quest.category === 'Main Quest' && quest.status !== 'Completed',
   );
-  const sideQuests = quests.filter(
+  const sideQuests = visibleQuests.filter(
     quest => quest.category === 'Side Quest' && quest.status !== 'Completed',
   );
-  const completedQuests = quests.filter(quest => quest.status === 'Completed');
+  const completedQuests = visibleQuests.filter(
+    quest => quest.status === 'Completed',
+  );
+  const hasVisibleQuests = visibleQuests.length > 0;
 
   return (
     <ScrollView
@@ -371,6 +440,61 @@ function QuestBoardScreen({
           <Text style={styles.primaryActionText}>Open Add Quest</Text>
         </Pressable>
       </View>
+
+      <View style={styles.filterCard}>
+        <Text style={styles.sectionTitle}>Search And Filter</Text>
+        <Text style={styles.formIntro}>
+          Narrow the board by title, difficulty, category, and completion
+          status.
+        </Text>
+
+        <View style={styles.formField}>
+          <Text style={styles.formLabel}>Search By Title</Text>
+          <TextInput
+            onChangeText={setSearchQuery}
+            placeholder="Search quests"
+            placeholderTextColor="#7e766b"
+            style={styles.titleInput}
+            testID="quest-search-input"
+            value={searchQuery}
+          />
+        </View>
+
+        <SectionPicker
+          label="Difficulty Filter"
+          onSelect={value =>
+            setSelectedDifficultyFilter(value as DifficultyFilter)
+          }
+          options={difficultyFilterOptions}
+          selectedValue={selectedDifficultyFilter}
+          testIdPrefix="difficulty-filter"
+        />
+
+        <SectionPicker
+          label="Category Filter"
+          onSelect={value => setSelectedCategoryFilter(value as CategoryFilter)}
+          options={categoryFilterOptions}
+          selectedValue={selectedCategoryFilter}
+          testIdPrefix="category-filter"
+        />
+
+        <SectionPicker
+          label="Status Filter"
+          onSelect={value => setSelectedStatusFilter(value as StatusFilter)}
+          options={statusFilterOptions}
+          selectedValue={selectedStatusFilter}
+          testIdPrefix="status-filter"
+        />
+      </View>
+
+      {!hasVisibleQuests ? (
+        <View style={styles.emptyStateCard}>
+          <Text style={styles.emptyStateTitle}>No quests match your filters</Text>
+          <Text style={styles.emptyStateText}>
+            Try a different search or reset one of the filter chips.
+          </Text>
+        </View>
+      ) : null}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Main Quest</Text>
@@ -764,6 +888,14 @@ const styles = StyleSheet.create({
     marginTop: 28,
     padding: 20,
   },
+  filterCard: {
+    backgroundColor: theme.surface,
+    borderColor: theme.ghostBorder,
+    borderRadius: 24,
+    borderWidth: 1,
+    marginTop: 20,
+    padding: 20,
+  },
   primaryActionButton: {
     alignItems: 'center',
     backgroundColor: theme.amber,
@@ -858,6 +990,25 @@ const styles = StyleSheet.create({
   },
   section: {
     marginTop: 28,
+  },
+  emptyStateCard: {
+    backgroundColor: theme.surfaceLow,
+    borderColor: theme.ghostBorder,
+    borderRadius: 22,
+    borderWidth: 1,
+    marginTop: 28,
+    padding: 18,
+  },
+  emptyStateTitle: {
+    color: theme.textPrimary,
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    color: '#b3aba0',
+    fontSize: 14,
+    lineHeight: 21,
   },
   sectionTitle: {
     color: theme.textPrimary,

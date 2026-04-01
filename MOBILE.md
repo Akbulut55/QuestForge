@@ -1,87 +1,315 @@
-# QuestForge Mobile Iterations
+# MOBILE.md - NAIM Evolution Log
 
-## Iteration 1 - Quest Board
-- Date: 2026-03-31
-- Design source: Stitch project `4285400526736348128`, screen `Quest Board`
-- Goal: Build a single dark-themed Quest Board screen with static quest data
-- Implemented:
-  - App title: Quest Forge
-  - Hero card with Level, XP, and Rank Title
-  - Three quest sections: Main Quest, Side Quests, Completed Quests
-  - Three static quest cards showing title, difficulty, XP reward, and status
-- Verification:
-  - `npm test -- --runInBand`
-  - `npx eslint App.tsx __tests__/App.test.tsx`
-- Screenshot: Capture after running the app locally for this iteration
-- Commit: Use the assignment commit format after verifying the screen locally
+> This file is the autoresearch log for QuestForge.
+> Every iteration gets documented here.
 
-## Iteration 2 - Quest Input Flow
-- Date: 2026-03-31
-- Design source: Stitch project `4285400526736348128`, screen `Add Quest`
-- Goal: Add a minimal in-memory quest creation flow inside the existing Quest Board
-- Implemented:
-  - Added an inline `Forge New Quest` input card on the current board
-  - Added quest title input
-  - Added difficulty selection: Easy, Medium, Hard, Epic
-  - Added category selection: Main Quest or Side Quest
-  - Added save button that immediately inserts the quest into the matching board section
-  - Kept quest creation in memory only with no storage or navigation added
-- Verification:
-  - `npm test -- --runInBand`
-  - `npx eslint App.tsx __tests__/App.test.tsx`
-  - `npx tsc --noEmit`
-- Screenshot: Capture after creating a quest successfully in the running app
-- Commit: Use the assignment commit format after verifying the flow locally
+---
 
-## Iteration 3 - Multi-Screen Navigation
-- Date: 2026-03-31
-- Design source: Stitch project `4285400526736348128`, screens `Quest Board` and `Add Quest`
-- Goal: Separate the board and quest creation flow into dedicated screens while keeping the in-memory quest flow working
-- Implemented:
-  - Kept Quest Board as the home screen
-  - Moved the quest creation form into a dedicated Add Quest screen
-  - Added navigation from Quest Board to Add Quest
-  - Added a back action from Add Quest to Quest Board
-  - Kept quest creation in memory and returned to the board after saving
-  - Confirmed saved quests appear immediately on the Quest Board
-- Verification:
-  - `npm test -- --runInBand`
-  - `npx eslint App.tsx __tests__/App.test.tsx`
-  - `npx tsc --noEmit`
-- Screenshot: Capture after navigating to Add Quest, saving a quest, and returning to the board
-- Commit: Use the assignment commit format after verifying the flow locally
+## Identity
 
-## Iteration 4 - Local Quest Persistence
-- Date: 2026-03-31
-- Goal: Persist the quest list locally on the device while preserving the current UI flow
-- Storage approach: `@react-native-async-storage/async-storage`
-- Implemented:
-  - Added a minimal storage helper for loading and saving quests
-  - Loaded persisted quests when the app starts
-  - Saved quest changes locally whenever the quest list changes
-  - Kept the current Quest Board and Add Quest screens unchanged in behavior
-  - Preserved in-memory quest creation while adding local device persistence underneath it
-- Verification:
-  - `npm test -- --runInBand`
-  - `npx eslint App.tsx __tests__/App.test.tsx src/storage/questStorage.ts`
-  - `npx tsc --noEmit`
-- Screenshot: Capture after saving a quest, closing the app, and confirming it still appears after reopening
-- Commit: Use the assignment commit format after verifying persistence locally
+**NAIM Name:** `Quest Blacksmith`
+**Crew:** `[Fill in your group name]`
+**App Concept:** `QuestForge turns daily tasks into RPG-style quests with XP, ranks, and progression.`
+**Starting Tool:** `Stitch + Codex`
 
-## Iteration 5 - XP And Rank Progression
-- Date: 2026-03-31
-- Goal: Add quest completion, XP awards, and rank progression while keeping the current quest flow simple
-- Implemented:
-  - Added a `Mark Completed` action for active quests on the Quest Board
-  - Awarded XP on completion using difficulty-based values: Easy `10`, Medium `20`, Hard `35`, Epic `50`
-  - Moved completed quests into the existing Completed Quests section
-  - Updated the hero card to show live XP and rank title progression
-  - Added simple rank milestones: `Novice`, `Adventurer`, `Knight`, `Champion`
-  - Persisted hero progress together with quests in local storage
-  - Added migration support for the previous quest-only storage format from Iteration 4
-- Verification:
-  - `npm test -- --runInBand`
-  - `npx eslint App.tsx __tests__/App.test.tsx src/storage/questStorage.ts`
-  - `npx tsc --noEmit`
-- Screenshot: Capture after completing a quest and seeing XP and rank update on the board
-- Commit: Use the assignment commit format after verifying the progression flow locally
+---
+
+## Scoreboard
+
+| Metric | Value |
+|--------|-------|
+| Total Iterations | 6 |
+| Total Weight (kg) | 70 |
+| Total Time (min) | Not tracked |
+| Failed Attempts | Not tracked |
+
+---
+
+## Iterations
+
+---
+
+### Iteration 1
+
+| Field | Value |
+|-------|-------|
+| Feature | `Basic Quest Board UI` |
+| Weight | `5 kg` |
+| Tool Used | `Stitch + Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+You are working inside my local React Native project called QuestForge.
+
+Important assignment constraints:
+- This is for a NAIM-style iterative mobile app assignment
+- I must build one small feature per iteration
+- I must document each iteration in MOBILE.md
+- I must take a screenshot after each successful iteration
+- I must commit after each iteration
+- So do NOT build the whole app at once
+
+Use the connected Stitch MCP server as the design source.
+
+Task: Implement ONLY Iteration 1.
+
+Project concept:
+QuestForge turns daily tasks into RPG-style quests with XP, ranks, and progression.
+
+Iteration 1 goal:
+Build a single Quest Board screen only.
+```
+
+**What happened:**
+- Built the first Quest Board screen using the Stitch `Quest Board` screen as the reference.
+- The app got a dark RPG-inspired layout with hero stats and three static quest sections.
+
+**Screenshot:** `iteration-1-quest-board.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Basic Quest Board UI - 5kg`
+
+---
+
+### Iteration 2
+
+| Field | Value |
+|-------|-------|
+| Feature | `Add quest input flow` |
+| Weight | `10 kg` |
+| Tool Used | `Stitch + Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+You are continuing my local React Native project called QuestForge.
+
+Important assignment constraints:
+- This is for a NAIM-style iterative mobile app assignment
+- I must build one small feature per iteration
+- I must document each iteration in MOBILE.md
+- I must take a screenshot after each successful iteration
+- I must commit after each iteration
+- So do NOT build extra features beyond this iteration
+
+Current state:
+- Iteration 1 is already done
+- The app already has a Quest Board screen with static mock quest sections and quest cards
+
+Task: Implement ONLY Iteration 2.
+
+Iteration 2 goal:
+Add the quest creation input flow.
+```
+
+**What happened:**
+- Added an in-memory quest creation flow directly onto the Quest Board.
+- Users could enter a title, choose difficulty and category, and see the new quest appear immediately.
+
+**Screenshot:** `iteration-2-add-quest-flow.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add quest input flow - 10kg`
+
+---
+
+### Iteration 3
+
+| Field | Value |
+|-------|-------|
+| Feature | `Multi-screen navigation` |
+| Weight | `15 kg` |
+| Tool Used | `Stitch + Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+You are continuing my local React Native project called QuestForge.
+
+Important assignment constraints:
+- This is for a NAIM-style iterative mobile app assignment
+- I must build one small feature per iteration
+- I must document each iteration in MOBILE.md
+- I must take a screenshot after each successful iteration
+- I must commit after each iteration
+- So do NOT build extra features beyond this iteration
+
+Current state:
+- Iteration 1 is already done: Quest Board UI
+- Iteration 2 is already done: in-memory add quest flow
+
+Task: Implement ONLY Iteration 3.
+
+Iteration 3 goal:
+Add proper multi-screen navigation.
+```
+
+**What happened:**
+- Split the flow into a dedicated `Quest Board` screen and `Add Quest` screen.
+- Saving a quest returned the user to the board with the new quest visible.
+
+**Screenshot:** `iteration-3-navigation.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add multi-screen navigation - 15kg`
+
+---
+
+### Iteration 4
+
+| Field | Value |
+|-------|-------|
+| Feature | `Local quest persistence` |
+| Weight | `20 kg` |
+| Tool Used | `Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+You are continuing my local React Native project called QuestForge.
+
+Important assignment constraints:
+- This is for a NAIM-style iterative mobile app assignment
+- I must build one small feature per iteration
+- I must document each iteration in MOBILE.md
+- I must take a screenshot after each successful iteration
+- I must commit after each iteration
+- So do NOT build extra features beyond this iteration
+
+Current state:
+- Iteration 1 is done: Quest Board UI
+- Iteration 2 is done: add quest input flow
+- Iteration 3 is done: multi-screen navigation
+
+Task: Implement ONLY Iteration 4.
+
+Iteration 4 goal:
+Add local persistence for quests.
+```
+
+**What happened:**
+- Added AsyncStorage-based local persistence for the quest list.
+- Saved quests now stay on the device after the app is closed and reopened.
+
+**Screenshot:** `iteration-4-persistence.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add local quest persistence - 20kg`
+
+---
+
+### Iteration 5
+
+| Field | Value |
+|-------|-------|
+| Feature | `XP and rank progression` |
+| Weight | `10 kg` |
+| Tool Used | `Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+You are continuing my local React Native project called QuestForge.
+
+Important assignment constraints:
+- This is for a NAIM-style iterative mobile app assignment
+- I must build one small feature per iteration
+- I must document each iteration in MOBILE.md
+- I must take a screenshot after each successful iteration
+- I must commit after each iteration
+- So do NOT build extra features beyond this iteration
+
+Current state:
+- Iteration 1 is done: Quest Board UI
+- Iteration 2 is done: add quest input flow
+- Iteration 3 is done: multi-screen navigation
+- Iteration 4 is done: local persistence
+
+Task: Implement ONLY Iteration 5.
+
+Iteration 5 goal:
+Add XP and rank progression logic.
+```
+
+**What happened:**
+- Added quest completion, XP gain by difficulty, and rank progression on the hero card.
+- Completed quests now move into the completed section and hero progress is persisted with quest data.
+
+**Screenshot:** `iteration-5-xp-rank.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add XP and rank progression - 10kg`
+
+---
+
+### Iteration 6
+
+| Field | Value |
+|-------|-------|
+| Feature | `Search and filter quests` |
+| Weight | `10 kg` |
+| Tool Used | `Codex` |
+| Time | `6 min` |
+| Attempts | `1` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+You are continuing my local React Native project called QuestForge.
+
+Important assignment constraints:
+- This is for a NAIM-style iterative mobile app assignment
+- I must build one small feature per iteration
+- I must document each iteration in MOBILE.md
+- I must take a screenshot after each successful iteration
+- I must commit after each iteration
+- So do NOT build extra features beyond this iteration
+
+Current state:
+- Iteration 1 is done: Quest Board UI
+- Iteration 2 is done: add quest input flow
+- Iteration 3 is done: multi-screen navigation
+- Iteration 4 is done: local persistence
+- Iteration 5 is done: XP and rank progression
+
+Task: Implement ONLY Iteration 6.
+
+Iteration 6 goal:
+Add search and filter functionality for quests.
+```
+
+**What happened:**
+- Added a live search input and simple filters for difficulty, category, and status on the Quest Board.
+- The filters work together in real time while preserving the existing quest state, XP/rank progression, and persistence behavior.
+
+**Screenshot:** `iteration-6-search-filter.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add search and filter quests - 10kg`
+
+---
+
+## Reflection
+
+**Hardest part:**
+> Keeping each iteration small while still making the app feel meaningfully better every step.
+
+**What AI did well:**
+> It kept the work iterative, respected the assignment boundaries, and handled both feature development and debugging.
+
+**Where AI failed:**
+> Some dependency and local Android build issues needed extra troubleshooting outside the core app code.
+
+**If I started over, I would:**
+> Track exact time, attempts, screenshot names, and commit hashes from the first iteration instead of filling placeholders later.
+
+**Best feature I built:**
+> XP and rank progression, because it made QuestForge feel like a real game-inspired productivity app.
+
+**Biggest surprise:**
+> Even simple systems like completion, persistence, and filtering made the app feel much more polished without needing complex backend work.

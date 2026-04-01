@@ -156,3 +156,45 @@ test('completing a quest awards XP, updates rank, and saves game state', async (
     expect.stringContaining('"rankTitle":"Knight"'),
   );
 });
+
+test('search and filters work together on the quest board', async () => {
+  let tree: ReactTestRenderer.ReactTestRenderer;
+
+  await ReactTestRenderer.act(async () => {
+    tree = ReactTestRenderer.create(<App />);
+  });
+
+  await ReactTestRenderer.act(async () => {
+    await flushAsyncWork();
+  });
+
+  let root = tree!.root;
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'quest-search-input' }).props.onChangeText(
+      'brew',
+    );
+  });
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'difficulty-filter-medium' }).props.onPress();
+    root.findByProps({ testID: 'category-filter-side-quest' }).props.onPress();
+    root.findByProps({ testID: 'status-filter-active' }).props.onPress();
+  });
+
+  root = tree!.root;
+
+  expect(
+    root.findAll(node => node.props.children === 'Brew a Focus Potion').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(
+      node => node.props.children === 'Defeat the Laundry Dragon',
+    ).length,
+  ).toBe(0);
+  expect(
+    root.findAll(
+      node => node.props.children === 'Sharpen the Study Blade',
+    ).length,
+  ).toBe(0);
+});
