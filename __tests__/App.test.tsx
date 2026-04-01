@@ -301,6 +301,24 @@ test('progress screen shows derived hero and quest summary stats', async () => {
     root.findAll(node => node.props.children === 'Completed Quests').length,
   ).toBeGreaterThan(0);
   expect(
+    root.findAll(node => node.props.children === 'Achievements').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'First Quest').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Quest Finisher').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Rising Hero').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Unlocked').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Locked').length,
+  ).toBeGreaterThan(0);
+  expect(
     root.findAll(node => node.props.children === 'Switch to Light Mode').length,
   ).toBeGreaterThan(0);
 
@@ -377,6 +395,50 @@ test('editing a quest updates its details and persists the changes', async () =>
     expect.stringContaining('"category":"Main Quest"'),
   );
   expect(editedRender).toContain('"Open Add Quest"');
+});
+
+test('completing a quest unlocks achievement badges and persists them', async () => {
+  let tree: ReactTestRenderer.ReactTestRenderer;
+
+  await ReactTestRenderer.act(async () => {
+    tree = ReactTestRenderer.create(<App />);
+  });
+
+  await ReactTestRenderer.act(async () => {
+    await flushAsyncWork();
+  });
+
+  let root = tree!.root;
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'complete-quest-quest-1' }).props.onPress();
+  });
+
+  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
+    GAME_STATE_STORAGE_KEY,
+    expect.stringContaining('"unlockedAchievementIds"'),
+  );
+  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
+    GAME_STATE_STORAGE_KEY,
+    expect.stringContaining('"rising-hero"'),
+  );
+  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
+    GAME_STATE_STORAGE_KEY,
+    expect.stringContaining('"quest-finisher"'),
+  );
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'navigate-to-progress-screen' }).props.onPress();
+  });
+
+  root = tree!.root;
+
+  expect(
+    root.findAll(node => node.props.children === 'Rising Hero').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Unlocked').length,
+  ).toBeGreaterThan(0);
 });
 
 test('deleting a quest from the edit screen removes it and persists the update', async () => {

@@ -18,8 +18,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 11 |
-| Total Weight (kg) | 120 |
+| Total Iterations | 12 |
+| Total Weight (kg) | 130 |
 | Total Time (min) | Not tracked |
 | Failed Attempts | Not tracked |
 
@@ -536,6 +536,58 @@ Add edit and delete quest management.
 **Screenshot:** `iteration-11-edit-delete-quests.png`
 
 **Commit:** `[NAIM: Quest Blacksmith] Add edit and delete quest management - 10kg`
+
+---
+
+### Iteration 12
+
+| Field | Value |
+|-------|-------|
+| Feature | `Achievement badge system` |
+| Weight | `10 kg` |
+| Tool Used | `Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+You are continuing my local React Native project called QuestForge.
+
+Important assignment constraints:
+- This is for a NAIM-style iterative mobile app assignment
+- I must build one small feature per iteration
+- I must document each iteration in MOBILE.md
+- I must take a screenshot after each successful iteration
+- I must commit after each iteration
+- So do NOT build extra features beyond this iteration
+
+Current state:
+- Iteration 1 is done: Quest Board UI
+- Iteration 2 is done: add quest input flow
+- Iteration 3 is done: multi-screen navigation
+- Iteration 4 is done: local persistence
+- Iteration 5 is done: XP and rank progression
+- Iteration 6 is done: search and filter quests
+- Iteration 7 is done: manual theme toggle
+- Iteration 8 is done: profile progress screen
+- Iteration 9 is done: quest completion animation
+- Iteration 10 is done: daily streak system
+- Iteration 11 is done: edit and delete quest management
+
+Task: Implement ONLY Iteration 12.
+
+Iteration 12 goal:
+Add an achievement badge system.
+```
+
+**What happened:**
+- Added a small centralized achievement badge system that unlocks automatically from existing quest, XP, and streak data.
+- The unlocked badges are persisted with the saved game state and displayed on the Progress screen, while locked badges remain visible in a muted style for simple progress tracking.
+
+**Screenshot:** `iteration-12-achievement-badges.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add achievement badge system - 10kg`
 
 ---
 

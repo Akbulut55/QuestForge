@@ -24,6 +24,12 @@ type Category = 'Main Quest' | 'Side Quest';
 type Status = 'Ready' | 'In Progress' | 'Completed';
 type ScreenName = 'quest-board' | 'add-quest' | 'progress';
 type RankTitle = 'Novice' | 'Adventurer' | 'Knight' | 'Champion';
+type AchievementId =
+  | 'first-quest'
+  | 'quest-finisher'
+  | 'rising-hero'
+  | 'streak-keeper'
+  | 'quest-master';
 type DifficultyFilter = 'All' | Difficulty;
 type CategoryFilter = 'All' | Category;
 type StatusFilter = 'All' | 'Active' | 'Completed';
@@ -49,6 +55,7 @@ type GameState = {
   hero: HeroProgress;
   quests: Quest[];
   themeMode: ThemeMode;
+  unlockedAchievementIds: AchievementId[];
 };
 
 type ProgressStats = {
@@ -61,6 +68,12 @@ type ProgressStats = {
 type CompletionFeedback = {
   questTitle: string;
   xpGained: number;
+};
+
+type AchievementDefinition = {
+  id: AchievementId;
+  title: string;
+  description: string;
 };
 
 type ThemePalette = {
@@ -177,6 +190,34 @@ const initialQuests: Quest[] = [
     xpReward: 10,
     status: 'Completed',
     category: 'Side Quest',
+  },
+];
+
+const achievementDefinitions: AchievementDefinition[] = [
+  {
+    id: 'first-quest',
+    title: 'First Quest',
+    description: 'Create the first quest in your log.',
+  },
+  {
+    id: 'quest-finisher',
+    title: 'Quest Finisher',
+    description: 'Complete your first quest.',
+  },
+  {
+    id: 'rising-hero',
+    title: 'Rising Hero',
+    description: 'Reach 50 XP.',
+  },
+  {
+    id: 'streak-keeper',
+    title: 'Streak Keeper',
+    description: 'Reach a 3-day streak.',
+  },
+  {
+    id: 'quest-master',
+    title: 'Quest Master',
+    description: 'Complete 10 quests.',
   },
 ];
 
@@ -365,23 +406,31 @@ function normalizeQuest(quest: Omit<Quest, 'id'> & Partial<Pick<Quest, 'id'>>) {
 
 function createInitialGameState(): GameState {
   const normalizedQuests = initialQuests.map(normalizeQuest);
-  const startingXp = calculateCompletedQuestXp(normalizedQuests);
+  const hero = createHeroProgress(calculateCompletedQuestXp(normalizedQuests));
 
   return {
-    hero: createHeroProgress(startingXp),
+    hero,
     quests: normalizedQuests,
     themeMode: 'dark',
+    unlockedAchievementIds: getUnlockedAchievementIds({
+      hero,
+      quests: normalizedQuests,
+    }),
   };
 }
 
 function migrateLegacyQuests(quests: Quest[]): GameState {
   const normalizedQuests = quests.map(normalizeQuest);
-  const heroXp = calculateCompletedQuestXp(normalizedQuests);
+  const hero = createHeroProgress(calculateCompletedQuestXp(normalizedQuests));
 
   return {
-    hero: createHeroProgress(heroXp),
+    hero,
     quests: normalizedQuests,
     themeMode: 'dark',
+    unlockedAchievementIds: getUnlockedAchievementIds({
+      hero,
+      quests: normalizedQuests,
+    }),
   };
 }
 
@@ -392,14 +441,21 @@ function normalizeStoredGameState(state: GameState): GameState {
       ? state.hero.xp
       : calculateCompletedQuestXp(normalizedQuests);
 
+  const hero = createHeroProgress(
+    normalizedXp,
+    state.hero?.streakCount,
+    state.hero?.lastCompletedDate ?? null,
+  );
+
   return {
-    hero: createHeroProgress(
-      normalizedXp,
-      state.hero?.streakCount,
-      state.hero?.lastCompletedDate ?? null,
-    ),
+    hero,
     quests: normalizedQuests,
     themeMode: state.themeMode === 'light' ? 'light' : 'dark',
+    unlockedAchievementIds: getUnlockedAchievementIds({
+      hero,
+      quests: normalizedQuests,
+      existingUnlockedAchievementIds: state.unlockedAchievementIds ?? [],
+    }),
   };
 }
 
@@ -444,6 +500,65 @@ function getProgressStats(quests: Quest[]): ProgressStats {
   };
 }
 
+function shouldUnlockAchievement({
+  achievementId,
+  hero,
+  quests,
+  stats,
+}: {
+  achievementId: AchievementId;
+  hero: HeroProgress;
+  quests: Quest[];
+  stats: ProgressStats;
+}) {
+  switch (achievementId) {
+    case 'first-quest':
+      return quests.length >= 1;
+    case 'quest-finisher':
+      return stats.totalCompleted >= 1;
+    case 'rising-hero':
+      return hero.xp >= 50;
+    case 'streak-keeper':
+      return hero.streakCount >= 3;
+    case 'quest-master':
+      return stats.totalCompleted >= 10;
+    default:
+      return false;
+  }
+}
+
+function getUnlockedAchievementIds({
+  hero,
+  quests,
+  existingUnlockedAchievementIds = [],
+}: {
+  hero: HeroProgress;
+  quests: Quest[];
+  existingUnlockedAchievementIds?: AchievementId[];
+}) {
+  const stats = getProgressStats(quests);
+  const unlockedAchievementIds = new Set<AchievementId>(
+    existingUnlockedAchievementIds,
+  );
+
+  achievementDefinitions.forEach(achievement => {
+    if (
+      shouldUnlockAchievement({
+        achievementId: achievement.id,
+        hero,
+        quests,
+        stats,
+      })
+    ) {
+      unlockedAchievementIds.add(achievement.id);
+    }
+  });
+
+  return achievementDefinitions
+    .map(achievement => achievement.id)
+    .filter(achievementId => unlockedAchievementIds.has(achievementId));
+}
+
 function HeroStat({
   label,
   value,
@@ -476,6 +591,54 @@ function ProgressMetric({
     <View style={styles.progressMetricCard}>
       <Text style={styles.progressMetricLabel}>{label}</Text>
       <Text style={styles.progressMetricValue}>{value}</Text>
+    </View>
+  );
+}
+
+function AchievementBadge({
+  achievement,
+  isUnlocked,
+  styles,
+}: {
+  achievement: AchievementDefinition;
+  isUnlocked: boolean;
+  styles: ReturnType<typeof createStyles>;
+}) {
+  return (
+    <View
+      style={[
+        styles.achievementCard,
+        isUnlocked
+          ? styles.achievementCardUnlocked
+          : styles.achievementCardLocked,
+      ]}>
+      <Text
+        style={[
+          styles.achievementTitle,
+          isUnlocked
+            ? styles.achievementTitleUnlocked
+            : styles.achievementTitleLocked,
+        ]}>
+        {achievement.title}
+      </Text>
+      <Text
+        style={[
+          styles.achievementDescription,
+          isUnlocked
+            ? styles.achievementDescriptionUnlocked
+            : styles.achievementDescriptionLocked,
+        ]}>
+        {achievement.description}
+      </Text>
+      <Text
+        style={[
+          styles.achievementStatus,
+          isUnlocked
+            ? styles.achievementStatusUnlocked
+            : styles.achievementStatusLocked,
+        ]}>
+        {isUnlocked ? 'Unlocked' : 'Locked'}
+      </Text>
     </View>
   );
 }
@@ -884,6 +1047,7 @@ function QuestBoardScreen({
 function ProgressScreen({
   hero,
   quests,
+  unlockedAchievementIds,
   onBack,
   onToggleTheme,
   styles,
@@ -891,6 +1055,7 @@ function ProgressScreen({
 }: {
   hero: HeroProgress;
   quests: Quest[];
+  unlockedAchievementIds: AchievementId[];
   onBack: () => void;
   onToggleTheme: () => void;
   styles: ReturnType<typeof createStyles>;
@@ -988,6 +1153,25 @@ function ProgressScreen({
             styles={styles}
             value={`${hero.streakCount} days`}
           />
+        </View>
+      </View>
+
+      <View style={styles.formCard}>
+        <Text style={styles.sectionTitle}>Achievements</Text>
+        <Text style={styles.formIntro}>
+          Badges unlock automatically from the progress you already build on the
+          quest board.
+        </Text>
+
+        <View style={styles.achievementGrid}>
+          {achievementDefinitions.map(achievement => (
+            <AchievementBadge
+              achievement={achievement}
+              isUnlocked={unlockedAchievementIds.includes(achievement.id)}
+              key={achievement.id}
+              styles={styles}
+            />
+          ))}
         </View>
       </View>
     </ScrollView>
@@ -1214,31 +1398,42 @@ function App() {
       const existingQuest = currentState.quests.find(
         currentQuest => currentQuest.id === normalizedQuest.id,
       );
-
-      if (existingQuest) {
-        return {
-          ...currentState,
-          quests: currentState.quests.map(currentQuest =>
+      const nextQuests = existingQuest
+        ? currentState.quests.map(currentQuest =>
             currentQuest.id === normalizedQuest.id
               ? normalizedQuest
               : currentQuest,
-          ),
-        };
-      }
+          )
+        : [normalizedQuest, ...currentState.quests];
+      const unlockedAchievementIds = getUnlockedAchievementIds({
+        hero: currentState.hero,
+        quests: nextQuests,
+        existingUnlockedAchievementIds: currentState.unlockedAchievementIds,
+      });
 
       return {
         ...currentState,
-        quests: [normalizedQuest, ...currentState.quests],
+        quests: nextQuests,
+        unlockedAchievementIds,
       };
     });
     returnToBoard();
   };
 
   const handleDeleteQuest = (questId: string) => {
-    setGameState(currentState => ({
-      ...currentState,
-      quests: currentState.quests.filter(quest => quest.id !== questId),
-    }));
+    setGameState(currentState => {
+      const nextQuests = currentState.quests.filter(quest => quest.id !== questId);
+
+      return {
+        ...currentState,
+        quests: nextQuests,
+        unlockedAchievementIds: getUnlockedAchievementIds({
+          hero: currentState.hero,
+          quests: nextQuests,
+          existingUnlockedAchievementIds: currentState.unlockedAchievementIds,
+        }),
+      };
+    });
     returnToBoard();
   };
 
@@ -1276,6 +1471,17 @@ function App() {
         quests: currentState.quests.map(quest =>
           quest.id === questId ? { ...quest, status: 'Completed' } : quest,
         ),
+        unlockedAchievementIds: getUnlockedAchievementIds({
+          hero: createHeroProgress(
+            updatedXp,
+            updatedStreak.streakCount,
+            updatedStreak.lastCompletedDate,
+          ),
+          quests: currentState.quests.map(quest =>
+            quest.id === questId ? { ...quest, status: 'Completed' } : quest,
+          ),
+          existingUnlockedAchievementIds: currentState.unlockedAchievementIds,
+        }),
       };
     });
   };
@@ -1330,6 +1536,7 @@ function App() {
                 quests={gameState.quests}
                 styles={styles}
                 themeMode={gameState.themeMode}
+                unlockedAchievementIds={gameState.unlockedAchievementIds}
               />
             ) : (
               <AddQuestScreen
@@ -1855,6 +2062,58 @@ function createStyles(theme: ThemePalette) {
       color: theme.textPrimary,
       fontSize: 24,
       fontWeight: '700',
+    },
+    achievementGrid: {
+      gap: 12,
+      marginTop: 8,
+    },
+    achievementCard: {
+      borderRadius: 20,
+      borderWidth: 1,
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+    },
+    achievementCardUnlocked: {
+      backgroundColor: theme.activeBadgeBackground,
+      borderColor: theme.amber,
+    },
+    achievementCardLocked: {
+      backgroundColor: theme.surfaceLow,
+      borderColor: theme.ghostBorder,
+    },
+    achievementTitle: {
+      fontSize: 17,
+      fontWeight: '700',
+      marginBottom: 6,
+    },
+    achievementTitleUnlocked: {
+      color: theme.textPrimary,
+    },
+    achievementTitleLocked: {
+      color: theme.textMuted,
+    },
+    achievementDescription: {
+      fontSize: 13,
+      lineHeight: 19,
+      marginBottom: 10,
+    },
+    achievementDescriptionUnlocked: {
+      color: theme.subtitle,
+    },
+    achievementDescriptionLocked: {
+      color: theme.placeholder,
+    },
+    achievementStatus: {
+      fontSize: 12,
+      fontWeight: '700',
+      letterSpacing: 1.1,
+      textTransform: 'uppercase',
+    },
+    achievementStatusUnlocked: {
+      color: theme.amberSoft,
+    },
+    achievementStatusLocked: {
+      color: theme.textMuted,
     },
   });
 }
