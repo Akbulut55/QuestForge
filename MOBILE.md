@@ -18,8 +18,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 7 |
-| Total Weight (kg) | 75 |
+| Total Iterations | 9 |
+| Total Weight (kg) | 100 |
 | Total Time (min) | Not tracked |
 | Failed Attempts | Not tracked |
 
@@ -338,6 +338,103 @@ Add a manual theme toggle for light mode and dark mode.
 **Screenshot:** `iteration-7-theme-toggle.png`
 
 **Commit:** `[NAIM: Quest Blacksmith] Add theme toggle - 5kg`
+
+---
+
+### Iteration 8
+
+| Field | Value |
+|-------|-------|
+| Feature | `Profile / Progress screen` |
+| Weight | `15 kg` |
+| Tool Used | `Codex` |
+| Time | `7 min` |
+| Attempts | `1` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+You are continuing my local React Native project called QuestForge.
+
+Important assignment constraints:
+- This is for a NAIM-style iterative mobile app assignment
+- I must build one small feature per iteration
+- I must document each iteration in MOBILE.md
+- I must take a screenshot after each successful iteration
+- I must commit after each iteration
+- So do NOT build extra features beyond this iteration
+
+Current state:
+- Iteration 1 is done: Quest Board UI
+- Iteration 2 is done: add quest input flow
+- Iteration 3 is done: multi-screen navigation
+- Iteration 4 is done: local persistence
+- Iteration 5 is done: XP and rank progression
+- Iteration 6 is done: search and filter quests
+- Iteration 7 is done: manual theme toggle
+
+Task: Implement ONLY Iteration 8.
+
+Iteration 8 goal:
+Add a dedicated Profile / Progress screen.
+```
+
+**What happened:**
+- Added a dedicated Progress screen that reuses the existing hero and quest state instead of introducing new data or new persistence rules.
+- The screen shows current XP, rank title, total quests created, total quests completed, active quests, and completed quests while preserving theme support and the current app flow.
+
+**Screenshot:** `iteration-8-profile-progress.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add profile progress screen - 15kg`
+
+---
+
+### Iteration 9
+
+| Field | Value |
+|-------|-------|
+| Feature | `Quest completion animation / visual feedback` |
+| Weight | `10 kg` |
+| Tool Used | `Codex` |
+| Time | `11 min` |
+| Attempts | `1` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+You are continuing my local React Native project called QuestForge.
+
+Important assignment constraints:
+- This is for a NAIM-style iterative mobile app assignment
+- I must build one small feature per iteration
+- I must document each iteration in MOBILE.md
+- I must take a screenshot after each successful iteration
+- I must commit after each iteration
+- So do NOT build extra features beyond this iteration
+
+Current state:
+- Iteration 1 is done: Quest Board UI
+- Iteration 2 is done: add quest input flow
+- Iteration 3 is done: multi-screen navigation
+- Iteration 4 is done: local persistence
+- Iteration 5 is done: XP and rank progression
+- Iteration 6 is done: search and filter quests
+- Iteration 7 is done: manual theme toggle
+- Iteration 8 is done: profile progress screen
+
+Task: Implement ONLY Iteration 9.
+
+Iteration 9 goal:
+Add a custom quest completion animation / visual feedback.
+```
+
+**What happened:**
+- Added a lightweight quest completion feedback banner on the Quest Board that appears when a quest is marked complete.
+- The banner shows a clear `Quest Complete` reward message with the quest title and XP gained, while keeping the existing completion, persistence, theme, and progression logic unchanged.
+
+**Screenshot:** `iteration-9-completion-feedback.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add quest completion animation - 10kg`
 
 ---
 

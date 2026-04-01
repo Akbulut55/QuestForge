@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   Pressable,
   ScrollView,
   StatusBar,
@@ -21,7 +22,7 @@ import {
 type Difficulty = 'Easy' | 'Medium' | 'Hard' | 'Epic';
 type Category = 'Main Quest' | 'Side Quest';
 type Status = 'Ready' | 'In Progress' | 'Completed';
-type ScreenName = 'quest-board' | 'add-quest';
+type ScreenName = 'quest-board' | 'add-quest' | 'progress';
 type RankTitle = 'Novice' | 'Adventurer' | 'Knight' | 'Champion';
 type DifficultyFilter = 'All' | Difficulty;
 type CategoryFilter = 'All' | Category;
@@ -46,6 +47,18 @@ type GameState = {
   hero: HeroProgress;
   quests: Quest[];
   themeMode: ThemeMode;
+};
+
+type ProgressStats = {
+  totalCreated: number;
+  totalCompleted: number;
+  activeCount: number;
+  completedCount: number;
+};
+
+type CompletionFeedback = {
+  questTitle: string;
+  xpGained: number;
 };
 
 type ThemePalette = {
@@ -292,6 +305,17 @@ function questMatchesFilters({
   return matchesSearch && matchesDifficulty && matchesCategory && matchesStatus;
 }
 
+function getProgressStats(quests: Quest[]): ProgressStats {
+  const totalCompleted = quests.filter(quest => quest.status === 'Completed').length;
+
+  return {
+    totalCreated: quests.length,
+    totalCompleted,
+    activeCount: quests.length - totalCompleted,
+    completedCount: totalCompleted,
+  };
+}
+
 function HeroStat({
   label,
   value,
@@ -307,6 +331,23 @@ function HeroStat({
     <View style={styles.heroStat}>
       <Text style={styles.heroStatLabel}>{label}</Text>
       <Text style={[styles.heroStatValue, accentStyle]}>{value}</Text>
+    </View>
+  );
+}
+
+function ProgressMetric({
+  label,
+  value,
+  styles,
+}: {
+  label: string;
+  value: string;
+  styles: ReturnType<typeof createStyles>;
+}) {
+  return (
+    <View style={styles.progressMetricCard}>
+      <Text style={styles.progressMetricLabel}>{label}</Text>
+      <Text style={styles.progressMetricValue}>{value}</Text>
     </View>
   );
 }
@@ -442,6 +483,8 @@ function QuestBoardScreen({
   onToggleTheme,
   onCompleteQuest,
   onNavigateToAddQuest,
+  onNavigateToProgress,
+  completionFeedback,
 }: {
   hero: HeroProgress;
   quests: Quest[];
@@ -450,6 +493,8 @@ function QuestBoardScreen({
   onToggleTheme: () => void;
   onCompleteQuest: (questId: string) => void;
   onNavigateToAddQuest: () => void;
+  onNavigateToProgress: () => void;
+  completionFeedback: CompletionFeedback | null;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDifficultyFilter, setSelectedDifficultyFilter] =
@@ -458,6 +503,31 @@ function QuestBoardScreen({
     useState<CategoryFilter>('All');
   const [selectedStatusFilter, setSelectedStatusFilter] =
     useState<StatusFilter>('All');
+  const feedbackOpacity = useRef(new Animated.Value(0)).current;
+  const feedbackTranslateY = useRef(new Animated.Value(-12)).current;
+
+  useEffect(() => {
+    if (!completionFeedback) {
+      return;
+    }
+
+    feedbackOpacity.setValue(0);
+    feedbackTranslateY.setValue(-12);
+
+    Animated.parallel([
+      Animated.timing(feedbackOpacity, {
+        duration: 240,
+        toValue: 1,
+        useNativeDriver: true,
+      }),
+      Animated.spring(feedbackTranslateY, {
+        damping: 14,
+        stiffness: 190,
+        toValue: 0,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [completionFeedback, feedbackOpacity, feedbackTranslateY]);
 
   const visibleQuests = quests.filter(quest =>
     questMatchesFilters({
@@ -525,6 +595,26 @@ function QuestBoardScreen({
         </View>
       </View>
 
+      {completionFeedback ? (
+        <Animated.View
+          style={[
+            styles.completionBanner,
+            {
+              opacity: feedbackOpacity,
+              transform: [{ translateY: feedbackTranslateY }],
+            },
+          ]}
+          testID="completion-feedback-banner">
+          <Text style={styles.completionBannerKicker}>Quest Complete</Text>
+          <Text style={styles.completionBannerTitle}>
+            {completionFeedback.questTitle}
+          </Text>
+          <Text style={styles.completionBannerText}>
+            +{completionFeedback.xpGained} XP gained
+          </Text>
+        </Animated.View>
+      ) : null}
+
       <View style={styles.boardActionCard}>
         <Text style={styles.sectionTitle}>Forge New Quest</Text>
         <Text style={styles.formIntro}>
@@ -536,6 +626,12 @@ function QuestBoardScreen({
           style={styles.primaryActionButton}
           testID="navigate-to-add-quest">
           <Text style={styles.primaryActionText}>Open Add Quest</Text>
+        </Pressable>
+        <Pressable
+          onPress={onNavigateToProgress}
+          style={styles.secondaryActionButton}
+          testID="navigate-to-progress-screen">
+          <Text style={styles.secondaryActionText}>Open Progress</Text>
         </Pressable>
       </View>
 
@@ -626,6 +722,108 @@ function QuestBoardScreen({
         {completedQuests.map(quest => (
           <QuestCard key={quest.id} quest={quest} styles={styles} />
         ))}
+      </View>
+    </ScrollView>
+  );
+}
+
+function ProgressScreen({
+  hero,
+  quests,
+  onBack,
+  onToggleTheme,
+  styles,
+  themeMode,
+}: {
+  hero: HeroProgress;
+  quests: Quest[];
+  onBack: () => void;
+  onToggleTheme: () => void;
+  styles: ReturnType<typeof createStyles>;
+  themeMode: ThemeMode;
+}) {
+  const stats = getProgressStats(quests);
+
+  return (
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}>
+      <View style={styles.screenHeader}>
+        <Pressable
+          onPress={onBack}
+          style={styles.backButton}
+          testID="back-from-progress-screen">
+          <Text style={styles.backButtonText}>Back</Text>
+        </Pressable>
+        <Text style={styles.screenLabel}>Quest Board</Text>
+        <ThemeToggle
+          onToggleTheme={onToggleTheme}
+          styles={styles}
+          themeMode={themeMode}
+        />
+      </View>
+
+      <Text style={styles.kicker}>Profile</Text>
+      <Text style={styles.title}>Hero Summary</Text>
+      <Text style={styles.subtitle}>
+        Track the progress you have forged from quests already living in your
+        current log.
+      </Text>
+
+      <View style={styles.heroCard}>
+        <View style={styles.heroHeader}>
+          <View>
+            <Text style={styles.heroEyebrow}>Current Progress</Text>
+            <Text style={styles.heroTitle}>Rank Title: {hero.rankTitle}</Text>
+          </View>
+          <View style={styles.heroOrb} />
+        </View>
+
+        <View style={styles.heroStatsRow}>
+          <HeroStat
+            accentStyle={styles.levelAccent}
+            label="Level"
+            styles={styles}
+            value={getLevelForXp(hero.xp)}
+          />
+          <HeroStat
+            accentStyle={styles.xpAccent}
+            label="XP"
+            styles={styles}
+            value={`${hero.xp}`}
+          />
+        </View>
+      </View>
+
+      <View style={styles.formCard}>
+        <Text style={styles.sectionTitle}>Quest Progress</Text>
+        <Text style={styles.formIntro}>
+          This screen summarizes the quest board without creating any new data
+          or changing your current flow.
+        </Text>
+
+        <View style={styles.progressGrid}>
+          <ProgressMetric
+            label="Total Quests Created"
+            styles={styles}
+            value={`${stats.totalCreated}`}
+          />
+          <ProgressMetric
+            label="Total Quests Completed"
+            styles={styles}
+            value={`${stats.totalCompleted}`}
+          />
+          <ProgressMetric
+            label="Active Quests"
+            styles={styles}
+            value={`${stats.activeCount}`}
+          />
+          <ProgressMetric
+            label="Completed Quests"
+            styles={styles}
+            value={`${stats.completedCount}`}
+          />
+        </View>
       </View>
     </ScrollView>
   );
@@ -753,6 +951,8 @@ function App() {
   const [gameState, setGameState] = useState<GameState>(createInitialGameState);
   const [currentScreen, setCurrentScreen] = useState<ScreenName>('quest-board');
   const [isHydrated, setIsHydrated] = useState(false);
+  const [completionFeedback, setCompletionFeedback] =
+    useState<CompletionFeedback | null>(null);
 
   const currentTheme = themes[gameState.themeMode];
   const styles = createStyles(currentTheme);
@@ -816,6 +1016,11 @@ function App() {
         currentState.hero.xp +
         completionXpByDifficulty[questToComplete.difficulty];
 
+      setCompletionFeedback({
+        questTitle: questToComplete.title,
+        xpGained: completionXpByDifficulty[questToComplete.difficulty],
+      });
+
       return {
         ...currentState,
         hero: createHeroProgress(updatedXp),
@@ -851,9 +1056,20 @@ function App() {
           <>
             {currentScreen === 'quest-board' ? (
               <QuestBoardScreen
+                completionFeedback={completionFeedback}
                 hero={gameState.hero}
                 onCompleteQuest={handleCompleteQuest}
                 onNavigateToAddQuest={() => setCurrentScreen('add-quest')}
+                onNavigateToProgress={() => setCurrentScreen('progress')}
+                onToggleTheme={handleToggleTheme}
+                quests={gameState.quests}
+                styles={styles}
+                themeMode={gameState.themeMode}
+              />
+            ) : currentScreen === 'progress' ? (
+              <ProgressScreen
+                hero={gameState.hero}
+                onBack={() => setCurrentScreen('quest-board')}
                 onToggleTheme={handleToggleTheme}
                 quests={gameState.quests}
                 styles={styles}
@@ -1048,6 +1264,38 @@ function createStyles(theme: ThemePalette) {
       marginTop: 28,
       padding: 20,
     },
+    completionBanner: {
+      backgroundColor: theme.surface,
+      borderColor: theme.success,
+      borderRadius: 24,
+      borderWidth: 1,
+      marginTop: 18,
+      paddingHorizontal: 18,
+      paddingVertical: 16,
+      shadowColor: theme.success,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.18,
+      shadowRadius: 18,
+    },
+    completionBannerKicker: {
+      color: theme.success,
+      fontSize: 12,
+      fontWeight: '700',
+      letterSpacing: 1.4,
+      marginBottom: 6,
+      textTransform: 'uppercase',
+    },
+    completionBannerTitle: {
+      color: theme.textPrimary,
+      fontSize: 20,
+      fontWeight: '700',
+      marginBottom: 6,
+    },
+    completionBannerText: {
+      color: theme.blueSoft,
+      fontSize: 14,
+      fontWeight: '700',
+    },
     filterCard: {
       backgroundColor: theme.surface,
       borderColor: theme.ghostBorder,
@@ -1069,6 +1317,22 @@ function createStyles(theme: ThemePalette) {
       fontSize: 16,
       fontWeight: '800',
       letterSpacing: 0.4,
+    },
+    secondaryActionButton: {
+      alignItems: 'center',
+      backgroundColor: theme.surfaceHigh,
+      borderColor: theme.ghostBorder,
+      borderRadius: 18,
+      borderWidth: 1,
+      marginTop: 12,
+      paddingHorizontal: 18,
+      paddingVertical: 16,
+    },
+    secondaryActionText: {
+      color: theme.textPrimary,
+      fontSize: 16,
+      fontWeight: '700',
+      letterSpacing: 0.3,
     },
     formCard: {
       backgroundColor: theme.surface,
@@ -1265,6 +1529,30 @@ function createStyles(theme: ThemePalette) {
     completeButtonText: {
       color: theme.textPrimary,
       fontSize: 14,
+      fontWeight: '700',
+    },
+    progressGrid: {
+      gap: 12,
+      marginTop: 8,
+    },
+    progressMetricCard: {
+      backgroundColor: theme.surfaceLow,
+      borderColor: theme.ghostBorder,
+      borderRadius: 20,
+      borderWidth: 1,
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+    },
+    progressMetricLabel: {
+      color: theme.textMuted,
+      fontSize: 12,
+      letterSpacing: 1,
+      marginBottom: 8,
+      textTransform: 'uppercase',
+    },
+    progressMetricValue: {
+      color: theme.textPrimary,
+      fontSize: 24,
       fontWeight: '700',
     },
   });

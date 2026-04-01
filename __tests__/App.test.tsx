@@ -144,8 +144,16 @@ test('completing a quest awards XP, updates rank, and saves game state', async (
   root = tree!.root;
   const completedRender = JSON.stringify(tree!.toJSON());
 
+  expect(
+    root.findByProps({ testID: 'completion-feedback-banner' }),
+  ).toBeTruthy();
   expect(completedRender).toContain('"Knight"');
   expect(completedRender).toContain('"60"');
+  expect(completedRender).toContain('"Quest Complete"');
+  expect(completedRender).toContain('"Defeat the Laundry Dragon"');
+  expect(completedRender).toContain('"+"');
+  expect(completedRender).toContain('"50"');
+  expect(completedRender).toContain('" XP gained"');
   expect(() =>
     root.findByProps({ testID: 'complete-quest-quest-1' }),
   ).toThrow();
@@ -240,5 +248,60 @@ test('theme toggle switches modes and persists the selected theme', async () => 
 
   expect(
     root.findAll(node => node.props.children === 'Switch to Dark Mode').length,
+  ).toBeGreaterThan(0);
+});
+
+test('progress screen shows derived hero and quest summary stats', async () => {
+  let tree: ReactTestRenderer.ReactTestRenderer;
+
+  await ReactTestRenderer.act(async () => {
+    tree = ReactTestRenderer.create(<App />);
+  });
+
+  await ReactTestRenderer.act(async () => {
+    await flushAsyncWork();
+  });
+
+  let root = tree!.root;
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'navigate-to-progress-screen' }).props.onPress();
+  });
+
+  root = tree!.root;
+  const progressRender = JSON.stringify(tree!.toJSON());
+
+  expect(
+    root.findAll(node => node.props.children === 'Hero Summary').length,
+  ).toBeGreaterThan(0);
+  expect(progressRender).toContain('"Rank Title: "');
+  expect(progressRender).toContain('"Novice"');
+  expect(
+    root.findAll(node => node.props.children === 'Total Quests Created').length,
+  ).toBeGreaterThan(0);
+  expect(root.findAll(node => node.props.children === '3').length).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Total Quests Completed').length,
+  ).toBeGreaterThan(0);
+  expect(root.findAll(node => node.props.children === '1').length).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Active Quests').length,
+  ).toBeGreaterThan(0);
+  expect(root.findAll(node => node.props.children === '2').length).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Completed Quests').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Switch to Light Mode').length,
+  ).toBeGreaterThan(0);
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'back-from-progress-screen' }).props.onPress();
+  });
+
+  root = tree!.root;
+
+  expect(
+    root.findAll(node => node.props.children === 'Open Add Quest').length,
   ).toBeGreaterThan(0);
 });
