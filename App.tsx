@@ -26,6 +26,7 @@ type RankTitle = 'Novice' | 'Adventurer' | 'Knight' | 'Champion';
 type DifficultyFilter = 'All' | Difficulty;
 type CategoryFilter = 'All' | Category;
 type StatusFilter = 'All' | 'Active' | 'Completed';
+type ThemeMode = 'dark' | 'light';
 
 type Quest = {
   id: string;
@@ -44,22 +45,74 @@ type HeroProgress = {
 type GameState = {
   hero: HeroProgress;
   quests: Quest[];
+  themeMode: ThemeMode;
 };
 
-const theme = {
-  background: '#131313',
-  surfaceLow: '#1c1b1b',
-  surface: '#201f1f',
-  surfaceHigh: '#2a2a2a',
-  surfaceHighest: '#353534',
-  textPrimary: '#e5e2e1',
-  textMuted: '#d4c5ab',
-  amber: '#ffbf00',
-  amberSoft: '#ffe2ab',
-  blue: '#00d2fd',
-  blueSoft: '#a2e7ff',
-  ghostBorder: 'rgba(156, 143, 120, 0.18)',
-  success: '#88d498',
+type ThemePalette = {
+  background: string;
+  surfaceLow: string;
+  surface: string;
+  surfaceHigh: string;
+  surfaceHighest: string;
+  textPrimary: string;
+  textMuted: string;
+  amber: string;
+  amberSoft: string;
+  blue: string;
+  blueSoft: string;
+  success: string;
+  ghostBorder: string;
+  subtitle: string;
+  placeholder: string;
+  buttonText: string;
+  buttonDisabled: string;
+  activeBadgeBackground: string;
+  doneBadgeBackground: string;
+};
+
+const themes: Record<ThemeMode, ThemePalette> = {
+  dark: {
+    background: '#131313',
+    surfaceLow: '#1c1b1b',
+    surface: '#201f1f',
+    surfaceHigh: '#2a2a2a',
+    surfaceHighest: '#353534',
+    textPrimary: '#e5e2e1',
+    textMuted: '#d4c5ab',
+    amber: '#ffbf00',
+    amberSoft: '#ffe2ab',
+    blue: '#00d2fd',
+    blueSoft: '#a2e7ff',
+    success: '#88d498',
+    ghostBorder: 'rgba(156, 143, 120, 0.18)',
+    subtitle: '#b3aba0',
+    placeholder: '#7e766b',
+    buttonText: '#402d00',
+    buttonDisabled: '#6e5b22',
+    activeBadgeBackground: 'rgba(255, 191, 0, 0.16)',
+    doneBadgeBackground: 'rgba(136, 212, 152, 0.16)',
+  },
+  light: {
+    background: '#f5efe4',
+    surfaceLow: '#efe5d6',
+    surface: '#fbf6ed',
+    surfaceHigh: '#e6d9c5',
+    surfaceHighest: '#dccbb2',
+    textPrimary: '#2a2015',
+    textMuted: '#7a6447',
+    amber: '#c68a17',
+    amberSoft: '#f0c879',
+    blue: '#2e8da3',
+    blueSoft: '#69bfd5',
+    success: '#3c8a59',
+    ghostBorder: 'rgba(122, 100, 71, 0.16)',
+    subtitle: '#6f5d45',
+    placeholder: '#917b61',
+    buttonText: '#2a2015',
+    buttonDisabled: '#b79c67',
+    activeBadgeBackground: 'rgba(198, 138, 23, 0.14)',
+    doneBadgeBackground: 'rgba(60, 138, 89, 0.14)',
+  },
 };
 
 const difficultyOptions: Difficulty[] = ['Easy', 'Medium', 'Hard', 'Epic'];
@@ -180,6 +233,7 @@ function createInitialGameState(): GameState {
   return {
     hero: createHeroProgress(startingXp),
     quests: normalizedQuests,
+    themeMode: 'dark',
   };
 }
 
@@ -190,6 +244,7 @@ function migrateLegacyQuests(quests: Quest[]): GameState {
   return {
     hero: createHeroProgress(heroXp),
     quests: normalizedQuests,
+    themeMode: 'dark',
   };
 }
 
@@ -203,6 +258,7 @@ function normalizeStoredGameState(state: GameState): GameState {
   return {
     hero: createHeroProgress(normalizedXp),
     quests: normalizedQuests,
+    themeMode: state.themeMode === 'light' ? 'light' : 'dark',
   };
 }
 
@@ -233,19 +289,19 @@ function questMatchesFilters({
     (selectedStatusFilter === 'Completed' && quest.status === 'Completed') ||
     (selectedStatusFilter === 'Active' && quest.status !== 'Completed');
 
-  return (
-    matchesSearch && matchesDifficulty && matchesCategory && matchesStatus
-  );
+  return matchesSearch && matchesDifficulty && matchesCategory && matchesStatus;
 }
 
 function HeroStat({
   label,
   value,
   accentStyle,
+  styles,
 }: {
   label: string;
   value: string;
   accentStyle?: object;
+  styles: ReturnType<typeof createStyles>;
 }) {
   return (
     <View style={styles.heroStat}>
@@ -260,12 +316,14 @@ function SectionPicker({
   options,
   selectedValue,
   onSelect,
+  styles,
   testIdPrefix,
 }: {
   label: string;
   options: string[];
   selectedValue: string;
   onSelect: (value: string) => void;
+  styles: ReturnType<typeof createStyles>;
   testIdPrefix: string;
 }) {
   return (
@@ -299,11 +357,35 @@ function SectionPicker({
   );
 }
 
+function ThemeToggle({
+  styles,
+  themeMode,
+  onToggleTheme,
+}: {
+  styles: ReturnType<typeof createStyles>;
+  themeMode: ThemeMode;
+  onToggleTheme: () => void;
+}) {
+  const nextThemeLabel =
+    themeMode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+
+  return (
+    <Pressable
+      onPress={onToggleTheme}
+      style={styles.themeToggleButton}
+      testID="theme-toggle-button">
+      <Text style={styles.themeToggleText}>{nextThemeLabel}</Text>
+    </Pressable>
+  );
+}
+
 function QuestCard({
   quest,
+  styles,
   onComplete,
 }: {
   quest: Quest;
+  styles: ReturnType<typeof createStyles>;
   onComplete?: (questId: string) => void;
 }) {
   const isComplete = quest.status === 'Completed';
@@ -355,11 +437,17 @@ function QuestCard({
 function QuestBoardScreen({
   hero,
   quests,
+  styles,
+  themeMode,
+  onToggleTheme,
   onCompleteQuest,
   onNavigateToAddQuest,
 }: {
   hero: HeroProgress;
   quests: Quest[];
+  styles: ReturnType<typeof createStyles>;
+  themeMode: ThemeMode;
+  onToggleTheme: () => void;
   onCompleteQuest: (questId: string) => void;
   onNavigateToAddQuest: () => void;
 }) {
@@ -396,8 +484,18 @@ function QuestBoardScreen({
     <ScrollView
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}>
-      <Text style={styles.kicker}>Daily Quest Log</Text>
-      <Text style={styles.title}>Quest Forge</Text>
+      <View style={styles.topBar}>
+        <View>
+          <Text style={styles.kicker}>Daily Quest Log</Text>
+          <Text style={styles.title}>Quest Forge</Text>
+        </View>
+        <ThemeToggle
+          onToggleTheme={onToggleTheme}
+          styles={styles}
+          themeMode={themeMode}
+        />
+      </View>
+
       <Text style={styles.subtitle}>
         Turn your everyday tasks into a progression path worth chasing.
       </Text>
@@ -406,23 +504,23 @@ function QuestBoardScreen({
         <View style={styles.heroHeader}>
           <View>
             <Text style={styles.heroEyebrow}>Hero Overview</Text>
-            <Text style={styles.heroTitle}>
-              Rank Title: {hero.rankTitle}
-            </Text>
+            <Text style={styles.heroTitle}>Rank Title: {hero.rankTitle}</Text>
           </View>
           <View style={styles.heroOrb} />
         </View>
 
         <View style={styles.heroStatsRow}>
           <HeroStat
-            label="Level"
-            value={getLevelForXp(hero.xp)}
             accentStyle={styles.levelAccent}
+            label="Level"
+            styles={styles}
+            value={getLevelForXp(hero.xp)}
           />
           <HeroStat
-            label="XP"
-            value={`${hero.xp}`}
             accentStyle={styles.xpAccent}
+            label="XP"
+            styles={styles}
+            value={`${hero.xp}`}
           />
         </View>
       </View>
@@ -453,7 +551,7 @@ function QuestBoardScreen({
           <TextInput
             onChangeText={setSearchQuery}
             placeholder="Search quests"
-            placeholderTextColor="#7e766b"
+            placeholderTextColor={styles.themePlaceholder.color}
             style={styles.titleInput}
             testID="quest-search-input"
             value={searchQuery}
@@ -467,6 +565,7 @@ function QuestBoardScreen({
           }
           options={difficultyFilterOptions}
           selectedValue={selectedDifficultyFilter}
+          styles={styles}
           testIdPrefix="difficulty-filter"
         />
 
@@ -475,6 +574,7 @@ function QuestBoardScreen({
           onSelect={value => setSelectedCategoryFilter(value as CategoryFilter)}
           options={categoryFilterOptions}
           selectedValue={selectedCategoryFilter}
+          styles={styles}
           testIdPrefix="category-filter"
         />
 
@@ -483,6 +583,7 @@ function QuestBoardScreen({
           onSelect={value => setSelectedStatusFilter(value as StatusFilter)}
           options={statusFilterOptions}
           selectedValue={selectedStatusFilter}
+          styles={styles}
           testIdPrefix="status-filter"
         />
       </View>
@@ -503,6 +604,7 @@ function QuestBoardScreen({
             key={quest.id}
             onComplete={onCompleteQuest}
             quest={quest}
+            styles={styles}
           />
         ))}
       </View>
@@ -514,6 +616,7 @@ function QuestBoardScreen({
             key={quest.id}
             onComplete={onCompleteQuest}
             quest={quest}
+            styles={styles}
           />
         ))}
       </View>
@@ -521,7 +624,7 @@ function QuestBoardScreen({
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Completed Quests</Text>
         {completedQuests.map(quest => (
-          <QuestCard key={quest.id} quest={quest} />
+          <QuestCard key={quest.id} quest={quest} styles={styles} />
         ))}
       </View>
     </ScrollView>
@@ -531,9 +634,15 @@ function QuestBoardScreen({
 function AddQuestScreen({
   onBack,
   onSave,
+  onToggleTheme,
+  styles,
+  themeMode,
 }: {
   onBack: () => void;
   onSave: (quest: Quest) => void;
+  onToggleTheme: () => void;
+  styles: ReturnType<typeof createStyles>;
+  themeMode: ThemeMode;
 }) {
   const [questTitle, setQuestTitle] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] =
@@ -576,6 +685,11 @@ function AddQuestScreen({
           <Text style={styles.backButtonText}>Back</Text>
         </Pressable>
         <Text style={styles.screenLabel}>Quest Board</Text>
+        <ThemeToggle
+          onToggleTheme={onToggleTheme}
+          styles={styles}
+          themeMode={themeMode}
+        />
       </View>
 
       <Text style={styles.kicker}>Add Quest</Text>
@@ -595,7 +709,7 @@ function AddQuestScreen({
           <TextInput
             onChangeText={setQuestTitle}
             placeholder="Enter a new quest title"
-            placeholderTextColor="#7e766b"
+            placeholderTextColor={styles.themePlaceholder.color}
             style={styles.titleInput}
             testID="quest-title-input"
             value={questTitle}
@@ -607,6 +721,7 @@ function AddQuestScreen({
           onSelect={value => setSelectedDifficulty(value as Difficulty)}
           options={difficultyOptions}
           selectedValue={selectedDifficulty}
+          styles={styles}
           testIdPrefix="difficulty-option"
         />
 
@@ -615,6 +730,7 @@ function AddQuestScreen({
           onSelect={value => setSelectedCategory(value as Category)}
           options={categoryOptions}
           selectedValue={selectedCategory}
+          styles={styles}
           testIdPrefix="category-option"
         />
 
@@ -637,6 +753,9 @@ function App() {
   const [gameState, setGameState] = useState<GameState>(createInitialGameState);
   const [currentScreen, setCurrentScreen] = useState<ScreenName>('quest-board');
   const [isHydrated, setIsHydrated] = useState(false);
+
+  const currentTheme = themes[gameState.themeMode];
+  const styles = createStyles(currentTheme);
 
   useEffect(() => {
     let isMounted = true;
@@ -694,9 +813,11 @@ function App() {
       }
 
       const updatedXp =
-        currentState.hero.xp + completionXpByDifficulty[questToComplete.difficulty];
+        currentState.hero.xp +
+        completionXpByDifficulty[questToComplete.difficulty];
 
       return {
+        ...currentState,
         hero: createHeroProgress(updatedXp),
         quests: currentState.quests.map(quest =>
           quest.id === questId ? { ...quest, status: 'Completed' } : quest,
@@ -705,10 +826,22 @@ function App() {
     });
   };
 
+  const handleToggleTheme = () => {
+    setGameState(currentState => ({
+      ...currentState,
+      themeMode: currentState.themeMode === 'dark' ? 'light' : 'dark',
+    }));
+  };
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar barStyle="light-content" backgroundColor={theme.background} />
+        <StatusBar
+          backgroundColor={currentTheme.background}
+          barStyle={
+            gameState.themeMode === 'dark' ? 'light-content' : 'dark-content'
+          }
+        />
         {!isHydrated ? (
           <View style={styles.loadingState}>
             <Text style={styles.loadingKicker}>Restoring Quest Log</Text>
@@ -721,12 +854,18 @@ function App() {
                 hero={gameState.hero}
                 onCompleteQuest={handleCompleteQuest}
                 onNavigateToAddQuest={() => setCurrentScreen('add-quest')}
+                onToggleTheme={handleToggleTheme}
                 quests={gameState.quests}
+                styles={styles}
+                themeMode={gameState.themeMode}
               />
             ) : (
               <AddQuestScreen
                 onBack={() => setCurrentScreen('quest-board')}
                 onSave={handleSaveQuest}
+                onToggleTheme={handleToggleTheme}
+                styles={styles}
+                themeMode={gameState.themeMode}
               />
             )}
           </>
@@ -736,374 +875,399 @@ function App() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: theme.background,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 36,
-  },
-  loadingState: {
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  loadingKicker: {
-    color: theme.textMuted,
-    fontSize: 12,
-    letterSpacing: 2,
-    marginBottom: 10,
-    textTransform: 'uppercase',
-  },
-  loadingTitle: {
-    color: theme.textPrimary,
-    fontSize: 30,
-    fontWeight: '700',
-    letterSpacing: -0.8,
-  },
-  screenHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-  },
-  backButton: {
-    backgroundColor: theme.surfaceHigh,
-    borderColor: theme.ghostBorder,
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  backButtonText: {
-    color: theme.textPrimary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  screenLabel: {
-    color: theme.textMuted,
-    fontSize: 12,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
-  },
-  kicker: {
-    color: theme.textMuted,
-    fontSize: 13,
-    letterSpacing: 2,
-    marginBottom: 8,
-    textTransform: 'uppercase',
-  },
-  title: {
-    color: theme.textPrimary,
-    fontSize: 36,
-    fontWeight: '700',
-    letterSpacing: -0.8,
-  },
-  subtitle: {
-    color: '#b3aba0',
-    fontSize: 15,
-    lineHeight: 22,
-    marginTop: 10,
-    maxWidth: 300,
-  },
-  heroCard: {
-    backgroundColor: theme.surface,
-    borderColor: theme.ghostBorder,
-    borderRadius: 24,
-    borderWidth: 1,
-    marginTop: 24,
-    padding: 20,
-    shadowColor: theme.amber,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-  },
-  heroHeader: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  heroEyebrow: {
-    color: theme.textMuted,
-    fontSize: 12,
-    letterSpacing: 1.4,
-    marginBottom: 6,
-    textTransform: 'uppercase',
-  },
-  heroTitle: {
-    color: theme.textPrimary,
-    fontSize: 22,
-    fontWeight: '700',
-    maxWidth: 220,
-  },
-  heroOrb: {
-    backgroundColor: theme.amber,
-    borderRadius: 20,
-    height: 20,
-    shadowColor: theme.amber,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    width: 20,
-  },
-  heroStatsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 22,
-  },
-  heroStat: {
-    backgroundColor: theme.surfaceHigh,
-    borderRadius: 18,
-    flex: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 16,
-  },
-  heroStatLabel: {
-    color: theme.textMuted,
-    fontSize: 12,
-    marginBottom: 6,
-    textTransform: 'uppercase',
-  },
-  heroStatValue: {
-    color: theme.textPrimary,
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  levelAccent: {
-    color: theme.amberSoft,
-  },
-  xpAccent: {
-    color: theme.blueSoft,
-    fontSize: 20,
-  },
-  boardActionCard: {
-    backgroundColor: theme.surface,
-    borderColor: theme.ghostBorder,
-    borderRadius: 24,
-    borderWidth: 1,
-    marginTop: 28,
-    padding: 20,
-  },
-  filterCard: {
-    backgroundColor: theme.surface,
-    borderColor: theme.ghostBorder,
-    borderRadius: 24,
-    borderWidth: 1,
-    marginTop: 20,
-    padding: 20,
-  },
-  primaryActionButton: {
-    alignItems: 'center',
-    backgroundColor: theme.amber,
-    borderRadius: 18,
-    marginTop: 10,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-  },
-  primaryActionText: {
-    color: '#402d00',
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-  },
-  formCard: {
-    backgroundColor: theme.surface,
-    borderColor: theme.ghostBorder,
-    borderRadius: 24,
-    borderWidth: 1,
-    marginTop: 28,
-    padding: 20,
-  },
-  formIntro: {
-    color: '#b3aba0',
-    fontSize: 14,
-    lineHeight: 21,
-    marginBottom: 18,
-    marginTop: -4,
-  },
-  formField: {
-    marginTop: 14,
-  },
-  formLabel: {
-    color: theme.textMuted,
-    fontSize: 12,
-    letterSpacing: 1.2,
-    marginBottom: 10,
-    textTransform: 'uppercase',
-  },
-  titleInput: {
-    backgroundColor: theme.surfaceLow,
-    borderColor: theme.ghostBorder,
-    borderRadius: 18,
-    borderWidth: 1,
-    color: theme.textPrimary,
-    fontSize: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  optionRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  optionChip: {
-    backgroundColor: theme.surfaceLow,
-    borderColor: theme.ghostBorder,
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  optionChipSelected: {
-    backgroundColor: 'rgba(255, 191, 0, 0.16)',
-    borderColor: 'rgba(255, 191, 0, 0.26)',
-  },
-  optionChipText: {
-    color: theme.textMuted,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  optionChipTextSelected: {
-    color: theme.amberSoft,
-  },
-  saveButton: {
-    alignItems: 'center',
-    backgroundColor: theme.amber,
-    borderRadius: 18,
-    marginTop: 22,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-  },
-  saveButtonDisabled: {
-    backgroundColor: '#6e5b22',
-    opacity: 0.55,
-  },
-  saveButtonText: {
-    color: '#402d00',
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-  },
-  section: {
-    marginTop: 28,
-  },
-  emptyStateCard: {
-    backgroundColor: theme.surfaceLow,
-    borderColor: theme.ghostBorder,
-    borderRadius: 22,
-    borderWidth: 1,
-    marginTop: 28,
-    padding: 18,
-  },
-  emptyStateTitle: {
-    color: theme.textPrimary,
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  emptyStateText: {
-    color: '#b3aba0',
-    fontSize: 14,
-    lineHeight: 21,
-  },
-  sectionTitle: {
-    color: theme.textPrimary,
-    fontSize: 22,
-    fontWeight: '700',
-    marginBottom: 14,
-  },
-  questCard: {
-    backgroundColor: theme.surfaceLow,
-    borderColor: theme.ghostBorder,
-    borderRadius: 22,
-    borderWidth: 1,
-    marginBottom: 14,
-    padding: 18,
-  },
-  questCardCompleted: {
-    backgroundColor: theme.surfaceHighest,
-  },
-  questHeaderRow: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    gap: 12,
-    justifyContent: 'space-between',
-  },
-  questTitle: {
-    color: theme.textPrimary,
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '700',
-    lineHeight: 24,
-  },
-  statusBadge: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  statusBadgeActive: {
-    backgroundColor: 'rgba(255, 191, 0, 0.16)',
-  },
-  statusBadgeDone: {
-    backgroundColor: 'rgba(136, 212, 152, 0.16)',
-  },
-  statusBadgeText: {
-    color: theme.amberSoft,
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  statusBadgeTextDone: {
-    color: theme.success,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 16,
-  },
-  metaPill: {
-    backgroundColor: theme.surfaceHigh,
-    borderRadius: 16,
-    flex: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-  },
-  metaPillHighlight: {
-    backgroundColor: 'rgba(0, 210, 253, 0.12)',
-  },
-  metaLabel: {
-    color: theme.textMuted,
-    fontSize: 11,
-    marginBottom: 4,
-    textTransform: 'uppercase',
-  },
-  metaValue: {
-    color: theme.textPrimary,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  metaValueHighlight: {
-    color: theme.blueSoft,
-  },
-  completeButton: {
-    alignItems: 'center',
-    backgroundColor: theme.surfaceHigh,
-    borderColor: theme.ghostBorder,
-    borderRadius: 16,
-    borderWidth: 1,
-    marginTop: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  completeButtonText: {
-    color: theme.textPrimary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-});
+function createStyles(theme: ThemePalette) {
+  return StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    scrollContent: {
+      paddingHorizontal: 20,
+      paddingTop: 18,
+      paddingBottom: 36,
+    },
+    loadingState: {
+      alignItems: 'center',
+      flex: 1,
+      justifyContent: 'center',
+      paddingHorizontal: 24,
+    },
+    loadingKicker: {
+      color: theme.textMuted,
+      fontSize: 12,
+      letterSpacing: 2,
+      marginBottom: 10,
+      textTransform: 'uppercase',
+    },
+    loadingTitle: {
+      color: theme.textPrimary,
+      fontSize: 30,
+      fontWeight: '700',
+      letterSpacing: -0.8,
+    },
+    topBar: {
+      alignItems: 'flex-start',
+      flexDirection: 'row',
+      gap: 12,
+      justifyContent: 'space-between',
+    },
+    screenHeader: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 10,
+      justifyContent: 'space-between',
+      marginBottom: 14,
+    },
+    themeToggleButton: {
+      backgroundColor: theme.surfaceHigh,
+      borderColor: theme.ghostBorder,
+      borderRadius: 999,
+      borderWidth: 1,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+    },
+    themeToggleText: {
+      color: theme.textPrimary,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    backButton: {
+      backgroundColor: theme.surfaceHigh,
+      borderColor: theme.ghostBorder,
+      borderRadius: 999,
+      borderWidth: 1,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+    },
+    backButtonText: {
+      color: theme.textPrimary,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    screenLabel: {
+      color: theme.textMuted,
+      fontSize: 12,
+      letterSpacing: 1.4,
+      textTransform: 'uppercase',
+    },
+    kicker: {
+      color: theme.textMuted,
+      fontSize: 13,
+      letterSpacing: 2,
+      marginBottom: 8,
+      textTransform: 'uppercase',
+    },
+    title: {
+      color: theme.textPrimary,
+      fontSize: 36,
+      fontWeight: '700',
+      letterSpacing: -0.8,
+    },
+    subtitle: {
+      color: theme.subtitle,
+      fontSize: 15,
+      lineHeight: 22,
+      marginTop: 10,
+      maxWidth: 320,
+    },
+    heroCard: {
+      backgroundColor: theme.surface,
+      borderColor: theme.ghostBorder,
+      borderRadius: 24,
+      borderWidth: 1,
+      marginTop: 24,
+      padding: 20,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 0.12,
+      shadowRadius: 24,
+    },
+    heroHeader: {
+      alignItems: 'flex-start',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    heroEyebrow: {
+      color: theme.textMuted,
+      fontSize: 12,
+      letterSpacing: 1.4,
+      marginBottom: 6,
+      textTransform: 'uppercase',
+    },
+    heroTitle: {
+      color: theme.textPrimary,
+      fontSize: 22,
+      fontWeight: '700',
+      maxWidth: 220,
+    },
+    heroOrb: {
+      backgroundColor: theme.amber,
+      borderRadius: 20,
+      height: 20,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.35,
+      shadowRadius: 12,
+      width: 20,
+    },
+    heroStatsRow: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 22,
+    },
+    heroStat: {
+      backgroundColor: theme.surfaceHigh,
+      borderRadius: 18,
+      flex: 1,
+      paddingHorizontal: 14,
+      paddingVertical: 16,
+    },
+    heroStatLabel: {
+      color: theme.textMuted,
+      fontSize: 12,
+      marginBottom: 6,
+      textTransform: 'uppercase',
+    },
+    heroStatValue: {
+      color: theme.textPrimary,
+      fontSize: 22,
+      fontWeight: '700',
+    },
+    levelAccent: {
+      color: theme.amberSoft,
+    },
+    xpAccent: {
+      color: theme.blueSoft,
+      fontSize: 20,
+    },
+    boardActionCard: {
+      backgroundColor: theme.surface,
+      borderColor: theme.ghostBorder,
+      borderRadius: 24,
+      borderWidth: 1,
+      marginTop: 28,
+      padding: 20,
+    },
+    filterCard: {
+      backgroundColor: theme.surface,
+      borderColor: theme.ghostBorder,
+      borderRadius: 24,
+      borderWidth: 1,
+      marginTop: 20,
+      padding: 20,
+    },
+    primaryActionButton: {
+      alignItems: 'center',
+      backgroundColor: theme.amber,
+      borderRadius: 18,
+      marginTop: 10,
+      paddingHorizontal: 18,
+      paddingVertical: 16,
+    },
+    primaryActionText: {
+      color: theme.buttonText,
+      fontSize: 16,
+      fontWeight: '800',
+      letterSpacing: 0.4,
+    },
+    formCard: {
+      backgroundColor: theme.surface,
+      borderColor: theme.ghostBorder,
+      borderRadius: 24,
+      borderWidth: 1,
+      marginTop: 28,
+      padding: 20,
+    },
+    formIntro: {
+      color: theme.subtitle,
+      fontSize: 14,
+      lineHeight: 21,
+      marginBottom: 18,
+      marginTop: -4,
+    },
+    formField: {
+      marginTop: 14,
+    },
+    formLabel: {
+      color: theme.textMuted,
+      fontSize: 12,
+      letterSpacing: 1.2,
+      marginBottom: 10,
+      textTransform: 'uppercase',
+    },
+    titleInput: {
+      backgroundColor: theme.surfaceLow,
+      borderColor: theme.ghostBorder,
+      borderRadius: 18,
+      borderWidth: 1,
+      color: theme.textPrimary,
+      fontSize: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+    },
+    themePlaceholder: {
+      color: theme.placeholder,
+    },
+    optionRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+    },
+    optionChip: {
+      backgroundColor: theme.surfaceLow,
+      borderColor: theme.ghostBorder,
+      borderRadius: 999,
+      borderWidth: 1,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+    },
+    optionChipSelected: {
+      backgroundColor: theme.activeBadgeBackground,
+      borderColor: theme.ghostBorder,
+    },
+    optionChipText: {
+      color: theme.textMuted,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    optionChipTextSelected: {
+      color: theme.amberSoft,
+    },
+    saveButton: {
+      alignItems: 'center',
+      backgroundColor: theme.amber,
+      borderRadius: 18,
+      marginTop: 22,
+      paddingHorizontal: 18,
+      paddingVertical: 16,
+    },
+    saveButtonDisabled: {
+      backgroundColor: theme.buttonDisabled,
+      opacity: 0.55,
+    },
+    saveButtonText: {
+      color: theme.buttonText,
+      fontSize: 16,
+      fontWeight: '800',
+      letterSpacing: 0.4,
+    },
+    section: {
+      marginTop: 28,
+    },
+    emptyStateCard: {
+      backgroundColor: theme.surfaceLow,
+      borderColor: theme.ghostBorder,
+      borderRadius: 22,
+      borderWidth: 1,
+      marginTop: 28,
+      padding: 18,
+    },
+    emptyStateTitle: {
+      color: theme.textPrimary,
+      fontSize: 18,
+      fontWeight: '700',
+      marginBottom: 8,
+    },
+    emptyStateText: {
+      color: theme.subtitle,
+      fontSize: 14,
+      lineHeight: 21,
+    },
+    sectionTitle: {
+      color: theme.textPrimary,
+      fontSize: 22,
+      fontWeight: '700',
+      marginBottom: 14,
+    },
+    questCard: {
+      backgroundColor: theme.surfaceLow,
+      borderColor: theme.ghostBorder,
+      borderRadius: 22,
+      borderWidth: 1,
+      marginBottom: 14,
+      padding: 18,
+    },
+    questCardCompleted: {
+      backgroundColor: theme.surfaceHighest,
+    },
+    questHeaderRow: {
+      alignItems: 'flex-start',
+      flexDirection: 'row',
+      gap: 12,
+      justifyContent: 'space-between',
+    },
+    questTitle: {
+      color: theme.textPrimary,
+      flex: 1,
+      fontSize: 18,
+      fontWeight: '700',
+      lineHeight: 24,
+    },
+    statusBadge: {
+      borderRadius: 999,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+    },
+    statusBadgeActive: {
+      backgroundColor: theme.activeBadgeBackground,
+    },
+    statusBadgeDone: {
+      backgroundColor: theme.doneBadgeBackground,
+    },
+    statusBadgeText: {
+      color: theme.amberSoft,
+      fontSize: 11,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+    },
+    statusBadgeTextDone: {
+      color: theme.success,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 16,
+    },
+    metaPill: {
+      backgroundColor: theme.surfaceHigh,
+      borderRadius: 16,
+      flex: 1,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+    },
+    metaPillHighlight: {
+      backgroundColor: `${theme.blue}20`,
+    },
+    metaLabel: {
+      color: theme.textMuted,
+      fontSize: 11,
+      marginBottom: 4,
+      textTransform: 'uppercase',
+    },
+    metaValue: {
+      color: theme.textPrimary,
+      fontSize: 15,
+      fontWeight: '600',
+    },
+    metaValueHighlight: {
+      color: theme.blueSoft,
+    },
+    completeButton: {
+      alignItems: 'center',
+      backgroundColor: theme.surfaceHigh,
+      borderColor: theme.ghostBorder,
+      borderRadius: 16,
+      borderWidth: 1,
+      marginTop: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+    },
+    completeButtonText: {
+      color: theme.textPrimary,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+  });
+}
 
 export default App;

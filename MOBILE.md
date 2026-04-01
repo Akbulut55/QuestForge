@@ -18,8 +18,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 6 |
-| Total Weight (kg) | 70 |
+| Total Iterations | 7 |
+| Total Weight (kg) | 75 |
 | Total Time (min) | Not tracked |
 | Failed Attempts | Not tracked |
 
@@ -291,6 +291,53 @@ Add search and filter functionality for quests.
 **Screenshot:** `iteration-6-search-filter.png`
 
 **Commit:** `[NAIM: Quest Blacksmith] Add search and filter quests - 10kg`
+
+---
+
+### Iteration 7
+
+| Field | Value |
+|-------|-------|
+| Feature | `Add theme toggle` |
+| Weight | `5 kg` |
+| Tool Used | `Codex` |
+| Time | `8 min` |
+| Attempts | `1` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+You are continuing my local React Native project called QuestForge.
+
+Important assignment constraints:
+- This is for a NAIM-style iterative mobile app assignment
+- I must build one small feature per iteration
+- I must document each iteration in MOBILE.md
+- I must take a screenshot after each successful iteration
+- I must commit after each iteration
+- So do NOT build extra features beyond this iteration
+
+Current state:
+- Iteration 1 is done: Quest Board UI
+- Iteration 2 is done: add quest input flow
+- Iteration 3 is done: multi-screen navigation
+- Iteration 4 is done: local persistence
+- Iteration 5 is done: XP and rank progression
+- Iteration 6 is done: search and filter quests
+
+Task: Implement ONLY Iteration 7.
+
+Iteration 7 goal:
+Add a manual theme toggle for light mode and dark mode.
+```
+
+**What happened:**
+- Added a manual light and dark theme toggle that works across the Quest Board and Add Quest screens.
+- The selected theme is now stored with the existing game state, so the visual mode stays the same after restarting the app.
+
+**Screenshot:** `iteration-7-theme-toggle.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add theme toggle - 5kg`
 
 ---
 

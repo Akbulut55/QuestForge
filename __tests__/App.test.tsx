@@ -68,6 +68,7 @@ test('loads persisted game state from AsyncStorage', async () => {
           rankTitle: 'Knight',
         },
         quests: [],
+        themeMode: 'light',
       });
     }
 
@@ -83,6 +84,7 @@ test('loads persisted game state from AsyncStorage', async () => {
       rankTitle: 'Knight',
     },
     quests: [],
+    themeMode: 'light',
   });
 });
 
@@ -197,4 +199,46 @@ test('search and filters work together on the quest board', async () => {
       node => node.props.children === 'Sharpen the Study Blade',
     ).length,
   ).toBe(0);
+});
+
+test('theme toggle switches modes and persists the selected theme', async () => {
+  let tree: ReactTestRenderer.ReactTestRenderer;
+
+  await ReactTestRenderer.act(async () => {
+    tree = ReactTestRenderer.create(<App />);
+  });
+
+  await ReactTestRenderer.act(async () => {
+    await flushAsyncWork();
+  });
+
+  let root = tree!.root;
+
+  expect(
+    root.findAll(node => node.props.children === 'Switch to Light Mode').length,
+  ).toBeGreaterThan(0);
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'theme-toggle-button' }).props.onPress();
+  });
+
+  root = tree!.root;
+
+  expect(
+    root.findAll(node => node.props.children === 'Switch to Dark Mode').length,
+  ).toBeGreaterThan(0);
+  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
+    GAME_STATE_STORAGE_KEY,
+    expect.stringContaining('"themeMode":"light"'),
+  );
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'navigate-to-add-quest' }).props.onPress();
+  });
+
+  root = tree!.root;
+
+  expect(
+    root.findAll(node => node.props.children === 'Switch to Dark Mode').length,
+  ).toBeGreaterThan(0);
 });
