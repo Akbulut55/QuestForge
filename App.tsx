@@ -552,10 +552,12 @@ function QuestCard({
   quest,
   styles,
   onComplete,
+  onEdit,
 }: {
   quest: Quest;
   styles: ReturnType<typeof createStyles>;
   onComplete?: (questId: string) => void;
+  onEdit?: (questId: string) => void;
 }) {
   const isComplete = quest.status === 'Completed';
 
@@ -599,6 +601,15 @@ function QuestCard({
           <Text style={styles.completeButtonText}>Mark Completed</Text>
         </Pressable>
       ) : null}
+
+      {onEdit ? (
+        <Pressable
+          onPress={() => onEdit(quest.id)}
+          style={styles.cardSecondaryButton}
+          testID={`edit-quest-${quest.id}`}>
+          <Text style={styles.cardSecondaryButtonText}>Edit Quest</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -610,6 +621,7 @@ function QuestBoardScreen({
   themeMode,
   onToggleTheme,
   onCompleteQuest,
+  onEditQuest,
   onNavigateToAddQuest,
   onNavigateToProgress,
   completionFeedback,
@@ -620,6 +632,7 @@ function QuestBoardScreen({
   themeMode: ThemeMode;
   onToggleTheme: () => void;
   onCompleteQuest: (questId: string) => void;
+  onEditQuest: (questId: string) => void;
   onNavigateToAddQuest: () => void;
   onNavigateToProgress: () => void;
   completionFeedback: CompletionFeedback | null;
@@ -833,6 +846,7 @@ function QuestBoardScreen({
           <QuestCard
             key={quest.id}
             onComplete={onCompleteQuest}
+            onEdit={onEditQuest}
             quest={quest}
             styles={styles}
           />
@@ -845,6 +859,7 @@ function QuestBoardScreen({
           <QuestCard
             key={quest.id}
             onComplete={onCompleteQuest}
+            onEdit={onEditQuest}
             quest={quest}
             styles={styles}
           />
@@ -854,7 +869,12 @@ function QuestBoardScreen({
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Completed Quests</Text>
         {completedQuests.map(quest => (
-          <QuestCard key={quest.id} quest={quest} styles={styles} />
+          <QuestCard
+            key={quest.id}
+            onEdit={onEditQuest}
+            quest={quest}
+            styles={styles}
+          />
         ))}
       </View>
     </ScrollView>
@@ -977,21 +997,39 @@ function ProgressScreen({
 function AddQuestScreen({
   onBack,
   onSave,
+  onDelete,
+  questToEdit,
   onToggleTheme,
   styles,
   themeMode,
 }: {
   onBack: () => void;
   onSave: (quest: Quest) => void;
+  onDelete: (questId: string) => void;
+  questToEdit: Quest | null;
   onToggleTheme: () => void;
   styles: ReturnType<typeof createStyles>;
   themeMode: ThemeMode;
 }) {
+  const isEditing = questToEdit !== null;
   const [questTitle, setQuestTitle] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] =
     useState<Difficulty>('Easy');
   const [selectedCategory, setSelectedCategory] =
     useState<Category>('Side Quest');
+
+  useEffect(() => {
+    if (questToEdit) {
+      setQuestTitle(questToEdit.title);
+      setSelectedDifficulty(questToEdit.difficulty);
+      setSelectedCategory(questToEdit.category);
+      return;
+    }
+
+    setQuestTitle('');
+    setSelectedDifficulty('Easy');
+    setSelectedCategory('Side Quest');
+  }, [questToEdit]);
 
   const canSaveQuest = questTitle.trim().length > 0;
 
@@ -1003,17 +1041,13 @@ function AddQuestScreen({
     }
 
     onSave({
-      id: createQuestId(),
+      id: questToEdit?.id ?? createQuestId(),
       title,
       difficulty: selectedDifficulty,
       xpReward: completionXpByDifficulty[selectedDifficulty],
-      status: 'Ready',
+      status: questToEdit?.status ?? 'Ready',
       category: selectedCategory,
     });
-
-    setQuestTitle('');
-    setSelectedDifficulty('Easy');
-    setSelectedCategory('Side Quest');
   };
 
   return (
@@ -1035,17 +1069,30 @@ function AddQuestScreen({
         />
       </View>
 
-      <Text style={styles.kicker}>Add Quest</Text>
-      <Text style={styles.title}>Forge New Quest</Text>
+      <Text style={styles.kicker}>{isEditing ? 'Edit Quest' : 'Add Quest'}</Text>
+      <Text style={styles.title}>
+        {isEditing ? 'Refine Quest Details' : 'Forge New Quest'}
+      </Text>
       <Text style={styles.subtitle}>
-        Create a new mission and send it back to the Quest Board instantly.
+        {isEditing
+          ? 'Update the quest and send the changes back to the Quest Board instantly.'
+          : 'Create a new mission and send it back to the Quest Board instantly.'}
       </Text>
 
       <View style={styles.formCard}>
         <Text style={styles.sectionTitle}>Quest Details</Text>
         <Text style={styles.formIntro}>
-          Keep this screen focused on creating one new quest at a time.
+          {isEditing
+            ? 'Keep this screen focused on updating one existing quest at a time.'
+            : 'Keep this screen focused on creating one new quest at a time.'}
         </Text>
+
+        {questToEdit?.status === 'Completed' ? (
+          <Text style={styles.formHint}>
+            Completed quest edits only update the saved details. Earned XP and
+            streak history stay as they are.
+          </Text>
+        ) : null}
 
         <View style={styles.formField}>
           <Text style={styles.formLabel}>Quest Title</Text>
@@ -1085,8 +1132,19 @@ function AddQuestScreen({
             !canSaveQuest && styles.saveButtonDisabled,
           ]}
           testID="save-quest-button">
-          <Text style={styles.saveButtonText}>Save Quest</Text>
+          <Text style={styles.saveButtonText}>
+            {isEditing ? 'Save Changes' : 'Save Quest'}
+          </Text>
         </Pressable>
+
+        {questToEdit ? (
+          <Pressable
+            onPress={() => onDelete(questToEdit.id)}
+            style={styles.deleteButton}
+            testID="delete-quest-button">
+            <Text style={styles.deleteButtonText}>Delete Quest</Text>
+          </Pressable>
+        ) : null}
       </View>
     </ScrollView>
   );
@@ -1098,9 +1156,14 @@ function App() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [completionFeedback, setCompletionFeedback] =
     useState<CompletionFeedback | null>(null);
+  const [editingQuestId, setEditingQuestId] = useState<string | null>(null);
 
   const currentTheme = themes[gameState.themeMode];
   const styles = createStyles(currentTheme);
+  const questToEdit =
+    editingQuestId === null
+      ? null
+      : gameState.quests.find(quest => quest.id === editingQuestId) ?? null;
 
   useEffect(() => {
     let isMounted = true;
@@ -1139,12 +1202,44 @@ function App() {
     saveStoredGameState(gameState);
   }, [gameState, isHydrated]);
 
+  const returnToBoard = () => {
+    setEditingQuestId(null);
+    setCurrentScreen('quest-board');
+  };
+
   const handleSaveQuest = (quest: Quest) => {
+    const normalizedQuest = normalizeQuest(quest);
+
+    setGameState(currentState => {
+      const existingQuest = currentState.quests.find(
+        currentQuest => currentQuest.id === normalizedQuest.id,
+      );
+
+      if (existingQuest) {
+        return {
+          ...currentState,
+          quests: currentState.quests.map(currentQuest =>
+            currentQuest.id === normalizedQuest.id
+              ? normalizedQuest
+              : currentQuest,
+          ),
+        };
+      }
+
+      return {
+        ...currentState,
+        quests: [normalizedQuest, ...currentState.quests],
+      };
+    });
+    returnToBoard();
+  };
+
+  const handleDeleteQuest = (questId: string) => {
     setGameState(currentState => ({
       ...currentState,
-      quests: [normalizeQuest(quest), ...currentState.quests],
+      quests: currentState.quests.filter(quest => quest.id !== questId),
     }));
-    setCurrentScreen('quest-board');
+    returnToBoard();
   };
 
   const handleCompleteQuest = (questId: string) => {
@@ -1213,7 +1308,14 @@ function App() {
                 completionFeedback={completionFeedback}
                 hero={gameState.hero}
                 onCompleteQuest={handleCompleteQuest}
-                onNavigateToAddQuest={() => setCurrentScreen('add-quest')}
+                onEditQuest={questId => {
+                  setEditingQuestId(questId);
+                  setCurrentScreen('add-quest');
+                }}
+                onNavigateToAddQuest={() => {
+                  setEditingQuestId(null);
+                  setCurrentScreen('add-quest');
+                }}
                 onNavigateToProgress={() => setCurrentScreen('progress')}
                 onToggleTheme={handleToggleTheme}
                 quests={gameState.quests}
@@ -1231,9 +1333,11 @@ function App() {
               />
             ) : (
               <AddQuestScreen
-                onBack={() => setCurrentScreen('quest-board')}
+                onBack={returnToBoard}
+                onDelete={handleDeleteQuest}
                 onSave={handleSaveQuest}
                 onToggleTheme={handleToggleTheme}
+                questToEdit={questToEdit}
                 styles={styles}
                 themeMode={gameState.themeMode}
               />
@@ -1509,6 +1613,12 @@ function createStyles(theme: ThemePalette) {
       marginBottom: 18,
       marginTop: -4,
     },
+    formHint: {
+      color: theme.textMuted,
+      fontSize: 13,
+      lineHeight: 20,
+      marginTop: -4,
+    },
     formField: {
       marginTop: 14,
     },
@@ -1690,6 +1800,37 @@ function createStyles(theme: ThemePalette) {
       color: theme.textPrimary,
       fontSize: 14,
       fontWeight: '700',
+    },
+    cardSecondaryButton: {
+      alignItems: 'center',
+      backgroundColor: theme.surfaceHigh,
+      borderColor: theme.ghostBorder,
+      borderRadius: 16,
+      borderWidth: 1,
+      marginTop: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+    },
+    cardSecondaryButtonText: {
+      color: theme.textPrimary,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    deleteButton: {
+      alignItems: 'center',
+      backgroundColor: theme.doneBadgeBackground,
+      borderColor: theme.success,
+      borderRadius: 18,
+      borderWidth: 1,
+      marginTop: 12,
+      paddingHorizontal: 18,
+      paddingVertical: 16,
+    },
+    deleteButtonText: {
+      color: theme.success,
+      fontSize: 16,
+      fontWeight: '800',
+      letterSpacing: 0.3,
     },
     progressGrid: {
       gap: 12,

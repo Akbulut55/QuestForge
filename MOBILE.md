@@ -18,8 +18,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 10 |
-| Total Weight (kg) | 110 |
+| Total Iterations | 11 |
+| Total Weight (kg) | 120 |
 | Total Time (min) | Not tracked |
 | Failed Attempts | Not tracked |
 
@@ -485,6 +485,57 @@ Add a daily streak system.
 **Screenshot:** `iteration-10-daily-streak.png`
 
 **Commit:** `[NAIM: Quest Blacksmith] Add daily streak system - 10kg`
+
+---
+
+### Iteration 11
+
+| Field | Value |
+|-------|-------|
+| Feature | `Edit and delete quest management` |
+| Weight | `10 kg` |
+| Tool Used | `Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+You are continuing my local React Native project called QuestForge.
+
+Important assignment constraints:
+- This is for a NAIM-style iterative mobile app assignment
+- I must build one small feature per iteration
+- I must document each iteration in MOBILE.md
+- I must take a screenshot after each successful iteration
+- I must commit after each iteration
+- So do NOT build extra features beyond this iteration
+
+Current state:
+- Iteration 1 is done: Quest Board UI
+- Iteration 2 is done: add quest input flow
+- Iteration 3 is done: multi-screen navigation
+- Iteration 4 is done: local persistence
+- Iteration 5 is done: XP and rank progression
+- Iteration 6 is done: search and filter quests
+- Iteration 7 is done: manual theme toggle
+- Iteration 8 is done: profile progress screen
+- Iteration 9 is done: quest completion animation
+- Iteration 10 is done: daily streak system
+
+Task: Implement ONLY Iteration 11.
+
+Iteration 11 goal:
+Add edit and delete quest management.
+```
+
+**What happened:**
+- Reused the existing Add Quest screen as an add-or-edit form so quests can now be updated without adding another screen.
+- Added edit access from quest cards and a delete action inside the edit form, while keeping persistence, XP, streaks, and completed-quest progress behavior simple by only changing the saved quest details.
+
+**Screenshot:** `iteration-11-edit-delete-quests.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add edit and delete quest management - 10kg`
 
 ---
 

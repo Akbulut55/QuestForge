@@ -315,6 +315,107 @@ test('progress screen shows derived hero and quest summary stats', async () => {
   ).toBeGreaterThan(0);
 });
 
+test('editing a quest updates its details and persists the changes', async () => {
+  let tree: ReactTestRenderer.ReactTestRenderer;
+
+  await ReactTestRenderer.act(async () => {
+    tree = ReactTestRenderer.create(<App />);
+  });
+
+  await ReactTestRenderer.act(async () => {
+    await flushAsyncWork();
+  });
+
+  let root = tree!.root;
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'edit-quest-quest-2' }).props.onPress();
+  });
+
+  root = tree!.root;
+
+  expect(
+    root.findAll(node => node.props.children === 'Refine Quest Details').length,
+  ).toBeGreaterThan(0);
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'quest-title-input' }).props.onChangeText(
+      'Brew an Archmage Focus Potion',
+    );
+  });
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'difficulty-option-hard' }).props.onPress();
+    root.findByProps({ testID: 'category-option-main-quest' }).props.onPress();
+  });
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'save-quest-button' }).props.onPress();
+  });
+
+  root = tree!.root;
+  const editedRender = JSON.stringify(tree!.toJSON());
+
+  expect(
+    root.findAll(
+      node => node.props.children === 'Brew an Archmage Focus Potion',
+    ).length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Brew a Focus Potion').length,
+  ).toBe(0);
+  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
+    GAME_STATE_STORAGE_KEY,
+    expect.stringContaining('Brew an Archmage Focus Potion'),
+  );
+  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
+    GAME_STATE_STORAGE_KEY,
+    expect.stringContaining('"difficulty":"Hard"'),
+  );
+  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
+    GAME_STATE_STORAGE_KEY,
+    expect.stringContaining('"category":"Main Quest"'),
+  );
+  expect(editedRender).toContain('"Open Add Quest"');
+});
+
+test('deleting a quest from the edit screen removes it and persists the update', async () => {
+  let tree: ReactTestRenderer.ReactTestRenderer;
+
+  await ReactTestRenderer.act(async () => {
+    tree = ReactTestRenderer.create(<App />);
+  });
+
+  await ReactTestRenderer.act(async () => {
+    await flushAsyncWork();
+  });
+
+  let root = tree!.root;
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'edit-quest-quest-2' }).props.onPress();
+  });
+
+  root = tree!.root;
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'delete-quest-button' }).props.onPress();
+  });
+
+  root = tree!.root;
+
+  expect(
+    root.findAll(node => node.props.children === 'Brew a Focus Potion').length,
+  ).toBe(0);
+  expect(
+    root.findAll(node => node.props.children === 'Open Add Quest').length,
+  ).toBeGreaterThan(0);
+  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
+    GAME_STATE_STORAGE_KEY,
+    expect.not.stringContaining('"id":"quest-2"'),
+  );
+});
+
 test('completing multiple quests on the same day only increases the streak once', async () => {
   let tree: ReactTestRenderer.ReactTestRenderer;
 
