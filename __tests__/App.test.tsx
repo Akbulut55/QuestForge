@@ -42,6 +42,7 @@ jest.mock('../src/api/gameStateApi', () => ({
   createRemoteQuest: jest.fn(),
   deleteRemoteQuest: jest.fn(),
   fetchRemoteAppConfig: jest.fn(),
+  fetchRemoteDailySuggestions: jest.fn(),
   fetchRemoteGameState: jest.fn(),
   saveRemoteGameState: jest.fn(),
   updateRemoteQuest: jest.fn(),
@@ -61,6 +62,7 @@ import {
   createRemoteQuest,
   deleteRemoteQuest,
   fetchRemoteAppConfig,
+  fetchRemoteDailySuggestions,
   fetchRemoteGameState,
   saveRemoteGameState,
   updateRemoteQuest,
@@ -77,6 +79,7 @@ const mockCreateRemoteQuest = createRemoteQuest as jest.Mock;
 const mockUpdateRemoteQuest = updateRemoteQuest as jest.Mock;
 const mockDeleteRemoteQuest = deleteRemoteQuest as jest.Mock;
 const mockCompleteRemoteQuest = completeRemoteQuest as jest.Mock;
+const mockFetchRemoteDailySuggestions = fetchRemoteDailySuggestions as jest.Mock;
 const mockUpdateRemoteTheme = updateRemoteTheme as jest.Mock;
 const mockUpdateRemoteSortOption = updateRemoteSortOption as jest.Mock;
 
@@ -196,6 +199,48 @@ const completionXpByDifficulty = {
   Hard: 35,
   Epic: 50,
 } as const;
+const suggestionTemplates = [
+  {
+    title: 'Refill the Mana Flask',
+    difficulty: 'Easy',
+    category: 'Side Quest',
+  },
+  {
+    title: 'Map the Day Ahead',
+    difficulty: 'Easy',
+    category: 'Main Quest',
+  },
+  {
+    title: 'Train the Focus Familiar',
+    difficulty: 'Medium',
+    category: 'Side Quest',
+  },
+  {
+    title: 'Polish the Guild Resume',
+    difficulty: 'Medium',
+    category: 'Main Quest',
+  },
+  {
+    title: 'Clear the Inbox Cavern',
+    difficulty: 'Hard',
+    category: 'Main Quest',
+  },
+  {
+    title: 'Raid the Laundry Keep',
+    difficulty: 'Hard',
+    category: 'Side Quest',
+  },
+  {
+    title: 'Forge a Weekly Master Plan',
+    difficulty: 'Epic',
+    category: 'Main Quest',
+  },
+  {
+    title: 'Protect the Evening Wind-Down',
+    difficulty: 'Easy',
+    category: 'Side Quest',
+  },
+] as const;
 const rankThresholds = [
   { minimumXp: 100, title: 'Champion' },
   { minimumXp: 50, title: 'Knight' },
@@ -389,6 +434,39 @@ function getUnlockedAchievementIds({
   );
 }
 
+function getDailySuggestionsForState(
+  quests: typeof defaultRemoteGameState.quests,
+  dateKey: string,
+) {
+  const existingQuestTitles = new Set(
+    quests.map(quest => quest.title.trim().toLowerCase()),
+  );
+  const startingIndex = Number(dateKey.replace(/-/g, '')) % suggestionTemplates.length;
+  const suggestions: Array<{
+    title: string;
+    difficulty: string;
+    category: string;
+  }> = [];
+
+  for (let offset = 0; offset < suggestionTemplates.length; offset += 1) {
+    const suggestion =
+      suggestionTemplates[(startingIndex + offset) % suggestionTemplates.length];
+    const normalizedTitle = suggestion.title.trim().toLowerCase();
+
+    if (existingQuestTitles.has(normalizedTitle)) {
+      continue;
+    }
+
+    suggestions.push({ ...suggestion });
+
+    if (suggestions.length === 3) {
+      break;
+    }
+  }
+
+  return suggestions;
+}
+
 function normalizeGameState(gameState: typeof defaultRemoteGameState) {
   const quests = gameState.quests.map(quest => ({
     ...quest,
@@ -446,6 +524,7 @@ async function renderHydratedApp() {
   mockUpdateRemoteQuest.mockClear();
   mockDeleteRemoteQuest.mockClear();
   mockCompleteRemoteQuest.mockClear();
+  mockFetchRemoteDailySuggestions.mockClear();
   mockUpdateRemoteTheme.mockClear();
   mockUpdateRemoteSortOption.mockClear();
 
@@ -464,6 +543,7 @@ beforeEach(() => {
   mockUpdateRemoteQuest.mockReset();
   mockDeleteRemoteQuest.mockReset();
   mockCompleteRemoteQuest.mockReset();
+  mockFetchRemoteDailySuggestions.mockReset();
   mockUpdateRemoteTheme.mockReset();
   mockUpdateRemoteSortOption.mockReset();
   mockAsyncStorage.getItem.mockResolvedValue(null);
@@ -471,6 +551,10 @@ beforeEach(() => {
   mockFetchRemoteAppConfig.mockImplementation(async () =>
     cloneState(mockRemoteAppConfig),
   );
+  mockFetchRemoteDailySuggestions.mockImplementation(async () => ({
+    suggestionDateKey: getDateKey(),
+    suggestions: getDailySuggestionsForState(mockBackendState.quests, getDateKey()),
+  }));
   mockFetchRemoteGameState.mockImplementation(async () => {
     mockBackendState = normalizeGameState(mockBackendState);
 
@@ -963,7 +1047,7 @@ test('sorting works with the current search and filter flow and persists selecti
   expect(lastSavedGameState.sortOption).toBe('Title A-Z');
 });
 
-test('daily suggestions can be added into the real quest list and persisted', async () => {
+test('daily suggestions come from the backend feed and refresh after adding one', async () => {
   jest.useFakeTimers();
   jest.setSystemTime(new Date('2026-04-14T09:00:00'));
 
@@ -984,7 +1068,9 @@ test('daily suggestions can be added into the real quest list and persisted', as
     const updatedRender = JSON.stringify(tree.toJSON());
     const lastSavedGameState = getLastSavedGameState();
 
-    expect(updatedRender).toContain('"Forge a Weekly Master Plan"');
+    expect(mockFetchRemoteDailySuggestions).toHaveBeenCalled();
+
+    expect(updatedRender).toContain('"Protect the Evening Wind-Down"');
     expect(
       lastSavedGameState.quests.some(
         (quest: { title: string }) =>
@@ -1244,6 +1330,10 @@ test('completing a quest on the next day increases the streak', async () => {
     jest.useRealTimers();
   }
 });
+
+
+
+
 
 
 

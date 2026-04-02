@@ -22,6 +22,7 @@ import {
   createRemoteQuest,
   deleteRemoteQuest,
   fetchRemoteAppConfig,
+  fetchRemoteDailySuggestions,
   fetchRemoteGameState,
   saveRemoteGameState,
   updateRemoteQuest,
@@ -119,6 +120,11 @@ type ProgressStats = {
   totalCompleted: number;
   activeCount: number;
   completedCount: number;
+};
+
+type DailySuggestionsResponse = {
+  suggestionDateKey: string;
+  suggestions: SuggestedQuest[];
 };
 
 type CompletionFeedback = {
@@ -1082,6 +1088,7 @@ function QuestBoardScreen({
   appConfig,
   hero,
   quests,
+  dailySuggestionDateKey,
   dailySuggestions,
   selectedSortOption,
   styles,
@@ -1100,6 +1107,7 @@ function QuestBoardScreen({
   appConfig: AppConfig;
   hero: HeroProgress;
   quests: Quest[];
+  dailySuggestionDateKey: string;
   dailySuggestions: SuggestedQuest[];
   selectedSortOption: SortOption;
   styles: ReturnType<typeof createStyles>;
@@ -1259,9 +1267,10 @@ function QuestBoardScreen({
       <View style={styles.boardActionCard}>
         <Text style={styles.sectionTitle}>{appConfig.suggestionSectionTitle}</Text>
         <Text style={styles.formIntro}>
-          Fresh local quest ideas rotate each day so you can add one to the
-          board in a single tap.
+          Fresh quest ideas now come from a backend-generated daily feed so the
+          board can change without another mobile rebuild.
         </Text>
+        <Text style={styles.formHint}>Realm seed: {dailySuggestionDateKey}</Text>
 
         {dailySuggestions.length > 0 ? (
           dailySuggestions.map((suggestion, index) => (
@@ -1721,6 +1730,12 @@ function App() {
     useState<CompletionFeedback | null>(null);
   const [editingQuestId, setEditingQuestId] = useState<string | null>(null);
   const [isRefreshingAppConfig, setIsRefreshingAppConfig] = useState(false);
+  const [dailySuggestions, setDailySuggestions] = useState<SuggestedQuest[]>(
+    () => getDailySuggestions(getDateKey(), initialQuests.map(normalizeQuest)),
+  );
+  const [dailySuggestionDateKey, setDailySuggestionDateKey] = useState(
+    getDateKey(),
+  );
 
   const currentTheme = themes[gameState.themeMode];
   const styles = createStyles(currentTheme);
@@ -1728,7 +1743,6 @@ function App() {
     editingQuestId === null
       ? null
       : gameState.quests.find(quest => quest.id === editingQuestId) ?? null;
-  const dailySuggestions = getDailySuggestions(getDateKey(), gameState.quests);
 
   const backendUnavailableMessage =
     'Backend connection required. Start `npm run backend` and retry.';
@@ -1747,6 +1761,24 @@ function App() {
     setAppConfig(normalizedAppConfig);
 
     return normalizedAppConfig;
+  };
+
+  const applyRemoteDailySuggestions = (
+    nextDailySuggestions: DailySuggestionsResponse,
+  ) => {
+    setDailySuggestionDateKey(nextDailySuggestions.suggestionDateKey);
+    setDailySuggestions(nextDailySuggestions.suggestions);
+
+    return nextDailySuggestions;
+  };
+
+  const refreshRemoteDailySuggestions = async () => {
+    const nextDailySuggestions =
+      await fetchRemoteDailySuggestions<DailySuggestionsResponse>();
+
+    applyRemoteDailySuggestions(nextDailySuggestions);
+
+    return nextDailySuggestions;
   };
 
   const runGameStateRequest = async <T extends GameStateResponse>(
@@ -1773,10 +1805,11 @@ function App() {
       setBackendError(null);
 
       try {
-        const [remoteGameStateResponse, remoteAppConfigResponse] =
+        const [remoteGameStateResponse, remoteAppConfigResponse, remoteDailySuggestionsResponse] =
           await Promise.all([
             fetchRemoteGameState<GameState>(),
             fetchRemoteAppConfig<AppConfig>(),
+            fetchRemoteDailySuggestions<DailySuggestionsResponse>(),
           ]);
         const remoteGameState = normalizeStoredGameState(
           remoteGameStateResponse,
@@ -1809,6 +1842,7 @@ function App() {
 
         applyRemoteGameState(nextGameState);
         applyRemoteAppConfig(remoteAppConfig);
+        applyRemoteDailySuggestions(remoteDailySuggestionsResponse);
       } catch {
         if (!isMounted) {
           return;
@@ -1847,14 +1881,19 @@ function App() {
         );
 
     if (response) {
+      await refreshRemoteDailySuggestions();
       returnToBoard();
     }
   };
 
   const handleAddSuggestedQuest = async (suggestion: SuggestedQuest) => {
-    await runGameStateRequest(() =>
+    const response = await runGameStateRequest(() =>
       createRemoteQuest<SuggestedQuest, GameStateResponse>(suggestion),
     );
+
+    if (response) {
+      await refreshRemoteDailySuggestions();
+    }
   };
 
   const handleDeleteQuest = async (questId: string) => {
@@ -1863,6 +1902,7 @@ function App() {
     );
 
     if (response) {
+      await refreshRemoteDailySuggestions();
       returnToBoard();
     }
   };
@@ -1897,13 +1937,15 @@ function App() {
 
     try {
       setBackendError(null);
-      const [nextGameState, nextAppConfig] = await Promise.all([
+      const [nextGameState, nextAppConfig, nextDailySuggestions] = await Promise.all([
         fetchRemoteGameState<GameState>(),
         fetchRemoteAppConfig<AppConfig>(),
+        fetchRemoteDailySuggestions<DailySuggestionsResponse>(),
       ]);
 
       applyRemoteGameState(nextGameState);
       applyRemoteAppConfig(nextAppConfig);
+      applyRemoteDailySuggestions(nextDailySuggestions);
     } catch {
       setBackendError(backendUnavailableMessage);
     } finally {
@@ -1947,6 +1989,7 @@ function App() {
               <QuestBoardScreen
                 appConfig={appConfig}
                 completionFeedback={completionFeedback}
+                dailySuggestionDateKey={dailySuggestionDateKey}
                 dailySuggestions={dailySuggestions}
                 hero={gameState.hero}
                 isRefreshingAppConfig={isRefreshingAppConfig}
@@ -2596,6 +2639,8 @@ function createStyles(theme: ThemePalette) {
 }
 
 export default App;
+
+
 
 
 
