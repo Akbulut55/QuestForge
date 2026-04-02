@@ -51,6 +51,12 @@ type Quest = {
   createdAt: number;
 };
 
+type SuggestedQuest = {
+  title: string;
+  difficulty: Difficulty;
+  category: Category;
+};
+
 type HeroProgress = {
   xp: number;
   rankTitle: RankTitle;
@@ -208,6 +214,49 @@ const initialQuests: Quest[] = [
     status: 'Completed',
     category: 'Side Quest',
     createdAt: 3,
+  },
+];
+
+const suggestionTemplates: SuggestedQuest[] = [
+  {
+    title: 'Refill the Mana Flask',
+    difficulty: 'Easy',
+    category: 'Side Quest',
+  },
+  {
+    title: 'Map the Day Ahead',
+    difficulty: 'Easy',
+    category: 'Main Quest',
+  },
+  {
+    title: 'Train the Focus Familiar',
+    difficulty: 'Medium',
+    category: 'Side Quest',
+  },
+  {
+    title: 'Polish the Guild Resume',
+    difficulty: 'Medium',
+    category: 'Main Quest',
+  },
+  {
+    title: 'Clear the Inbox Cavern',
+    difficulty: 'Hard',
+    category: 'Main Quest',
+  },
+  {
+    title: 'Raid the Laundry Keep',
+    difficulty: 'Hard',
+    category: 'Side Quest',
+  },
+  {
+    title: 'Forge a Weekly Master Plan',
+    difficulty: 'Epic',
+    category: 'Main Quest',
+  },
+  {
+    title: 'Protect the Evening Wind-Down',
+    difficulty: 'Easy',
+    category: 'Side Quest',
   },
 ];
 
@@ -617,6 +666,33 @@ function sortQuests(quests: Quest[], sortOption: SortOption) {
   return sortedQuests;
 }
 
+function getDailySuggestions(dateKey: string, quests: Quest[]) {
+  const existingQuestTitles = new Set(
+    quests.map(quest => quest.title.trim().toLowerCase()),
+  );
+  const startingIndex =
+    Number(dateKey.replace(/-/g, '')) % suggestionTemplates.length;
+  const suggestions: SuggestedQuest[] = [];
+
+  for (let offset = 0; offset < suggestionTemplates.length; offset += 1) {
+    const suggestion =
+      suggestionTemplates[(startingIndex + offset) % suggestionTemplates.length];
+    const normalizedTitle = suggestion.title.trim().toLowerCase();
+
+    if (existingQuestTitles.has(normalizedTitle)) {
+      continue;
+    }
+
+    suggestions.push(suggestion);
+
+    if (suggestions.length === 3) {
+      break;
+    }
+  }
+
+  return suggestions;
+}
+
 function HeroStat({
   label,
   value,
@@ -838,10 +914,12 @@ function QuestCard({
 function QuestBoardScreen({
   hero,
   quests,
+  dailySuggestions,
   selectedSortOption,
   styles,
   themeMode,
   onToggleTheme,
+  onAddSuggestedQuest,
   onCompleteQuest,
   onEditQuest,
   onNavigateToAddQuest,
@@ -851,10 +929,12 @@ function QuestBoardScreen({
 }: {
   hero: HeroProgress;
   quests: Quest[];
+  dailySuggestions: SuggestedQuest[];
   selectedSortOption: SortOption;
   styles: ReturnType<typeof createStyles>;
   themeMode: ThemeMode;
   onToggleTheme: () => void;
+  onAddSuggestedQuest: (suggestion: SuggestedQuest) => void;
   onCompleteQuest: (questId: string) => void;
   onEditQuest: (questId: string) => void;
   onNavigateToAddQuest: () => void;
@@ -989,6 +1069,50 @@ function QuestBoardScreen({
           </Text>
         </Animated.View>
       ) : null}
+
+      <View style={styles.boardActionCard}>
+        <Text style={styles.sectionTitle}>Daily Suggestions</Text>
+        <Text style={styles.formIntro}>
+          Fresh local quest ideas rotate each day so you can add one to the
+          board in a single tap.
+        </Text>
+
+        {dailySuggestions.length > 0 ? (
+          dailySuggestions.map((suggestion, index) => (
+            <View
+              key={`${suggestion.title}-${index}`}
+              style={styles.suggestionCard}
+              testID={`daily-suggestion-card-${index}`}>
+              <Text style={styles.suggestionTitle}>{suggestion.title}</Text>
+              <View style={styles.metaRow}>
+                <View style={styles.metaPill}>
+                  <Text style={styles.metaLabel}>Difficulty</Text>
+                  <Text style={styles.metaValue}>{suggestion.difficulty}</Text>
+                </View>
+                <View style={styles.metaPill}>
+                  <Text style={styles.metaLabel}>Category</Text>
+                  <Text style={styles.metaValue}>{suggestion.category}</Text>
+                </View>
+              </View>
+              <Pressable
+                onPress={() => onAddSuggestedQuest(suggestion)}
+                style={styles.cardSecondaryButton}
+                testID={`add-suggested-quest-${index}`}>
+                <Text style={styles.cardSecondaryButtonText}>
+                  Add Suggested Quest
+                </Text>
+              </Pressable>
+            </View>
+          ))
+        ) : (
+          <View style={styles.emptyStateCard}>
+            <Text style={styles.emptyStateTitle}>No fresh suggestions today</Text>
+            <Text style={styles.emptyStateText}>
+              Your current quest log already covers the local suggestion pool.
+            </Text>
+          </View>
+        )}
+      </View>
 
       <View style={styles.boardActionCard}>
         <Text style={styles.sectionTitle}>Forge New Quest</Text>
@@ -1423,6 +1547,7 @@ function App() {
     editingQuestId === null
       ? null
       : gameState.quests.find(quest => quest.id === editingQuestId) ?? null;
+  const dailySuggestions = getDailySuggestions(getDateKey(), gameState.quests);
 
   useEffect(() => {
     let isMounted = true;
@@ -1493,6 +1618,32 @@ function App() {
       };
     });
     returnToBoard();
+  };
+
+  const handleAddSuggestedQuest = (suggestion: SuggestedQuest) => {
+    const suggestedQuest = normalizeQuest({
+      id: createQuestId(),
+      title: suggestion.title,
+      difficulty: suggestion.difficulty,
+      xpReward: completionXpByDifficulty[suggestion.difficulty],
+      status: 'Ready',
+      category: suggestion.category,
+      createdAt: Date.now(),
+    });
+
+    setGameState(currentState => {
+      const nextQuests = [suggestedQuest, ...currentState.quests];
+
+      return {
+        ...currentState,
+        quests: nextQuests,
+        unlockedAchievementIds: getUnlockedAchievementIds({
+          hero: currentState.hero,
+          quests: nextQuests,
+          existingUnlockedAchievementIds: currentState.unlockedAchievementIds,
+        }),
+      };
+    });
   };
 
   const handleDeleteQuest = (questId: string) => {
@@ -1594,7 +1745,9 @@ function App() {
             {currentScreen === 'quest-board' ? (
               <QuestBoardScreen
                 completionFeedback={completionFeedback}
+                dailySuggestions={dailySuggestions}
                 hero={gameState.hero}
+                onAddSuggestedQuest={handleAddSuggestedQuest}
                 onCompleteQuest={handleCompleteQuest}
                 onEditQuest={questId => {
                   setEditingQuestId(questId);
@@ -1818,6 +1971,20 @@ function createStyles(theme: ThemePalette) {
       borderWidth: 1,
       marginTop: 28,
       padding: 20,
+    },
+    suggestionCard: {
+      backgroundColor: theme.surfaceLow,
+      borderColor: theme.ghostBorder,
+      borderRadius: 20,
+      borderWidth: 1,
+      marginTop: 12,
+      padding: 16,
+    },
+    suggestionTitle: {
+      color: theme.textPrimary,
+      fontSize: 18,
+      fontWeight: '700',
+      lineHeight: 24,
     },
     completionBanner: {
       backgroundColor: theme.surface,

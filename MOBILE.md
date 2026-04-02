@@ -18,8 +18,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 13 |
-| Total Weight (kg) | 140 |
+| Total Iterations | 14 |
+| Total Weight (kg) | 150 |
 | Total Time (min) | Not tracked |
 | Failed Attempts | Not tracked |
 
@@ -641,6 +641,60 @@ Add quest sorting options.
 **Screenshot:** `iteration-13-quest-sorting.png`
 
 **Commit:** `[NAIM: Quest Blacksmith] Add quest sorting options - 10kg`
+
+---
+
+### Iteration 14
+
+| Field | Value |
+|-------|-------|
+| Feature | `Daily quest suggestions` |
+| Weight | `10 kg` |
+| Tool Used | `Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+You are continuing my local React Native project called QuestForge.
+
+Important assignment constraints:
+- This is for a NAIM-style iterative mobile app assignment
+- I must build one small feature per iteration
+- I must document each iteration in MOBILE.md
+- I must take a screenshot after each successful iteration
+- I must commit after each iteration
+- So do NOT build extra features beyond this iteration
+
+Current state:
+- Iteration 1 is done: Quest Board UI
+- Iteration 2 is done: add quest input flow
+- Iteration 3 is done: multi-screen navigation
+- Iteration 4 is done: local persistence
+- Iteration 5 is done: XP and rank progression
+- Iteration 6 is done: search and filter quests
+- Iteration 7 is done: manual theme toggle
+- Iteration 8 is done: profile progress screen
+- Iteration 9 is done: quest completion animation
+- Iteration 10 is done: daily streak system
+- Iteration 11 is done: edit and delete quest management
+- Iteration 12 is done: achievement badge system
+- Iteration 13 is done: quest sorting options
+
+Task: Implement ONLY Iteration 14.
+
+Iteration 14 goal:
+Add daily quest suggestions.
+```
+
+**What happened:**
+- Added a local rule-based daily suggestion section on the Quest Board using a fixed rotating template pool and the current day to choose quest ideas.
+- Each suggestion can be added directly into the real quest list with one tap, and the rest of the app flow stays unchanged because suggested quests reuse the existing save and persistence logic.
+
+**Screenshot:** `iteration-14-daily-suggestions.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add daily quest suggestions - 10kg`
 
 ---
 

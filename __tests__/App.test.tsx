@@ -302,6 +302,44 @@ test('sorting works with the current search and filter flow and persists selecti
   );
 });
 
+test('daily suggestions can be added into the real quest list and persisted', async () => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date('2026-04-14T09:00:00'));
+
+  try {
+    let tree: ReactTestRenderer.ReactTestRenderer;
+
+    await ReactTestRenderer.act(async () => {
+      tree = ReactTestRenderer.create(<App />);
+    });
+
+    await ReactTestRenderer.act(async () => {
+      await flushMicrotasks();
+    });
+
+    let root = tree!.root;
+    const initialRender = JSON.stringify(tree!.toJSON());
+
+    expect(initialRender).toContain('"Daily Suggestions"');
+    expect(initialRender).toContain('"Forge a Weekly Master Plan"');
+
+    await ReactTestRenderer.act(async () => {
+      root.findByProps({ testID: 'add-suggested-quest-0' }).props.onPress();
+    });
+
+    root = tree!.root;
+    const updatedRender = JSON.stringify(tree!.toJSON());
+
+    expect(updatedRender).toContain('"Forge a Weekly Master Plan"');
+    expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
+      GAME_STATE_STORAGE_KEY,
+      expect.stringContaining('Forge a Weekly Master Plan'),
+    );
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
 test('theme toggle switches modes and persists the selected theme', async () => {
   let tree: ReactTestRenderer.ReactTestRenderer;
 
