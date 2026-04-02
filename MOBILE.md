@@ -25,8 +25,8 @@ After teacher feedback, the project direction was corrected beginning in Iterati
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 17 |
-| Total Weight (kg) | 180 |
+| Total Iterations | 18 |
+| Total Weight (kg) | 190 |
 | Total Time (min) | Not tracked |
 | Failed Attempts | Not tracked |
 
@@ -792,6 +792,32 @@ yes
 **Screenshot:** `iteration-17-backend-app-config.png`
 
 **Commit:** `[NAIM: Quest Blacksmith] Add backend app config refresh - 10kg`
+
+---
+
+### Iteration 18
+
+| Field | Value |
+|-------|-------|
+| Feature | `Backend-driven Progress screen config` |
+| Weight | `10 kg` |
+| Tool Used | `Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+do all 4 iterations and after each iteration commit them and update mobile.md when there is a new screen needed you are already connected to stitch you should generate a new screen then use it on the app
+```
+
+**What happened:**
+- Moved the Progress screen copy into the backend app config instead of hardcoding its headings and intro text in the React Native screen.
+- After a realm refresh, the Progress screen now picks up backend-controlled titles, subtitles, section headings, and achievement copy while keeping the same screen structure and data.
+
+**Screenshot:** `iteration-18-backend-progress-config.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add backend progress screen config - 10kg`
 
 ---
 

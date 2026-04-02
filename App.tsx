@@ -96,6 +96,14 @@ type AppConfig = {
   mainQuestSectionTitle: string;
   sideQuestSectionTitle: string;
   completedQuestSectionTitle: string;
+  progressKicker: string;
+  progressTitle: string;
+  progressSubtitle: string;
+  progressHeroEyebrow: string;
+  progressSectionTitle: string;
+  progressSectionIntro: string;
+  achievementSectionTitle: string;
+  achievementSectionIntro: string;
 };
 
 type GameStateResponse = {
@@ -229,6 +237,17 @@ function createDefaultAppConfig(): AppConfig {
     mainQuestSectionTitle: 'Main Quest',
     sideQuestSectionTitle: 'Side Quests',
     completedQuestSectionTitle: 'Completed Quests',
+    progressKicker: 'Profile',
+    progressTitle: 'Hero Summary',
+    progressSubtitle:
+      'Track the progress you have forged from quests already living in your current log.',
+    progressHeroEyebrow: 'Current Progress',
+    progressSectionTitle: 'Quest Progress',
+    progressSectionIntro:
+      'This screen summarizes the quest board without creating any new data or changing your current flow.',
+    achievementSectionTitle: 'Achievements',
+    achievementSectionIntro:
+      'Badges unlock automatically from the progress you already build on the quest board.',
   };
 }
 
@@ -610,6 +629,38 @@ function normalizeRemoteAppConfig(config: AppConfig): AppConfig {
     completedQuestSectionTitle: normalizeAppConfigText(
       config?.completedQuestSectionTitle,
       fallbackConfig.completedQuestSectionTitle,
+    ),
+    progressKicker: normalizeAppConfigText(
+      config?.progressKicker,
+      fallbackConfig.progressKicker,
+    ),
+    progressTitle: normalizeAppConfigText(
+      config?.progressTitle,
+      fallbackConfig.progressTitle,
+    ),
+    progressSubtitle: normalizeAppConfigText(
+      config?.progressSubtitle,
+      fallbackConfig.progressSubtitle,
+    ),
+    progressHeroEyebrow: normalizeAppConfigText(
+      config?.progressHeroEyebrow,
+      fallbackConfig.progressHeroEyebrow,
+    ),
+    progressSectionTitle: normalizeAppConfigText(
+      config?.progressSectionTitle,
+      fallbackConfig.progressSectionTitle,
+    ),
+    progressSectionIntro: normalizeAppConfigText(
+      config?.progressSectionIntro,
+      fallbackConfig.progressSectionIntro,
+    ),
+    achievementSectionTitle: normalizeAppConfigText(
+      config?.achievementSectionTitle,
+      fallbackConfig.achievementSectionTitle,
+    ),
+    achievementSectionIntro: normalizeAppConfigText(
+      config?.achievementSectionIntro,
+      fallbackConfig.achievementSectionIntro,
     ),
   };
 }
@@ -1380,6 +1431,7 @@ function QuestBoardScreen({
 }
 
 function ProgressScreen({
+  appConfig,
   hero,
   quests,
   unlockedAchievementIds,
@@ -1388,6 +1440,7 @@ function ProgressScreen({
   styles,
   themeMode,
 }: {
+  appConfig: AppConfig;
   hero: HeroProgress;
   quests: Quest[];
   unlockedAchievementIds: AchievementId[];
@@ -1417,17 +1470,14 @@ function ProgressScreen({
         />
       </View>
 
-      <Text style={styles.kicker}>Profile</Text>
-      <Text style={styles.title}>Hero Summary</Text>
-      <Text style={styles.subtitle}>
-        Track the progress you have forged from quests already living in your
-        current log.
-      </Text>
+      <Text style={styles.kicker}>{appConfig.progressKicker}</Text>
+      <Text style={styles.title}>{appConfig.progressTitle}</Text>
+      <Text style={styles.subtitle}>{appConfig.progressSubtitle}</Text>
 
       <View style={styles.heroCard}>
         <View style={styles.heroHeader}>
           <View>
-            <Text style={styles.heroEyebrow}>Current Progress</Text>
+            <Text style={styles.heroEyebrow}>{appConfig.progressHeroEyebrow}</Text>
             <Text style={styles.heroTitle}>Rank Title: {hero.rankTitle}</Text>
           </View>
           <View style={styles.heroOrb} />
@@ -1456,11 +1506,8 @@ function ProgressScreen({
       </View>
 
       <View style={styles.formCard}>
-        <Text style={styles.sectionTitle}>Quest Progress</Text>
-        <Text style={styles.formIntro}>
-          This screen summarizes the quest board without creating any new data
-          or changing your current flow.
-        </Text>
+        <Text style={styles.sectionTitle}>{appConfig.progressSectionTitle}</Text>
+        <Text style={styles.formIntro}>{appConfig.progressSectionIntro}</Text>
 
         <View style={styles.progressGrid}>
           <ProgressMetric
@@ -1492,11 +1539,8 @@ function ProgressScreen({
       </View>
 
       <View style={styles.formCard}>
-        <Text style={styles.sectionTitle}>Achievements</Text>
-        <Text style={styles.formIntro}>
-          Badges unlock automatically from the progress you already build on the
-          quest board.
-        </Text>
+        <Text style={styles.sectionTitle}>{appConfig.achievementSectionTitle}</Text>
+        <Text style={styles.formIntro}>{appConfig.achievementSectionIntro}</Text>
 
         <View style={styles.achievementGrid}>
           {achievementDefinitions.map(achievement => (
@@ -1927,6 +1971,7 @@ function App() {
               />
             ) : currentScreen === 'progress' ? (
               <ProgressScreen
+                appConfig={appConfig}
                 hero={gameState.hero}
                 onBack={() => setCurrentScreen('quest-board')}
                 onToggleTheme={handleToggleTheme}
@@ -2551,6 +2596,7 @@ function createStyles(theme: ThemePalette) {
 }
 
 export default App;
+
 
 
 

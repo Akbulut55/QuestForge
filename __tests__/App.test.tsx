@@ -113,6 +113,14 @@ type TestAppConfig = {
   mainQuestSectionTitle: string;
   sideQuestSectionTitle: string;
   completedQuestSectionTitle: string;
+  progressKicker: string;
+  progressTitle: string;
+  progressSubtitle: string;
+  progressHeroEyebrow: string;
+  progressSectionTitle: string;
+  progressSectionIntro: string;
+  achievementSectionTitle: string;
+  achievementSectionIntro: string;
 };
 
 const defaultRemoteGameState: TestGameState = {
@@ -169,6 +177,17 @@ const defaultRemoteAppConfig: TestAppConfig = {
   mainQuestSectionTitle: 'Main Quest',
   sideQuestSectionTitle: 'Side Quests',
   completedQuestSectionTitle: 'Completed Quests',
+  progressKicker: 'Profile',
+  progressTitle: 'Hero Summary',
+  progressSubtitle:
+    'Track the progress you have forged from quests already living in your current log.',
+  progressHeroEyebrow: 'Current Progress',
+  progressSectionTitle: 'Quest Progress',
+  progressSectionIntro:
+    'This screen summarizes the quest board without creating any new data or changing your current flow.',
+  achievementSectionTitle: 'Achievements',
+  achievementSectionIntro:
+    'Badges unlock automatically from the progress you already build on the quest board.',
 };
 
 const completionXpByDifficulty = {
@@ -756,6 +775,61 @@ test('loads backend-driven board copy and refreshes it inside the app', async ()
   expect(mockFetchRemoteAppConfig).toHaveBeenCalled();
 });
 
+test('loads backend-driven progress copy after realm sync refresh', async () => {
+  const tree = await renderHydratedApp();
+  let root = tree.root;
+
+  mockRemoteAppConfig = {
+    ...mockRemoteAppConfig,
+    configVersion: 3,
+    progressKicker: 'Hall Of Echoes',
+    progressTitle: 'Realm Progress Ledger',
+    progressSubtitle:
+      'The backend now controls how this progress screen speaks to the player.',
+    progressHeroEyebrow: 'Live Realm Progress',
+    progressSectionTitle: 'Guild Totals',
+    progressSectionIntro:
+      'These summary cards now come with backend-controlled section copy.',
+    achievementSectionTitle: 'Sigils Of Renown',
+    achievementSectionIntro:
+      'Badge guidance can also shift through backend config updates.',
+  };
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'refresh-app-config' }).props.onPress();
+    await flushMicrotasks();
+  });
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'navigate-to-progress-screen' }).props.onPress();
+  });
+
+  root = tree.root;
+  const progressRender = JSON.stringify(tree.toJSON());
+
+  expect(
+    root.findAll(node => node.props.children === 'Hall Of Echoes').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Realm Progress Ledger').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Live Realm Progress').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Guild Totals').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Sigils Of Renown').length,
+  ).toBeGreaterThan(0);
+  expect(progressRender).toContain(
+    'The backend now controls how this progress screen speaks to the player.',
+  );
+  expect(progressRender).toContain(
+    'Badge guidance can also shift through backend config updates.',
+  );
+});
+
 test('completing a quest awards XP, updates rank, and saves remote game state', async () => {
   const tree = await renderHydratedApp();
 
@@ -1170,6 +1244,7 @@ test('completing a quest on the next day increases the streak', async () => {
     jest.useRealTimers();
   }
 });
+
 
 
 

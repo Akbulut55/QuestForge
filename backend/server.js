@@ -91,6 +91,14 @@ const defaultAppConfig = {
   mainQuestSectionTitle: 'Main Quest',
   sideQuestSectionTitle: 'Side Quests',
   completedQuestSectionTitle: 'Completed Quests',
+  progressKicker: 'Profile',
+  progressTitle: 'Hero Summary',
+  progressSubtitle: 'Track the progress you have forged from quests already living in your current log.',
+  progressHeroEyebrow: 'Current Progress',
+  progressSectionTitle: 'Quest Progress',
+  progressSectionIntro: 'This screen summarizes the quest board without creating any new data or changing your current flow.',
+  achievementSectionTitle: 'Achievements',
+  achievementSectionIntro: 'Badges unlock automatically from the progress you already build on the quest board.',
 };
 
 function createQuestId() {
@@ -387,6 +395,38 @@ function normalizeAppConfig(appConfig) {
     completedQuestSectionTitle: normalizeTextField(
       appConfig?.completedQuestSectionTitle,
       defaultAppConfig.completedQuestSectionTitle,
+    ),
+    progressKicker: normalizeTextField(
+      appConfig?.progressKicker,
+      defaultAppConfig.progressKicker,
+    ),
+    progressTitle: normalizeTextField(
+      appConfig?.progressTitle,
+      defaultAppConfig.progressTitle,
+    ),
+    progressSubtitle: normalizeTextField(
+      appConfig?.progressSubtitle,
+      defaultAppConfig.progressSubtitle,
+    ),
+    progressHeroEyebrow: normalizeTextField(
+      appConfig?.progressHeroEyebrow,
+      defaultAppConfig.progressHeroEyebrow,
+    ),
+    progressSectionTitle: normalizeTextField(
+      appConfig?.progressSectionTitle,
+      defaultAppConfig.progressSectionTitle,
+    ),
+    progressSectionIntro: normalizeTextField(
+      appConfig?.progressSectionIntro,
+      defaultAppConfig.progressSectionIntro,
+    ),
+    achievementSectionTitle: normalizeTextField(
+      appConfig?.achievementSectionTitle,
+      defaultAppConfig.achievementSectionTitle,
+    ),
+    achievementSectionIntro: normalizeTextField(
+      appConfig?.achievementSectionIntro,
+      defaultAppConfig.achievementSectionIntro,
     ),
   };
 }
@@ -822,3 +862,4 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`QuestForge backend running at http://localhost:${PORT}`);
 });
+
