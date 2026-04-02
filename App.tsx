@@ -16,8 +16,18 @@ import {
 import {
   loadLegacyStoredQuests,
   loadStoredGameState,
-  saveStoredGameState,
 } from './src/storage/questStorage';
+import {
+  completeRemoteQuest,
+  createRemoteQuest,
+  deleteRemoteQuest,
+  fetchRemoteAppConfig,
+  fetchRemoteGameState,
+  saveRemoteGameState,
+  updateRemoteQuest,
+  updateRemoteSortOption,
+  updateRemoteTheme,
+} from './src/api/gameStateApi';
 
 type Difficulty = 'Easy' | 'Medium' | 'Hard' | 'Epic';
 type Category = 'Main Quest' | 'Side Quest';
@@ -51,11 +61,13 @@ type Quest = {
   createdAt: number;
 };
 
-type SuggestedQuest = {
+type QuestDraft = {
   title: string;
   difficulty: Difficulty;
   category: Category;
 };
+
+type SuggestedQuest = QuestDraft;
 
 type HeroProgress = {
   xp: number;
@@ -70,6 +82,28 @@ type GameState = {
   themeMode: ThemeMode;
   unlockedAchievementIds: AchievementId[];
   sortOption: SortOption;
+};
+
+type AppConfig = {
+  configVersion: number;
+  boardKicker: string;
+  boardSubtitle: string;
+  heroEyebrow: string;
+  realmSyncMessage: string;
+  suggestionSectionTitle: string;
+  addQuestSectionTitle: string;
+  filterSectionTitle: string;
+  mainQuestSectionTitle: string;
+  sideQuestSectionTitle: string;
+  completedQuestSectionTitle: string;
+};
+
+type GameStateResponse = {
+  gameState: GameState;
+};
+
+type CompleteQuestResponse = GameStateResponse & {
+  completionFeedback: CompletionFeedback | null;
 };
 
 type ProgressStats = {
@@ -179,6 +213,24 @@ const sortOptions: SortOption[] = [
   'Difficulty descending',
   'Title A-Z',
 ];
+
+function createDefaultAppConfig(): AppConfig {
+  return {
+    configVersion: 1,
+    boardKicker: 'Daily Quest Log',
+    boardSubtitle:
+      'Turn your everyday tasks into a progression path worth chasing.',
+    heroEyebrow: 'Hero Overview',
+    realmSyncMessage:
+      'Refresh this screen to pull the latest board copy from the backend.',
+    suggestionSectionTitle: 'Daily Suggestions',
+    addQuestSectionTitle: 'Forge New Quest',
+    filterSectionTitle: 'Search And Filter',
+    mainQuestSectionTitle: 'Main Quest',
+    sideQuestSectionTitle: 'Side Quests',
+    completedQuestSectionTitle: 'Completed Quests',
+  };
+}
 
 const completionXpByDifficulty: Record<Difficulty, number> = {
   Easy: 10,
@@ -402,42 +454,6 @@ function normalizeStreakProgress(
   };
 }
 
-function getNextStreakProgress(
-  streakCount: number,
-  lastCompletedDate: string | null,
-  completedDateKey: string,
-) {
-  if (lastCompletedDate === completedDateKey) {
-    return {
-      streakCount: Math.max(1, streakCount),
-      lastCompletedDate: completedDateKey,
-    };
-  }
-
-  if (!lastCompletedDate) {
-    return {
-      streakCount: 1,
-      lastCompletedDate: completedDateKey,
-    };
-  }
-
-  const dateDifference = getDateDifferenceInDays(
-    lastCompletedDate,
-    completedDateKey,
-  );
-
-  if (dateDifference === 1) {
-    return {
-      streakCount: Math.max(1, streakCount) + 1,
-      lastCompletedDate: completedDateKey,
-    };
-  }
-
-  return {
-    streakCount: 1,
-    lastCompletedDate: completedDateKey,
-  };
-}
 
 function createHeroProgress(
   xp: number,
@@ -527,13 +543,113 @@ function normalizeStoredGameState(state: GameState): GameState {
     hero,
     quests: normalizedQuests,
     themeMode: state.themeMode === 'light' ? 'light' : 'dark',
-    sortOption: sortOptions.includes(state.sortOption) ? state.sortOption : 'Newest first',
+    sortOption: sortOptions.includes(state.sortOption)
+      ? state.sortOption
+      : 'Newest first',
     unlockedAchievementIds: getUnlockedAchievementIds({
       hero,
       quests: normalizedQuests,
       existingUnlockedAchievementIds: state.unlockedAchievementIds ?? [],
     }),
   };
+}
+
+function normalizeAppConfigText(
+  value: string | undefined,
+  fallbackValue: string,
+) {
+  return typeof value === 'string' && value.trim().length > 0
+    ? value.trim()
+    : fallbackValue;
+}
+
+function normalizeRemoteAppConfig(config: AppConfig): AppConfig {
+  const fallbackConfig = createDefaultAppConfig();
+
+  return {
+    configVersion:
+      typeof config?.configVersion === 'number' && config.configVersion > 0
+        ? Math.floor(config.configVersion)
+        : fallbackConfig.configVersion,
+    boardKicker: normalizeAppConfigText(
+      config?.boardKicker,
+      fallbackConfig.boardKicker,
+    ),
+    boardSubtitle: normalizeAppConfigText(
+      config?.boardSubtitle,
+      fallbackConfig.boardSubtitle,
+    ),
+    heroEyebrow: normalizeAppConfigText(
+      config?.heroEyebrow,
+      fallbackConfig.heroEyebrow,
+    ),
+    realmSyncMessage: normalizeAppConfigText(
+      config?.realmSyncMessage,
+      fallbackConfig.realmSyncMessage,
+    ),
+    suggestionSectionTitle: normalizeAppConfigText(
+      config?.suggestionSectionTitle,
+      fallbackConfig.suggestionSectionTitle,
+    ),
+    addQuestSectionTitle: normalizeAppConfigText(
+      config?.addQuestSectionTitle,
+      fallbackConfig.addQuestSectionTitle,
+    ),
+    filterSectionTitle: normalizeAppConfigText(
+      config?.filterSectionTitle,
+      fallbackConfig.filterSectionTitle,
+    ),
+    mainQuestSectionTitle: normalizeAppConfigText(
+      config?.mainQuestSectionTitle,
+      fallbackConfig.mainQuestSectionTitle,
+    ),
+    sideQuestSectionTitle: normalizeAppConfigText(
+      config?.sideQuestSectionTitle,
+      fallbackConfig.sideQuestSectionTitle,
+    ),
+    completedQuestSectionTitle: normalizeAppConfigText(
+      config?.completedQuestSectionTitle,
+      fallbackConfig.completedQuestSectionTitle,
+    ),
+  };
+}
+
+function areGameStatesEqual(leftState: GameState, rightState: GameState) {
+  return JSON.stringify(leftState) === JSON.stringify(rightState);
+}
+
+function getLocalMigrationState({
+  storedGameState,
+  legacyQuests,
+}: {
+  storedGameState: GameState | null;
+  legacyQuests: Quest[] | null;
+}) {
+  if (storedGameState !== null) {
+    return normalizeStoredGameState(storedGameState);
+  }
+
+  if (legacyQuests !== null) {
+    return migrateLegacyQuests(legacyQuests);
+  }
+
+  return null;
+}
+
+function shouldMigrateLocalState(
+  remoteGameState: GameState,
+  localGameState: GameState | null,
+) {
+  if (localGameState === null) {
+    return false;
+  }
+
+  const defaultGameState = createInitialGameState();
+
+  return (
+    areGameStatesEqual(remoteGameState, defaultGameState) &&
+    !areGameStatesEqual(localGameState, defaultGameState)
+  );
 }
 
 function questMatchesFilters({
@@ -912,12 +1028,14 @@ function QuestCard({
 }
 
 function QuestBoardScreen({
+  appConfig,
   hero,
   quests,
   dailySuggestions,
   selectedSortOption,
   styles,
   themeMode,
+  onRefreshAppConfig,
   onToggleTheme,
   onAddSuggestedQuest,
   onCompleteQuest,
@@ -926,13 +1044,16 @@ function QuestBoardScreen({
   onNavigateToProgress,
   onSelectSortOption,
   completionFeedback,
+  isRefreshingAppConfig,
 }: {
+  appConfig: AppConfig;
   hero: HeroProgress;
   quests: Quest[];
   dailySuggestions: SuggestedQuest[];
   selectedSortOption: SortOption;
   styles: ReturnType<typeof createStyles>;
   themeMode: ThemeMode;
+  onRefreshAppConfig: () => void;
   onToggleTheme: () => void;
   onAddSuggestedQuest: (suggestion: SuggestedQuest) => void;
   onCompleteQuest: (questId: string) => void;
@@ -941,6 +1062,7 @@ function QuestBoardScreen({
   onNavigateToProgress: () => void;
   onSelectSortOption: (sortOption: SortOption) => void;
   completionFeedback: CompletionFeedback | null;
+  isRefreshingAppConfig: boolean;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDifficultyFilter, setSelectedDifficultyFilter] =
@@ -1005,7 +1127,7 @@ function QuestBoardScreen({
       showsVerticalScrollIndicator={false}>
       <View style={styles.topBar}>
         <View>
-          <Text style={styles.kicker}>Daily Quest Log</Text>
+          <Text style={styles.kicker}>{appConfig.boardKicker}</Text>
           <Text style={styles.title}>Quest Forge</Text>
         </View>
         <ThemeToggle
@@ -1015,14 +1137,12 @@ function QuestBoardScreen({
         />
       </View>
 
-      <Text style={styles.subtitle}>
-        Turn your everyday tasks into a progression path worth chasing.
-      </Text>
+      <Text style={styles.subtitle}>{appConfig.boardSubtitle}</Text>
 
       <View style={styles.heroCard}>
         <View style={styles.heroHeader}>
           <View>
-            <Text style={styles.heroEyebrow}>Hero Overview</Text>
+            <Text style={styles.heroEyebrow}>{appConfig.heroEyebrow}</Text>
             <Text style={styles.heroTitle}>Rank Title: {hero.rankTitle}</Text>
           </View>
           <View style={styles.heroOrb} />
@@ -1070,8 +1190,23 @@ function QuestBoardScreen({
         </Animated.View>
       ) : null}
 
+      <View style={styles.boardActionCard} testID="realm-sync-card">
+        <Text style={styles.sectionTitle}>Realm Sync</Text>
+        <Text style={styles.formIntro}>
+          Config v{appConfig.configVersion}. {appConfig.realmSyncMessage}
+        </Text>
+        <Pressable
+          onPress={onRefreshAppConfig}
+          style={styles.secondaryActionButton}
+          testID="refresh-app-config">
+          <Text style={styles.secondaryActionText}>
+            {isRefreshingAppConfig ? 'Syncing Realm...' : 'Refresh Realm Copy'}
+          </Text>
+        </Pressable>
+      </View>
+
       <View style={styles.boardActionCard}>
-        <Text style={styles.sectionTitle}>Daily Suggestions</Text>
+        <Text style={styles.sectionTitle}>{appConfig.suggestionSectionTitle}</Text>
         <Text style={styles.formIntro}>
           Fresh local quest ideas rotate each day so you can add one to the
           board in a single tap.
@@ -1115,7 +1250,7 @@ function QuestBoardScreen({
       </View>
 
       <View style={styles.boardActionCard}>
-        <Text style={styles.sectionTitle}>Forge New Quest</Text>
+        <Text style={styles.sectionTitle}>{appConfig.addQuestSectionTitle}</Text>
         <Text style={styles.formIntro}>
           Open the dedicated Add Quest screen to create a new mission for your
           quest log.
@@ -1135,7 +1270,7 @@ function QuestBoardScreen({
       </View>
 
       <View style={styles.filterCard}>
-        <Text style={styles.sectionTitle}>Search And Filter</Text>
+        <Text style={styles.sectionTitle}>{appConfig.filterSectionTitle}</Text>
         <Text style={styles.formIntro}>
           Narrow the board by title, difficulty, category, and completion
           status.
@@ -1202,7 +1337,7 @@ function QuestBoardScreen({
       ) : null}
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Main Quest</Text>
+        <Text style={styles.sectionTitle}>{appConfig.mainQuestSectionTitle}</Text>
         {mainQuests.map(quest => (
           <QuestCard
             key={quest.id}
@@ -1215,7 +1350,7 @@ function QuestBoardScreen({
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Side Quests</Text>
+        <Text style={styles.sectionTitle}>{appConfig.sideQuestSectionTitle}</Text>
         {sideQuests.map(quest => (
           <QuestCard
             key={quest.id}
@@ -1228,7 +1363,9 @@ function QuestBoardScreen({
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Completed Quests</Text>
+        <Text style={styles.sectionTitle}>
+          {appConfig.completedQuestSectionTitle}
+        </Text>
         {completedQuests.map(quest => (
           <QuestCard
             key={quest.id}
@@ -1386,7 +1523,7 @@ function AddQuestScreen({
   themeMode,
 }: {
   onBack: () => void;
-  onSave: (quest: Quest) => void;
+  onSave: (questDraft: QuestDraft) => void;
   onDelete: (questId: string) => void;
   questToEdit: Quest | null;
   onToggleTheme: () => void;
@@ -1423,13 +1560,9 @@ function AddQuestScreen({
     }
 
     onSave({
-      id: questToEdit?.id ?? createQuestId(),
       title,
       difficulty: selectedDifficulty,
-      xpReward: completionXpByDifficulty[selectedDifficulty],
-      status: questToEdit?.status ?? 'Ready',
       category: selectedCategory,
-      createdAt: questToEdit?.createdAt ?? Date.now(),
     });
   };
 
@@ -1535,11 +1668,15 @@ function AddQuestScreen({
 
 function App() {
   const [gameState, setGameState] = useState<GameState>(createInitialGameState);
+  const [appConfig, setAppConfig] = useState<AppConfig>(createDefaultAppConfig);
   const [currentScreen, setCurrentScreen] = useState<ScreenName>('quest-board');
   const [isHydrated, setIsHydrated] = useState(false);
+  const [backendError, setBackendError] = useState<string | null>(null);
+  const [backendRetryCount, setBackendRetryCount] = useState(0);
   const [completionFeedback, setCompletionFeedback] =
     useState<CompletionFeedback | null>(null);
   const [editingQuestId, setEditingQuestId] = useState<string | null>(null);
+  const [isRefreshingAppConfig, setIsRefreshingAppConfig] = useState(false);
 
   const currentTheme = themes[gameState.themeMode];
   const styles = createStyles(currentTheme);
@@ -1549,26 +1686,96 @@ function App() {
       : gameState.quests.find(quest => quest.id === editingQuestId) ?? null;
   const dailySuggestions = getDailySuggestions(getDateKey(), gameState.quests);
 
+  const backendUnavailableMessage =
+    'Backend connection required. Start `npm run backend` and retry.';
+
+  const applyRemoteGameState = (nextGameState: GameState) => {
+    const normalizedGameState = normalizeStoredGameState(nextGameState);
+
+    setGameState(normalizedGameState);
+
+    return normalizedGameState;
+  };
+
+  const applyRemoteAppConfig = (nextAppConfig: AppConfig) => {
+    const normalizedAppConfig = normalizeRemoteAppConfig(nextAppConfig);
+
+    setAppConfig(normalizedAppConfig);
+
+    return normalizedAppConfig;
+  };
+
+  const runGameStateRequest = async <T extends GameStateResponse>(
+    request: () => Promise<T>,
+  ) => {
+    try {
+      setBackendError(null);
+      const response = await request();
+
+      applyRemoteGameState(response.gameState);
+
+      return response;
+    } catch {
+      setBackendError(backendUnavailableMessage);
+      return null;
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
 
     const hydrateGameState = async () => {
-      const storedGameState = await loadStoredGameState<GameState>();
-      const legacyQuests = storedGameState
-        ? null
-        : await loadLegacyStoredQuests<Quest>();
+      setIsHydrated(false);
+      setBackendError(null);
 
-      if (!isMounted) {
-        return;
+      try {
+        const [remoteGameStateResponse, remoteAppConfigResponse] =
+          await Promise.all([
+            fetchRemoteGameState<GameState>(),
+            fetchRemoteAppConfig<AppConfig>(),
+          ]);
+        const remoteGameState = normalizeStoredGameState(
+          remoteGameStateResponse,
+        );
+        const remoteAppConfig = normalizeRemoteAppConfig(
+          remoteAppConfigResponse,
+        );
+        const storedGameState = await loadStoredGameState<GameState>();
+        const legacyQuests = storedGameState
+          ? null
+          : await loadLegacyStoredQuests<Quest>();
+        const localMigrationState = getLocalMigrationState({
+          storedGameState,
+          legacyQuests,
+        });
+        const nextGameState = shouldMigrateLocalState(
+          remoteGameState,
+          localMigrationState,
+        )
+          ? (localMigrationState as GameState)
+          : remoteGameState;
+
+        if (shouldMigrateLocalState(remoteGameState, localMigrationState)) {
+          await saveRemoteGameState(nextGameState);
+        }
+
+        if (!isMounted) {
+          return;
+        }
+
+        applyRemoteGameState(nextGameState);
+        applyRemoteAppConfig(remoteAppConfig);
+      } catch {
+        if (!isMounted) {
+          return;
+        }
+
+        setBackendError(backendUnavailableMessage);
+      } finally {
+        if (isMounted) {
+          setIsHydrated(true);
+        }
       }
-
-      if (storedGameState !== null) {
-        setGameState(normalizeStoredGameState(storedGameState));
-      } else if (legacyQuests !== null) {
-        setGameState(migrateLegacyQuests(legacyQuests));
-      }
-
-      setIsHydrated(true);
     };
 
     hydrateGameState();
@@ -1576,154 +1783,88 @@ function App() {
     return () => {
       isMounted = false;
     };
-  }, []);
-
-  useEffect(() => {
-    if (!isHydrated) {
-      return;
-    }
-
-    saveStoredGameState(gameState);
-  }, [gameState, isHydrated]);
+  }, [backendRetryCount]);
 
   const returnToBoard = () => {
     setEditingQuestId(null);
     setCurrentScreen('quest-board');
   };
 
-  const handleSaveQuest = (quest: Quest) => {
-    const normalizedQuest = normalizeQuest(quest);
-
-    setGameState(currentState => {
-      const existingQuest = currentState.quests.find(
-        currentQuest => currentQuest.id === normalizedQuest.id,
-      );
-      const nextQuests = existingQuest
-        ? currentState.quests.map(currentQuest =>
-            currentQuest.id === normalizedQuest.id
-              ? normalizedQuest
-              : currentQuest,
-          )
-        : [normalizedQuest, ...currentState.quests];
-      const unlockedAchievementIds = getUnlockedAchievementIds({
-        hero: currentState.hero,
-        quests: nextQuests,
-        existingUnlockedAchievementIds: currentState.unlockedAchievementIds,
-      });
-
-      return {
-        ...currentState,
-        quests: nextQuests,
-        unlockedAchievementIds,
-      };
-    });
-    returnToBoard();
-  };
-
-  const handleAddSuggestedQuest = (suggestion: SuggestedQuest) => {
-    const suggestedQuest = normalizeQuest({
-      id: createQuestId(),
-      title: suggestion.title,
-      difficulty: suggestion.difficulty,
-      xpReward: completionXpByDifficulty[suggestion.difficulty],
-      status: 'Ready',
-      category: suggestion.category,
-      createdAt: Date.now(),
-    });
-
-    setGameState(currentState => {
-      const nextQuests = [suggestedQuest, ...currentState.quests];
-
-      return {
-        ...currentState,
-        quests: nextQuests,
-        unlockedAchievementIds: getUnlockedAchievementIds({
-          hero: currentState.hero,
-          quests: nextQuests,
-          existingUnlockedAchievementIds: currentState.unlockedAchievementIds,
-        }),
-      };
-    });
-  };
-
-  const handleDeleteQuest = (questId: string) => {
-    setGameState(currentState => {
-      const nextQuests = currentState.quests.filter(quest => quest.id !== questId);
-
-      return {
-        ...currentState,
-        quests: nextQuests,
-        unlockedAchievementIds: getUnlockedAchievementIds({
-          hero: currentState.hero,
-          quests: nextQuests,
-          existingUnlockedAchievementIds: currentState.unlockedAchievementIds,
-        }),
-      };
-    });
-    returnToBoard();
-  };
-
-  const handleCompleteQuest = (questId: string) => {
-    setGameState(currentState => {
-      const questToComplete = currentState.quests.find(
-        quest => quest.id === questId,
-      );
-
-      if (!questToComplete || questToComplete.status === 'Completed') {
-        return currentState;
-      }
-
-      const updatedXp =
-        currentState.hero.xp +
-        completionXpByDifficulty[questToComplete.difficulty];
-      const updatedStreak = getNextStreakProgress(
-        currentState.hero.streakCount,
-        currentState.hero.lastCompletedDate,
-        getDateKey(),
-      );
-
-      setCompletionFeedback({
-        questTitle: questToComplete.title,
-        xpGained: completionXpByDifficulty[questToComplete.difficulty],
-      });
-
-      return {
-        ...currentState,
-        hero: createHeroProgress(
-          updatedXp,
-          updatedStreak.streakCount,
-          updatedStreak.lastCompletedDate,
-        ),
-        quests: currentState.quests.map(quest =>
-          quest.id === questId ? { ...quest, status: 'Completed' } : quest,
-        ),
-        unlockedAchievementIds: getUnlockedAchievementIds({
-          hero: createHeroProgress(
-            updatedXp,
-            updatedStreak.streakCount,
-            updatedStreak.lastCompletedDate,
+  const handleSaveQuest = async (questDraft: QuestDraft) => {
+    const response = questToEdit
+      ? await runGameStateRequest(() =>
+          updateRemoteQuest<QuestDraft, GameStateResponse>(
+            questToEdit.id,
+            questDraft,
           ),
-          quests: currentState.quests.map(quest =>
-            quest.id === questId ? { ...quest, status: 'Completed' } : quest,
-          ),
-          existingUnlockedAchievementIds: currentState.unlockedAchievementIds,
-        }),
-      };
-    });
+        )
+      : await runGameStateRequest(() =>
+          createRemoteQuest<QuestDraft, GameStateResponse>(questDraft),
+        );
+
+    if (response) {
+      returnToBoard();
+    }
   };
 
-  const handleToggleTheme = () => {
-    setGameState(currentState => ({
-      ...currentState,
-      themeMode: currentState.themeMode === 'dark' ? 'light' : 'dark',
-    }));
+  const handleAddSuggestedQuest = async (suggestion: SuggestedQuest) => {
+    await runGameStateRequest(() =>
+      createRemoteQuest<SuggestedQuest, GameStateResponse>(suggestion),
+    );
   };
 
-  const handleSelectSortOption = (sortOption: SortOption) => {
-    setGameState(currentState => ({
-      ...currentState,
-      sortOption,
-    }));
+  const handleDeleteQuest = async (questId: string) => {
+    const response = await runGameStateRequest(() =>
+      deleteRemoteQuest<GameStateResponse>(questId),
+    );
+
+    if (response) {
+      returnToBoard();
+    }
+  };
+
+  const handleCompleteQuest = async (questId: string) => {
+    const response = await runGameStateRequest(() =>
+      completeRemoteQuest<CompleteQuestResponse>(questId),
+    );
+
+    if (response?.completionFeedback) {
+      setCompletionFeedback(response.completionFeedback);
+    }
+  };
+
+  const handleToggleTheme = async () => {
+    const nextThemeMode: ThemeMode =
+      gameState.themeMode === 'dark' ? 'light' : 'dark';
+
+    await runGameStateRequest(() =>
+      updateRemoteTheme<ThemeMode, GameStateResponse>(nextThemeMode),
+    );
+  };
+
+  const handleSelectSortOption = async (sortOption: SortOption) => {
+    await runGameStateRequest(() =>
+      updateRemoteSortOption<SortOption, GameStateResponse>(sortOption),
+    );
+  };
+
+  const handleRefreshAppConfig = async () => {
+    setIsRefreshingAppConfig(true);
+
+    try {
+      setBackendError(null);
+      const [nextGameState, nextAppConfig] = await Promise.all([
+        fetchRemoteGameState<GameState>(),
+        fetchRemoteAppConfig<AppConfig>(),
+      ]);
+
+      applyRemoteGameState(nextGameState);
+      applyRemoteAppConfig(nextAppConfig);
+    } catch {
+      setBackendError(backendUnavailableMessage);
+    } finally {
+      setIsRefreshingAppConfig(false);
+    }
   };
 
   return (
@@ -1740,13 +1881,31 @@ function App() {
             <Text style={styles.loadingKicker}>Restoring Quest Log</Text>
             <Text style={styles.loadingTitle}>Quest Forge</Text>
           </View>
+        ) : backendError ? (
+          <View style={styles.loadingState}>
+            <View style={styles.connectionStateCard}>
+              <Text style={styles.loadingKicker}>Backend Required</Text>
+              <Text style={styles.connectionStateTitle}>
+                Quest Forge API Offline
+              </Text>
+              <Text style={styles.connectionStateText}>{backendError}</Text>
+              <Pressable
+                onPress={() => setBackendRetryCount(count => count + 1)}
+                style={styles.primaryActionButton}
+                testID="retry-backend-connection">
+                <Text style={styles.primaryActionText}>Retry Connection</Text>
+              </Pressable>
+            </View>
+          </View>
         ) : (
           <>
             {currentScreen === 'quest-board' ? (
               <QuestBoardScreen
+                appConfig={appConfig}
                 completionFeedback={completionFeedback}
                 dailySuggestions={dailySuggestions}
                 hero={gameState.hero}
+                isRefreshingAppConfig={isRefreshingAppConfig}
                 onAddSuggestedQuest={handleAddSuggestedQuest}
                 onCompleteQuest={handleCompleteQuest}
                 onEditQuest={questId => {
@@ -1758,6 +1917,7 @@ function App() {
                   setCurrentScreen('add-quest');
                 }}
                 onNavigateToProgress={() => setCurrentScreen('progress')}
+                onRefreshAppConfig={handleRefreshAppConfig}
                 onSelectSortOption={handleSelectSortOption}
                 onToggleTheme={handleToggleTheme}
                 quests={gameState.quests}
@@ -1810,6 +1970,15 @@ function createStyles(theme: ThemePalette) {
       justifyContent: 'center',
       paddingHorizontal: 24,
     },
+    connectionStateCard: {
+      backgroundColor: theme.surface,
+      borderColor: theme.ghostBorder,
+      borderRadius: 24,
+      borderWidth: 1,
+      maxWidth: 360,
+      padding: 24,
+      width: '100%',
+    },
     loadingKicker: {
       color: theme.textMuted,
       fontSize: 12,
@@ -1822,6 +1991,18 @@ function createStyles(theme: ThemePalette) {
       fontSize: 30,
       fontWeight: '700',
       letterSpacing: -0.8,
+    },
+    connectionStateTitle: {
+      color: theme.textPrimary,
+      fontSize: 26,
+      fontWeight: '700',
+      letterSpacing: -0.6,
+      marginBottom: 10,
+    },
+    connectionStateText: {
+      color: theme.subtitle,
+      fontSize: 15,
+      lineHeight: 22,
     },
     topBar: {
       alignItems: 'flex-start',
@@ -2370,3 +2551,8 @@ function createStyles(theme: ThemePalette) {
 }
 
 export default App;
+
+
+
+
+

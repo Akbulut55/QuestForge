@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "android": "react-native run-android",
+    "backend": "node backend/server.js",
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",

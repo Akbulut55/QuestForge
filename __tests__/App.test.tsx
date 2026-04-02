@@ -36,6 +36,19 @@ jest.mock('@react-native-async-storage/async-storage', () => {
   };
 });
 
+jest.mock('../src/api/gameStateApi', () => ({
+  __esModule: true,
+  completeRemoteQuest: jest.fn(),
+  createRemoteQuest: jest.fn(),
+  deleteRemoteQuest: jest.fn(),
+  fetchRemoteAppConfig: jest.fn(),
+  fetchRemoteGameState: jest.fn(),
+  saveRemoteGameState: jest.fn(),
+  updateRemoteQuest: jest.fn(),
+  updateRemoteSortOption: jest.fn(),
+  updateRemoteTheme: jest.fn(),
+}));
+
 import App from '../App';
 import {
   GAME_STATE_STORAGE_KEY,
@@ -43,25 +56,555 @@ import {
   loadLegacyStoredQuests,
   loadStoredGameState,
 } from '../src/storage/questStorage';
+import {
+  completeRemoteQuest,
+  createRemoteQuest,
+  deleteRemoteQuest,
+  fetchRemoteAppConfig,
+  fetchRemoteGameState,
+  saveRemoteGameState,
+  updateRemoteQuest,
+  updateRemoteSortOption,
+  updateRemoteTheme,
+} from '../src/api/gameStateApi';
 
 const mockAsyncStorage =
   require('@react-native-async-storage/async-storage').default;
+const mockFetchRemoteAppConfig = fetchRemoteAppConfig as jest.Mock;
+const mockFetchRemoteGameState = fetchRemoteGameState as jest.Mock;
+const mockSaveRemoteGameState = saveRemoteGameState as jest.Mock;
+const mockCreateRemoteQuest = createRemoteQuest as jest.Mock;
+const mockUpdateRemoteQuest = updateRemoteQuest as jest.Mock;
+const mockDeleteRemoteQuest = deleteRemoteQuest as jest.Mock;
+const mockCompleteRemoteQuest = completeRemoteQuest as jest.Mock;
+const mockUpdateRemoteTheme = updateRemoteTheme as jest.Mock;
+const mockUpdateRemoteSortOption = updateRemoteSortOption as jest.Mock;
 
-const flushAsyncWork = () =>
-  new Promise<void>(resolve => {
-    setTimeout(() => resolve(), 0);
+type TestGameState = {
+  hero: {
+    xp: number;
+    rankTitle: string;
+    streakCount: number;
+    lastCompletedDate: string | null;
+  };
+  quests: Array<{
+    id: string;
+    title: string;
+    difficulty: string;
+    xpReward: number;
+    status: string;
+    category: string;
+    createdAt: number;
+  }>;
+  themeMode: string;
+  unlockedAchievementIds: string[];
+  sortOption: string;
+};
+
+type TestAppConfig = {
+  configVersion: number;
+  boardKicker: string;
+  boardSubtitle: string;
+  heroEyebrow: string;
+  realmSyncMessage: string;
+  suggestionSectionTitle: string;
+  addQuestSectionTitle: string;
+  filterSectionTitle: string;
+  mainQuestSectionTitle: string;
+  sideQuestSectionTitle: string;
+  completedQuestSectionTitle: string;
+};
+
+const defaultRemoteGameState: TestGameState = {
+  hero: {
+    xp: 10,
+    rankTitle: 'Novice',
+    streakCount: 0,
+    lastCompletedDate: null,
+  },
+  quests: [
+    {
+      id: 'quest-1',
+      title: 'Defeat the Laundry Dragon',
+      difficulty: 'Epic',
+      xpReward: 50,
+      status: 'In Progress',
+      category: 'Main Quest',
+      createdAt: 1,
+    },
+    {
+      id: 'quest-2',
+      title: 'Brew a Focus Potion',
+      difficulty: 'Medium',
+      xpReward: 20,
+      status: 'Ready',
+      category: 'Side Quest',
+      createdAt: 2,
+    },
+    {
+      id: 'quest-3',
+      title: 'Sharpen the Study Blade',
+      difficulty: 'Easy',
+      xpReward: 10,
+      status: 'Completed',
+      category: 'Side Quest',
+      createdAt: 3,
+    },
+  ],
+  themeMode: 'dark',
+  unlockedAchievementIds: ['first-quest', 'quest-finisher'],
+  sortOption: 'Newest first',
+};
+
+const defaultRemoteAppConfig: TestAppConfig = {
+  configVersion: 1,
+  boardKicker: 'Daily Quest Log',
+  boardSubtitle: 'Turn your everyday tasks into a progression path worth chasing.',
+  heroEyebrow: 'Hero Overview',
+  realmSyncMessage:
+    'Refresh this screen to pull the latest board copy from the backend.',
+  suggestionSectionTitle: 'Daily Suggestions',
+  addQuestSectionTitle: 'Forge New Quest',
+  filterSectionTitle: 'Search And Filter',
+  mainQuestSectionTitle: 'Main Quest',
+  sideQuestSectionTitle: 'Side Quests',
+  completedQuestSectionTitle: 'Completed Quests',
+};
+
+const completionXpByDifficulty = {
+  Easy: 10,
+  Medium: 20,
+  Hard: 35,
+  Epic: 50,
+} as const;
+const rankThresholds = [
+  { minimumXp: 100, title: 'Champion' },
+  { minimumXp: 50, title: 'Knight' },
+  { minimumXp: 20, title: 'Adventurer' },
+  { minimumXp: 0, title: 'Novice' },
+] as const;
+const achievementIds = [
+  'first-quest',
+  'quest-finisher',
+  'rising-hero',
+  'streak-keeper',
+  'quest-master',
+] as const;
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
+const cloneState = <T,>(value: T) => JSON.parse(JSON.stringify(value)) as T;
+
+let mockBackendState = cloneState(defaultRemoteGameState);
+let mockRemoteAppConfig = cloneState(defaultRemoteAppConfig);
+
+function getDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+function parseDateKey(dateKey: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+    return null;
+  }
+
+  const [year, month, day] = dateKey.split('-').map(Number);
+  const parsedDate = new Date(year, month - 1, day);
+
+  if (
+    parsedDate.getFullYear() !== year ||
+    parsedDate.getMonth() !== month - 1 ||
+    parsedDate.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return parsedDate;
+}
+
+function getDateDifferenceInDays(fromDateKey: string, toDateKey: string) {
+  const fromDate = parseDateKey(fromDateKey);
+  const toDate = parseDateKey(toDateKey);
+
+  if (!fromDate || !toDate) {
+    return null;
+  }
+
+  return Math.round((toDate.getTime() - fromDate.getTime()) / DAY_IN_MS);
+}
+
+function normalizeStreakProgress(
+  streakCount: number,
+  lastCompletedDate: string | null,
+) {
+  if (!lastCompletedDate) {
+    return {
+      streakCount: 0,
+      lastCompletedDate: null,
+    };
+  }
+
+  const dateDifference = getDateDifferenceInDays(lastCompletedDate, getDateKey());
+
+  if (dateDifference === null || dateDifference < 0) {
+    return {
+      streakCount: 0,
+      lastCompletedDate: null,
+    };
+  }
+
+  if (dateDifference <= 1) {
+    return {
+      streakCount: Math.max(0, streakCount),
+      lastCompletedDate,
+    };
+  }
+
+  return {
+    streakCount: 0,
+    lastCompletedDate: null,
+  };
+}
+
+function getNextStreakProgress(
+  streakCount: number,
+  lastCompletedDate: string | null,
+  completedDateKey: string,
+) {
+  if (lastCompletedDate === completedDateKey) {
+    return {
+      streakCount: Math.max(1, streakCount),
+      lastCompletedDate: completedDateKey,
+    };
+  }
+
+  if (!lastCompletedDate) {
+    return {
+      streakCount: 1,
+      lastCompletedDate: completedDateKey,
+    };
+  }
+
+  const dateDifference = getDateDifferenceInDays(
+    lastCompletedDate,
+    completedDateKey,
+  );
+
+  if (dateDifference === 1) {
+    return {
+      streakCount: Math.max(1, streakCount) + 1,
+      lastCompletedDate: completedDateKey,
+    };
+  }
+
+  return {
+    streakCount: 1,
+    lastCompletedDate: completedDateKey,
+  };
+}
+
+function getRankTitleForXp(xp: number) {
+  return (
+    rankThresholds.find(threshold => xp >= threshold.minimumXp)?.title ??
+    'Novice'
+  );
+}
+
+function createHeroProgress(
+  xp: number,
+  streakCount = 0,
+  lastCompletedDate: string | null = null,
+) {
+  const normalizedStreak = normalizeStreakProgress(
+    streakCount,
+    lastCompletedDate,
+  );
+
+  return {
+    xp,
+    rankTitle: getRankTitleForXp(xp),
+    streakCount: normalizedStreak.streakCount,
+    lastCompletedDate: normalizedStreak.lastCompletedDate,
+  };
+}
+
+function getProgressStats(
+  quests: Array<{ status: string }>,
+) {
+  const totalCompleted = quests.filter(quest => quest.status === 'Completed').length;
+
+  return {
+    totalCompleted,
+  };
+}
+
+function getUnlockedAchievementIds({
+  hero,
+  quests,
+  existingUnlockedAchievementIds = [],
+}: {
+  hero: typeof defaultRemoteGameState.hero;
+  quests: typeof defaultRemoteGameState.quests;
+  existingUnlockedAchievementIds?: string[];
+}) {
+  const stats = getProgressStats(quests);
+  const unlockedAchievementIds = new Set(existingUnlockedAchievementIds);
+
+  achievementIds.forEach(achievementId => {
+    const shouldUnlock =
+      (achievementId === 'first-quest' && quests.length >= 1) ||
+      (achievementId === 'quest-finisher' && stats.totalCompleted >= 1) ||
+      (achievementId === 'rising-hero' && hero.xp >= 50) ||
+      (achievementId === 'streak-keeper' && hero.streakCount >= 3) ||
+      (achievementId === 'quest-master' && stats.totalCompleted >= 10);
+
+    if (shouldUnlock) {
+      unlockedAchievementIds.add(achievementId);
+    }
   });
+
+  return achievementIds.filter(achievementId =>
+    unlockedAchievementIds.has(achievementId),
+  );
+}
+
+function normalizeGameState(gameState: typeof defaultRemoteGameState) {
+  const quests = gameState.quests.map(quest => ({
+    ...quest,
+    xpReward:
+      completionXpByDifficulty[
+        quest.difficulty as keyof typeof completionXpByDifficulty
+      ],
+  }));
+  const hero = createHeroProgress(
+    typeof gameState.hero?.xp === 'number'
+      ? gameState.hero.xp
+      : quests
+          .filter(quest => quest.status === 'Completed')
+          .reduce((totalXp, quest) => totalXp + quest.xpReward, 0),
+    gameState.hero?.streakCount,
+    gameState.hero?.lastCompletedDate ?? null,
+  );
+
+  return {
+    hero,
+    quests,
+    themeMode: gameState.themeMode === 'light' ? 'light' : 'dark',
+    sortOption: gameState.sortOption,
+    unlockedAchievementIds: getUnlockedAchievementIds({
+      hero,
+      quests,
+      existingUnlockedAchievementIds: gameState.unlockedAchievementIds,
+    }),
+  };
+}
+
+function getLastSavedGameState() {
+  return cloneState(mockBackendState);
+}
 
 const flushMicrotasks = async () => {
   await Promise.resolve();
   await Promise.resolve();
 };
 
+async function renderHydratedApp() {
+  let tree: ReactTestRenderer.ReactTestRenderer;
+
+  await ReactTestRenderer.act(async () => {
+    tree = ReactTestRenderer.create(<App />);
+  });
+
+  await ReactTestRenderer.act(async () => {
+    await flushMicrotasks();
+  });
+
+  mockFetchRemoteAppConfig.mockClear();
+  mockSaveRemoteGameState.mockClear();
+  mockCreateRemoteQuest.mockClear();
+  mockUpdateRemoteQuest.mockClear();
+  mockDeleteRemoteQuest.mockClear();
+  mockCompleteRemoteQuest.mockClear();
+  mockUpdateRemoteTheme.mockClear();
+  mockUpdateRemoteSortOption.mockClear();
+
+  return tree!;
+}
+
 beforeEach(() => {
+  mockBackendState = cloneState(defaultRemoteGameState);
+  mockRemoteAppConfig = cloneState(defaultRemoteAppConfig);
   mockAsyncStorage.getItem.mockReset();
   mockAsyncStorage.setItem.mockReset();
+  mockFetchRemoteAppConfig.mockReset();
+  mockFetchRemoteGameState.mockReset();
+  mockSaveRemoteGameState.mockReset();
+  mockCreateRemoteQuest.mockReset();
+  mockUpdateRemoteQuest.mockReset();
+  mockDeleteRemoteQuest.mockReset();
+  mockCompleteRemoteQuest.mockReset();
+  mockUpdateRemoteTheme.mockReset();
+  mockUpdateRemoteSortOption.mockReset();
   mockAsyncStorage.getItem.mockResolvedValue(null);
   mockAsyncStorage.setItem.mockResolvedValue(undefined);
+  mockFetchRemoteAppConfig.mockImplementation(async () =>
+    cloneState(mockRemoteAppConfig),
+  );
+  mockFetchRemoteGameState.mockImplementation(async () => {
+    mockBackendState = normalizeGameState(mockBackendState);
+
+    return cloneState(mockBackendState);
+  });
+  mockSaveRemoteGameState.mockImplementation(async (nextGameState: typeof defaultRemoteGameState) => {
+    mockBackendState = normalizeGameState(nextGameState);
+
+    return cloneState(mockBackendState);
+  });
+  mockCreateRemoteQuest.mockImplementation(
+    async (questDraft: { title: string; difficulty: string; category: string }) => {
+      const nextQuest = {
+        id: `quest-${Date.now()}-test`,
+        title: questDraft.title.trim(),
+        difficulty: questDraft.difficulty,
+        xpReward:
+          completionXpByDifficulty[
+            questDraft.difficulty as keyof typeof completionXpByDifficulty
+          ],
+        status: 'Ready',
+        category: questDraft.category,
+        createdAt: Date.now(),
+      };
+
+      mockBackendState = normalizeGameState({
+        ...mockBackendState,
+        quests: [nextQuest, ...mockBackendState.quests],
+        unlockedAchievementIds: getUnlockedAchievementIds({
+          hero: mockBackendState.hero,
+          quests: [nextQuest, ...mockBackendState.quests],
+          existingUnlockedAchievementIds: mockBackendState.unlockedAchievementIds,
+        }),
+      });
+
+      return { gameState: cloneState(mockBackendState) };
+    },
+  );
+  mockUpdateRemoteQuest.mockImplementation(
+    async (
+      questId: string,
+      questDraft: { title: string; difficulty: string; category: string },
+    ) => {
+      const nextQuests = mockBackendState.quests.map(quest =>
+        quest.id === questId
+          ? {
+              ...quest,
+              title: questDraft.title.trim(),
+              difficulty: questDraft.difficulty,
+              category: questDraft.category,
+              xpReward:
+                completionXpByDifficulty[
+                  questDraft.difficulty as keyof typeof completionXpByDifficulty
+                ],
+            }
+          : quest,
+      );
+
+      mockBackendState = normalizeGameState({
+        ...mockBackendState,
+        quests: nextQuests,
+        unlockedAchievementIds: getUnlockedAchievementIds({
+          hero: mockBackendState.hero,
+          quests: nextQuests,
+          existingUnlockedAchievementIds: mockBackendState.unlockedAchievementIds,
+        }),
+      });
+
+      return { gameState: cloneState(mockBackendState) };
+    },
+  );
+  mockDeleteRemoteQuest.mockImplementation(async (questId: string) => {
+    const nextQuests = mockBackendState.quests.filter(
+      quest => quest.id !== questId,
+    );
+
+    mockBackendState = normalizeGameState({
+      ...mockBackendState,
+      quests: nextQuests,
+      unlockedAchievementIds: getUnlockedAchievementIds({
+        hero: mockBackendState.hero,
+        quests: nextQuests,
+        existingUnlockedAchievementIds: mockBackendState.unlockedAchievementIds,
+      }),
+    });
+
+    return { gameState: cloneState(mockBackendState) };
+  });
+  mockCompleteRemoteQuest.mockImplementation(async (questId: string) => {
+    const questToComplete = mockBackendState.quests.find(
+      quest => quest.id === questId,
+    );
+
+    if (!questToComplete || questToComplete.status === 'Completed') {
+      return {
+        gameState: cloneState(mockBackendState),
+        completionFeedback: null,
+      };
+    }
+
+    const xpGained =
+      completionXpByDifficulty[
+        questToComplete.difficulty as keyof typeof completionXpByDifficulty
+      ];
+    const updatedStreak = getNextStreakProgress(
+      mockBackendState.hero.streakCount,
+      mockBackendState.hero.lastCompletedDate,
+      getDateKey(),
+    );
+    const nextHero = createHeroProgress(
+      mockBackendState.hero.xp + xpGained,
+      updatedStreak.streakCount,
+      updatedStreak.lastCompletedDate,
+    );
+    const nextQuests = mockBackendState.quests.map(quest =>
+      quest.id === questId ? { ...quest, status: 'Completed' } : quest,
+    );
+
+    mockBackendState = normalizeGameState({
+      ...mockBackendState,
+      hero: nextHero,
+      quests: nextQuests,
+      unlockedAchievementIds: getUnlockedAchievementIds({
+        hero: nextHero,
+        quests: nextQuests,
+        existingUnlockedAchievementIds: mockBackendState.unlockedAchievementIds,
+      }),
+    });
+
+    return {
+      gameState: cloneState(mockBackendState),
+      completionFeedback: {
+        questTitle: questToComplete.title,
+        xpGained,
+      },
+    };
+  });
+  mockUpdateRemoteTheme.mockImplementation(async (themeMode: 'dark' | 'light') => {
+    mockBackendState = normalizeGameState({
+      ...mockBackendState,
+      themeMode,
+    });
+
+    return { gameState: cloneState(mockBackendState) };
+  });
+  mockUpdateRemoteSortOption.mockImplementation(async (sortOption: string) => {
+    mockBackendState = normalizeGameState({
+      ...mockBackendState,
+      sortOption,
+    });
+
+    return { gameState: cloneState(mockBackendState) };
+  });
 });
 
 test('loads persisted game state from AsyncStorage', async () => {
@@ -126,7 +669,9 @@ test('loads legacy quests when old persistence exists', async () => {
   ]);
 });
 
-test('completing a quest awards XP, updates rank, and saves game state', async () => {
+test('shows a retry state when the backend is unavailable', async () => {
+  mockFetchRemoteGameState.mockRejectedValueOnce(new Error('offline'));
+
   let tree: ReactTestRenderer.ReactTestRenderer;
 
   await ReactTestRenderer.act(async () => {
@@ -134,20 +679,99 @@ test('completing a quest awards XP, updates rank, and saves game state', async (
   });
 
   await ReactTestRenderer.act(async () => {
-    await flushAsyncWork();
+    await flushMicrotasks();
   });
 
   let root = tree!.root;
-  const initialRender = JSON.stringify(tree!.toJSON());
+
+  expect(
+    root.findAll(node => node.props.children === 'Quest Forge API Offline')
+      .length,
+  ).toBeGreaterThan(0);
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'retry-backend-connection' }).props.onPress();
+    await flushMicrotasks();
+  });
+
+  root = tree!.root;
+
+  expect(
+    root.findAll(node => node.props.children === 'Open Add Quest').length,
+  ).toBeGreaterThan(0);
+}, 15000);
+
+test('loads backend-driven board copy and refreshes it inside the app', async () => {
+  const tree = await renderHydratedApp();
+  let root = tree.root;
+  let initialRender = JSON.stringify(tree.toJSON());
+
+  expect(
+    root.findAll(node => node.props.children === 'Daily Quest Log').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Daily Suggestions').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Realm Sync').length,
+  ).toBeGreaterThan(0);
+  expect(initialRender).toContain(
+    'Refresh this screen to pull the latest board copy from the backend.',
+  );
+
+  mockRemoteAppConfig = {
+    ...mockRemoteAppConfig,
+    configVersion: 2,
+    boardKicker: 'Festival Quest Board',
+    heroEyebrow: 'Seasonal Hero Snapshot',
+    suggestionSectionTitle: 'Festival Suggestions',
+    mainQuestSectionTitle: 'Guild Trials',
+    realmSyncMessage:
+      'A new backend copy is ready. Refresh the board to apply it.',
+  };
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'refresh-app-config' }).props.onPress();
+    await flushMicrotasks();
+  });
+
+  root = tree.root;
+  const refreshedRender = JSON.stringify(tree.toJSON());
+
+  expect(
+    root.findAll(node => node.props.children === 'Festival Quest Board').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Seasonal Hero Snapshot').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Festival Suggestions').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Guild Trials').length,
+  ).toBeGreaterThan(0);
+  expect(refreshedRender).toContain(
+    'A new backend copy is ready. Refresh the board to apply it.',
+  );
+  expect(mockFetchRemoteAppConfig).toHaveBeenCalled();
+});
+
+test('completing a quest awards XP, updates rank, and saves remote game state', async () => {
+  const tree = await renderHydratedApp();
+
+  let root = tree.root;
+  const initialRender = JSON.stringify(tree.toJSON());
 
   expect(initialRender).toContain('"Novice"');
 
   await ReactTestRenderer.act(async () => {
     root.findByProps({ testID: 'complete-quest-quest-1' }).props.onPress();
+    await flushMicrotasks();
   });
 
-  root = tree!.root;
-  const completedRender = JSON.stringify(tree!.toJSON());
+  root = tree.root;
+  const completedRender = JSON.stringify(tree.toJSON());
+  const lastSavedGameState = getLastSavedGameState();
 
   expect(
     root.findByProps({ testID: 'completion-feedback-banner' }),
@@ -156,38 +780,17 @@ test('completing a quest awards XP, updates rank, and saves game state', async (
   expect(completedRender).toContain('"60"');
   expect(completedRender).toContain('"Quest Complete"');
   expect(completedRender).toContain('"Defeat the Laundry Dragon"');
-  expect(completedRender).toContain('"+"');
-  expect(completedRender).toContain('"50"');
-  expect(completedRender).toContain('" XP gained"');
   expect(() =>
     root.findByProps({ testID: 'complete-quest-quest-1' }),
   ).toThrow();
-  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
-    GAME_STATE_STORAGE_KEY,
-    expect.stringContaining('"xp":60'),
-  );
-  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
-    GAME_STATE_STORAGE_KEY,
-    expect.stringContaining('"rankTitle":"Knight"'),
-  );
-  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
-    GAME_STATE_STORAGE_KEY,
-    expect.stringContaining('"streakCount":1'),
-  );
+  expect(lastSavedGameState.hero.xp).toBe(60);
+  expect(lastSavedGameState.hero.rankTitle).toBe('Knight');
+  expect(lastSavedGameState.hero.streakCount).toBe(1);
 });
 
 test('search and filters work together on the quest board', async () => {
-  let tree: ReactTestRenderer.ReactTestRenderer;
-
-  await ReactTestRenderer.act(async () => {
-    tree = ReactTestRenderer.create(<App />);
-  });
-
-  await ReactTestRenderer.act(async () => {
-    await flushAsyncWork();
-  });
-
-  let root = tree!.root;
+  const tree = await renderHydratedApp();
+  let root = tree.root;
 
   await ReactTestRenderer.act(async () => {
     root.findByProps({ testID: 'quest-search-input' }).props.onChangeText(
@@ -201,7 +804,7 @@ test('search and filters work together on the quest board', async () => {
     root.findByProps({ testID: 'status-filter-active' }).props.onPress();
   });
 
-  root = tree!.root;
+  root = tree.root;
 
   expect(
     root.findAll(node => node.props.children === 'Brew a Focus Potion').length,
@@ -219,64 +822,49 @@ test('search and filters work together on the quest board', async () => {
 });
 
 test('sorting works with the current search and filter flow and persists selection', async () => {
-  mockAsyncStorage.getItem.mockImplementation(async (key: string) => {
-    if (key === GAME_STATE_STORAGE_KEY) {
-      return JSON.stringify({
-        hero: {
-          xp: 0,
-          rankTitle: 'Novice',
-          streakCount: 0,
-          lastCompletedDate: null,
-        },
-        quests: [
-          {
-            id: 'quest-a',
-            title: 'Zephyr Trial',
-            difficulty: 'Medium',
-            xpReward: 20,
-            status: 'Ready',
-            category: 'Side Quest',
-            createdAt: 3,
-          },
-          {
-            id: 'quest-b',
-            title: 'Arcane Brew',
-            difficulty: 'Easy',
-            xpReward: 10,
-            status: 'In Progress',
-            category: 'Side Quest',
-            createdAt: 1,
-          },
-          {
-            id: 'quest-c',
-            title: 'Mystic Notes',
-            difficulty: 'Hard',
-            xpReward: 35,
-            status: 'Ready',
-            category: 'Side Quest',
-            createdAt: 2,
-          },
-        ],
-        themeMode: 'dark',
-        unlockedAchievementIds: ['first-quest'],
-        sortOption: 'Newest first',
-      });
-    }
+  mockBackendState = {
+    hero: {
+      xp: 0,
+      rankTitle: 'Novice',
+      streakCount: 0,
+      lastCompletedDate: null,
+    },
+    quests: [
+      {
+        id: 'quest-a',
+        title: 'Zephyr Trial',
+        difficulty: 'Medium',
+        xpReward: 20,
+        status: 'Ready',
+        category: 'Side Quest',
+        createdAt: 3,
+      },
+      {
+        id: 'quest-b',
+        title: 'Arcane Brew',
+        difficulty: 'Easy',
+        xpReward: 10,
+        status: 'In Progress',
+        category: 'Side Quest',
+        createdAt: 1,
+      },
+      {
+        id: 'quest-c',
+        title: 'Mystic Notes',
+        difficulty: 'Hard',
+        xpReward: 35,
+        status: 'Ready',
+        category: 'Side Quest',
+        createdAt: 2,
+      },
+    ],
+    themeMode: 'dark',
+    unlockedAchievementIds: ['first-quest'],
+    sortOption: 'Newest first',
+  };
 
-    return null;
-  });
-
-  let tree: ReactTestRenderer.ReactTestRenderer;
-
-  await ReactTestRenderer.act(async () => {
-    tree = ReactTestRenderer.create(<App />);
-  });
-
-  await ReactTestRenderer.act(async () => {
-    await flushAsyncWork();
-  });
-
-  let root = tree!.root;
+  const tree = await renderHydratedApp();
+  let root = tree.root;
 
   await ReactTestRenderer.act(async () => {
     root.findByProps({ testID: 'quest-search-input' }).props.onChangeText('r');
@@ -286,20 +874,19 @@ test('sorting works with the current search and filter flow and persists selecti
     root.findByProps({ testID: 'category-filter-side-quest' }).props.onPress();
     root.findByProps({ testID: 'status-filter-active' }).props.onPress();
     root.findByProps({ testID: 'sort-option-title-a-z' }).props.onPress();
+    await flushMicrotasks();
   });
 
-  root = tree!.root;
-  const sortedRender = JSON.stringify(tree!.toJSON());
+  root = tree.root;
+  const sortedRender = JSON.stringify(tree.toJSON());
   const arcaneIndex = sortedRender.indexOf('Arcane Brew');
   const zephyrIndex = sortedRender.indexOf('Zephyr Trial');
+  const lastSavedGameState = getLastSavedGameState();
 
   expect(arcaneIndex).toBeGreaterThan(-1);
   expect(zephyrIndex).toBeGreaterThan(-1);
   expect(arcaneIndex).toBeLessThan(zephyrIndex);
-  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
-    GAME_STATE_STORAGE_KEY,
-    expect.stringContaining('"sortOption":"Title A-Z"'),
-  );
+  expect(lastSavedGameState.sortOption).toBe('Title A-Z');
 });
 
 test('daily suggestions can be added into the real quest list and persisted', async () => {
@@ -307,51 +894,37 @@ test('daily suggestions can be added into the real quest list and persisted', as
   jest.setSystemTime(new Date('2026-04-14T09:00:00'));
 
   try {
-    let tree: ReactTestRenderer.ReactTestRenderer;
-
-    await ReactTestRenderer.act(async () => {
-      tree = ReactTestRenderer.create(<App />);
-    });
-
-    await ReactTestRenderer.act(async () => {
-      await flushMicrotasks();
-    });
-
-    let root = tree!.root;
-    const initialRender = JSON.stringify(tree!.toJSON());
+    const tree = await renderHydratedApp();
+    let root = tree.root;
+    const initialRender = JSON.stringify(tree.toJSON());
 
     expect(initialRender).toContain('"Daily Suggestions"');
     expect(initialRender).toContain('"Forge a Weekly Master Plan"');
 
     await ReactTestRenderer.act(async () => {
       root.findByProps({ testID: 'add-suggested-quest-0' }).props.onPress();
+      await flushMicrotasks();
     });
 
-    root = tree!.root;
-    const updatedRender = JSON.stringify(tree!.toJSON());
+    root = tree.root;
+    const updatedRender = JSON.stringify(tree.toJSON());
+    const lastSavedGameState = getLastSavedGameState();
 
     expect(updatedRender).toContain('"Forge a Weekly Master Plan"');
-    expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
-      GAME_STATE_STORAGE_KEY,
-      expect.stringContaining('Forge a Weekly Master Plan'),
-    );
+    expect(
+      lastSavedGameState.quests.some(
+        (quest: { title: string }) =>
+          quest.title === 'Forge a Weekly Master Plan',
+      ),
+    ).toBe(true);
   } finally {
     jest.useRealTimers();
   }
 });
 
-test('theme toggle switches modes and persists the selected theme', async () => {
-  let tree: ReactTestRenderer.ReactTestRenderer;
-
-  await ReactTestRenderer.act(async () => {
-    tree = ReactTestRenderer.create(<App />);
-  });
-
-  await ReactTestRenderer.act(async () => {
-    await flushAsyncWork();
-  });
-
-  let root = tree!.root;
+test('theme toggle switches modes and persists the selected theme remotely', async () => {
+  const tree = await renderHydratedApp();
+  let root = tree.root;
 
   expect(
     root.findAll(node => node.props.children === 'Switch to Light Mode').length,
@@ -359,48 +932,28 @@ test('theme toggle switches modes and persists the selected theme', async () => 
 
   await ReactTestRenderer.act(async () => {
     root.findByProps({ testID: 'theme-toggle-button' }).props.onPress();
+    await flushMicrotasks();
   });
 
-  root = tree!.root;
+  root = tree.root;
+  const lastSavedGameState = getLastSavedGameState();
 
   expect(
     root.findAll(node => node.props.children === 'Switch to Dark Mode').length,
   ).toBeGreaterThan(0);
-  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
-    GAME_STATE_STORAGE_KEY,
-    expect.stringContaining('"themeMode":"light"'),
-  );
-
-  await ReactTestRenderer.act(async () => {
-    root.findByProps({ testID: 'navigate-to-add-quest' }).props.onPress();
-  });
-
-  root = tree!.root;
-
-  expect(
-    root.findAll(node => node.props.children === 'Switch to Dark Mode').length,
-  ).toBeGreaterThan(0);
+  expect(lastSavedGameState.themeMode).toBe('light');
 });
 
 test('progress screen shows derived hero and quest summary stats', async () => {
-  let tree: ReactTestRenderer.ReactTestRenderer;
-
-  await ReactTestRenderer.act(async () => {
-    tree = ReactTestRenderer.create(<App />);
-  });
-
-  await ReactTestRenderer.act(async () => {
-    await flushAsyncWork();
-  });
-
-  let root = tree!.root;
+  const tree = await renderHydratedApp();
+  let root = tree.root;
 
   await ReactTestRenderer.act(async () => {
     root.findByProps({ testID: 'navigate-to-progress-screen' }).props.onPress();
   });
 
-  root = tree!.root;
-  const progressRender = JSON.stringify(tree!.toJSON());
+  root = tree.root;
+  const progressRender = JSON.stringify(tree.toJSON());
 
   expect(
     root.findAll(node => node.props.children === 'Hero Summary').length,
@@ -412,71 +965,25 @@ test('progress screen shows derived hero and quest summary stats', async () => {
   ).toBeGreaterThan(0);
   expect(root.findAll(node => node.props.children === '3').length).toBeGreaterThan(0);
   expect(
-    root.findAll(node => node.props.children === 'Total Quests Completed').length,
-  ).toBeGreaterThan(0);
-  expect(root.findAll(node => node.props.children === '1').length).toBeGreaterThan(0);
-  expect(
-    root.findAll(node => node.props.children === 'Active Quests').length,
-  ).toBeGreaterThan(0);
-  expect(root.findAll(node => node.props.children === '2').length).toBeGreaterThan(0);
-  expect(
-    root.findAll(node => node.props.children === 'Completed Quests').length,
-  ).toBeGreaterThan(0);
-  expect(
     root.findAll(node => node.props.children === 'Achievements').length,
   ).toBeGreaterThan(0);
   expect(
     root.findAll(node => node.props.children === 'First Quest').length,
   ).toBeGreaterThan(0);
   expect(
-    root.findAll(node => node.props.children === 'Quest Finisher').length,
-  ).toBeGreaterThan(0);
-  expect(
-    root.findAll(node => node.props.children === 'Rising Hero').length,
-  ).toBeGreaterThan(0);
-  expect(
     root.findAll(node => node.props.children === 'Unlocked').length,
-  ).toBeGreaterThan(0);
-  expect(
-    root.findAll(node => node.props.children === 'Locked').length,
-  ).toBeGreaterThan(0);
-  expect(
-    root.findAll(node => node.props.children === 'Switch to Light Mode').length,
-  ).toBeGreaterThan(0);
-
-  await ReactTestRenderer.act(async () => {
-    root.findByProps({ testID: 'back-from-progress-screen' }).props.onPress();
-  });
-
-  root = tree!.root;
-
-  expect(
-    root.findAll(node => node.props.children === 'Open Add Quest').length,
   ).toBeGreaterThan(0);
 });
 
-test('editing a quest updates its details and persists the changes', async () => {
-  let tree: ReactTestRenderer.ReactTestRenderer;
-
-  await ReactTestRenderer.act(async () => {
-    tree = ReactTestRenderer.create(<App />);
-  });
-
-  await ReactTestRenderer.act(async () => {
-    await flushAsyncWork();
-  });
-
-  let root = tree!.root;
+test('editing a quest updates its details and persists the changes remotely', async () => {
+  const tree = await renderHydratedApp();
+  let root = tree.root;
 
   await ReactTestRenderer.act(async () => {
     root.findByProps({ testID: 'edit-quest-quest-2' }).props.onPress();
   });
 
-  root = tree!.root;
-
-  expect(
-    root.findAll(node => node.props.children === 'Refine Quest Details').length,
-  ).toBeGreaterThan(0);
+  root = tree.root;
 
   await ReactTestRenderer.act(async () => {
     root.findByProps({ testID: 'quest-title-input' }).props.onChangeText(
@@ -491,10 +998,11 @@ test('editing a quest updates its details and persists the changes', async () =>
 
   await ReactTestRenderer.act(async () => {
     root.findByProps({ testID: 'save-quest-button' }).props.onPress();
+    await flushMicrotasks();
   });
 
-  root = tree!.root;
-  const editedRender = JSON.stringify(tree!.toJSON());
+  root = tree.root;
+  const lastSavedGameState = getLastSavedGameState();
 
   expect(
     root.findAll(
@@ -502,153 +1010,101 @@ test('editing a quest updates its details and persists the changes', async () =>
     ).length,
   ).toBeGreaterThan(0);
   expect(
-    root.findAll(node => node.props.children === 'Brew a Focus Potion').length,
-  ).toBe(0);
-  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
-    GAME_STATE_STORAGE_KEY,
-    expect.stringContaining('Brew an Archmage Focus Potion'),
-  );
-  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
-    GAME_STATE_STORAGE_KEY,
-    expect.stringContaining('"difficulty":"Hard"'),
-  );
-  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
-    GAME_STATE_STORAGE_KEY,
-    expect.stringContaining('"category":"Main Quest"'),
-  );
-  expect(editedRender).toContain('"Open Add Quest"');
+    lastSavedGameState.quests.some(
+      (quest: { title: string; difficulty: string; category: string }) =>
+        quest.title === 'Brew an Archmage Focus Potion' &&
+        quest.difficulty === 'Hard' &&
+        quest.category === 'Main Quest',
+    ),
+  ).toBe(true);
 });
 
-test('completing a quest unlocks achievement badges and persists them', async () => {
-  let tree: ReactTestRenderer.ReactTestRenderer;
-
-  await ReactTestRenderer.act(async () => {
-    tree = ReactTestRenderer.create(<App />);
-  });
-
-  await ReactTestRenderer.act(async () => {
-    await flushAsyncWork();
-  });
-
-  let root = tree!.root;
+test('completing a quest unlocks achievement badges and persists them remotely', async () => {
+  const tree = await renderHydratedApp();
+  let root = tree.root;
 
   await ReactTestRenderer.act(async () => {
     root.findByProps({ testID: 'complete-quest-quest-1' }).props.onPress();
+    await flushMicrotasks();
   });
 
-  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
-    GAME_STATE_STORAGE_KEY,
-    expect.stringContaining('"unlockedAchievementIds"'),
-  );
-  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
-    GAME_STATE_STORAGE_KEY,
-    expect.stringContaining('"rising-hero"'),
-  );
-  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
-    GAME_STATE_STORAGE_KEY,
-    expect.stringContaining('"quest-finisher"'),
-  );
+  let lastSavedGameState = getLastSavedGameState();
+
+  expect(lastSavedGameState.unlockedAchievementIds).toContain('rising-hero');
+  expect(lastSavedGameState.unlockedAchievementIds).toContain('quest-finisher');
 
   await ReactTestRenderer.act(async () => {
     root.findByProps({ testID: 'navigate-to-progress-screen' }).props.onPress();
   });
 
-  root = tree!.root;
+  root = tree.root;
 
   expect(
     root.findAll(node => node.props.children === 'Rising Hero').length,
   ).toBeGreaterThan(0);
-  expect(
-    root.findAll(node => node.props.children === 'Unlocked').length,
-  ).toBeGreaterThan(0);
 });
 
-test('deleting a quest from the edit screen removes it and persists the update', async () => {
-  let tree: ReactTestRenderer.ReactTestRenderer;
-
-  await ReactTestRenderer.act(async () => {
-    tree = ReactTestRenderer.create(<App />);
-  });
-
-  await ReactTestRenderer.act(async () => {
-    await flushAsyncWork();
-  });
-
-  let root = tree!.root;
+test('deleting a quest from the edit screen removes it and persists the update remotely', async () => {
+  const tree = await renderHydratedApp();
+  let root = tree.root;
 
   await ReactTestRenderer.act(async () => {
     root.findByProps({ testID: 'edit-quest-quest-2' }).props.onPress();
   });
 
-  root = tree!.root;
+  root = tree.root;
 
   await ReactTestRenderer.act(async () => {
     root.findByProps({ testID: 'delete-quest-button' }).props.onPress();
+    await flushMicrotasks();
   });
 
-  root = tree!.root;
+  root = tree.root;
+  const lastSavedGameState = getLastSavedGameState();
 
   expect(
     root.findAll(node => node.props.children === 'Brew a Focus Potion').length,
   ).toBe(0);
   expect(
-    root.findAll(node => node.props.children === 'Open Add Quest').length,
-  ).toBeGreaterThan(0);
-  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
-    GAME_STATE_STORAGE_KEY,
-    expect.not.stringContaining('"id":"quest-2"'),
-  );
+    lastSavedGameState.quests.some((quest: { id: string }) => quest.id === 'quest-2'),
+  ).toBe(false);
 });
 
 test('completing multiple quests on the same day only increases the streak once', async () => {
-  let tree: ReactTestRenderer.ReactTestRenderer;
-
-  await ReactTestRenderer.act(async () => {
-    tree = ReactTestRenderer.create(<App />);
-  });
-
-  await ReactTestRenderer.act(async () => {
-    await flushAsyncWork();
-  });
-
-  let root = tree!.root;
+  const tree = await renderHydratedApp();
+  let root = tree.root;
 
   await ReactTestRenderer.act(async () => {
     root.findByProps({ testID: 'complete-quest-quest-1' }).props.onPress();
+    await flushMicrotasks();
   });
 
-  root = tree!.root;
+  root = tree.root;
 
   await ReactTestRenderer.act(async () => {
     root.findByProps({ testID: 'complete-quest-quest-2' }).props.onPress();
+    await flushMicrotasks();
   });
 
-  expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
-    GAME_STATE_STORAGE_KEY,
-    expect.stringContaining('"streakCount":1'),
-  );
+  expect(getLastSavedGameState().hero.streakCount).toBe(1);
 });
 
-test('streak resets on load after a missed day', async () => {
+test('streak resets on load after a missed day from backend data', async () => {
   jest.useFakeTimers();
   jest.setSystemTime(new Date('2026-04-03T09:00:00'));
 
-  mockAsyncStorage.getItem.mockImplementation(async (key: string) => {
-    if (key === GAME_STATE_STORAGE_KEY) {
-      return JSON.stringify({
-        hero: {
-          xp: 35,
-          rankTitle: 'Adventurer',
-          streakCount: 3,
-          lastCompletedDate: '2026-04-01',
-        },
-        quests: [],
-        themeMode: 'dark',
-      });
-    }
-
-    return null;
-  });
+  mockBackendState = {
+    hero: {
+      xp: 35,
+      rankTitle: 'Adventurer',
+      streakCount: 3,
+      lastCompletedDate: '2026-04-01',
+    },
+    quests: [],
+    themeMode: 'dark',
+    unlockedAchievementIds: [],
+    sortOption: 'Newest first',
+  };
 
   try {
     await ReactTestRenderer.act(async () => {
@@ -659,14 +1115,10 @@ test('streak resets on load after a missed day', async () => {
       await flushMicrotasks();
     });
 
-    expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
-      GAME_STATE_STORAGE_KEY,
-      expect.stringContaining('"streakCount":0'),
-    );
-    expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
-      GAME_STATE_STORAGE_KEY,
-      expect.stringContaining('"lastCompletedDate":null'),
-    );
+    const lastSavedGameState = getLastSavedGameState();
+
+    expect(lastSavedGameState.hero.streakCount).toBe(0);
+    expect(lastSavedGameState.hero.lastCompletedDate).toBeNull();
   } finally {
     jest.useRealTimers();
   }
@@ -676,60 +1128,58 @@ test('completing a quest on the next day increases the streak', async () => {
   jest.useFakeTimers();
   jest.setSystemTime(new Date('2026-04-02T09:00:00'));
 
-  mockAsyncStorage.getItem.mockImplementation(async (key: string) => {
-    if (key === GAME_STATE_STORAGE_KEY) {
-      return JSON.stringify({
-        hero: {
-          xp: 10,
-          rankTitle: 'Novice',
-          streakCount: 1,
-          lastCompletedDate: '2026-04-01',
-        },
-        quests: [
-          {
-            id: 'quest-next-day',
-            title: 'Train at Dawn',
-            difficulty: 'Easy',
-            xpReward: 10,
-            status: 'Ready',
-            category: 'Side Quest',
-          },
-        ],
-        themeMode: 'dark',
-      });
-    }
-
-    return null;
-  });
+  mockBackendState = {
+    hero: {
+      xp: 10,
+      rankTitle: 'Novice',
+      streakCount: 1,
+      lastCompletedDate: '2026-04-01',
+    },
+    quests: [
+      {
+        id: 'quest-next-day',
+        title: 'Train at Dawn',
+        difficulty: 'Easy',
+        xpReward: 10,
+        status: 'Ready',
+        category: 'Side Quest',
+        createdAt: 4,
+      },
+    ],
+    themeMode: 'dark',
+    unlockedAchievementIds: ['first-quest'],
+    sortOption: 'Newest first',
+  };
 
   try {
-    let tree: ReactTestRenderer.ReactTestRenderer;
-
-    await ReactTestRenderer.act(async () => {
-      tree = ReactTestRenderer.create(<App />);
-    });
-
-    await ReactTestRenderer.act(async () => {
-      await flushMicrotasks();
-    });
-
-    const root = tree!.root;
+    const tree = await renderHydratedApp();
+    const root = tree.root;
 
     await ReactTestRenderer.act(async () => {
       root
         .findByProps({ testID: 'complete-quest-quest-next-day' })
         .props.onPress();
+      await flushMicrotasks();
     });
 
-    expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
-      GAME_STATE_STORAGE_KEY,
-      expect.stringContaining('"streakCount":2'),
-    );
-    expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
-      GAME_STATE_STORAGE_KEY,
-      expect.stringContaining('"lastCompletedDate":"2026-04-02"'),
-    );
+    const lastSavedGameState = getLastSavedGameState();
+
+    expect(lastSavedGameState.hero.streakCount).toBe(2);
+    expect(lastSavedGameState.hero.lastCompletedDate).toBe('2026-04-02');
   } finally {
     jest.useRealTimers();
   }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+

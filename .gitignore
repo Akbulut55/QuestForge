@@ -88,3 +88,8 @@ yarn-error.log
 !.env.sample
 google-services.json
 GoogleService-Info.plist
+
+# Local backend runtime data
+backend/data/*.json
+hs_err_pid*.log
+

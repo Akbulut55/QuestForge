@@ -8,9 +8,16 @@
 ## Identity
 
 **NAIM Name:** `Quest Blacksmith`
-**Crew:** `[Fill in your group name]`
 **App Concept:** `QuestForge turns daily tasks into RPG-style quests with XP, ranks, and progression.`
 **Starting Tool:** `Stitch + Codex`
+
+---
+
+## Process Note
+
+Iterations 1-14 reflect the real step-by-step feature work completed on QuestForge, but they were mostly prompt-driven UI and app updates rather than a strictly backend-driven and Stitch-first workflow.
+
+After teacher feedback, the project direction was corrected beginning in Iteration 15. Iterations 15 onward represent the intentional shift toward a backend-driven architecture while keeping the earlier work visible as honest project history.
 
 ---
 
@@ -18,14 +25,20 @@
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 14 |
-| Total Weight (kg) | 150 |
+| Total Iterations | 17 |
+| Total Weight (kg) | 180 |
 | Total Time (min) | Not tracked |
 | Failed Attempts | Not tracked |
 
 ---
 
 ## Iterations
+
+---
+
+### Phase 1: Initial Prompt-Driven Development
+
+These iterations show the actual feature growth of the app before the architecture correction.
 
 ---
 
@@ -695,6 +708,90 @@ Add daily quest suggestions.
 **Screenshot:** `iteration-14-daily-suggestions.png`
 
 **Commit:** `[NAIM: Quest Blacksmith] Add daily quest suggestions - 10kg`
+
+---
+
+### Phase 2: Backend-Driven Correction
+
+These iterations document the correction toward the teacher's intended backend-driven and Stitch-centered direction.
+
+---
+
+### Iteration 15
+
+| Field | Value |
+|-------|-------|
+| Feature | `Backend-driven game state foundation` |
+| Weight | `10 kg` |
+| Tool Used | `Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+i did this project wrong teacher said the main goal was to iterate updates inside the app it should be a backend driven app and you should use stitch for new screens themes etc. like when there is a new screen needed you should generate a new screen from stitch and use it you are already connected to stitch lets turn this app into backend driven app
+```
+
+**What happened:**
+- Started the correction by making QuestForge backend-driven in the smallest safe slice instead of rewriting the whole app at once.
+- Added a local backend server that stores the full game state, changed the React Native app to load and save through that API, preserved the current Stitch-derived UI, and added a clear retry state when the backend is offline.
+
+**Screenshot:** `iteration-15-backend-foundation.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add backend-driven foundation - 10kg`
+
+---
+
+### Iteration 16
+
+| Field | Value |
+|-------|-------|
+| Feature | `Backend quest action endpoints` |
+| Weight | `10 kg` |
+| Tool Used | `Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+yes
+```
+
+**What happened:**
+- Took the next backend-driven step by moving quest create, edit, delete, complete, theme, and sort updates into dedicated backend endpoints instead of mutating them locally and saving the whole state afterward.
+- The React Native app now treats the backend as the source of truth for those actions, while keeping the current Stitch-derived screens, progression systems, and persistence flow intact.
+
+**Screenshot:** `iteration-16-backend-actions.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Move quest actions to backend - 10kg`
+
+---
+
+### Iteration 17
+
+| Field | Value |
+|-------|-------|
+| Feature | `Backend-driven app config refresh` |
+| Weight | `10 kg` |
+| Tool Used | `Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+yes
+```
+
+**What happened:**
+- Added a small backend-driven app config system so the Quest Board can load visible copy like the board kicker, hero eyebrow, sync message, and section titles from the backend instead of hardcoding all of it in the mobile app.
+- Added an in-app refresh flow so changing the backend app config updates the board inside the running app, which better matches the teacher's idea of iterations happening through the app rather than only through mobile code edits.
+
+**Screenshot:** `iteration-17-backend-app-config.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add backend app config refresh - 10kg`
 
 ---
 
