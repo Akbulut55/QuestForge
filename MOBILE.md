@@ -25,8 +25,8 @@ After teacher feedback, the project direction was corrected beginning in Iterati
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 20 |
-| Total Weight (kg) | 210 |
+| Total Iterations | 21 |
+| Total Weight (kg) | 220 |
 | Total Time (min) | Not tracked |
 | Failed Attempts | Not tracked |
 
@@ -870,6 +870,32 @@ do all 4 iterations and after each iteration commit them and update mobile.md wh
 **Screenshot:** `iteration-20-backend-feature-flags.png`
 
 **Commit:** `[NAIM: Quest Blacksmith] Add backend feature flags - 10kg`
+
+---
+
+### Iteration 21
+
+| Field | Value |
+|-------|-------|
+| Feature | `Stitch-generated Realm Codex screen` |
+| Weight | `10 kg` |
+| Tool Used | `Stitch + Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+do all 4 iterations and after each iteration commit them and update mobile.md when there is a new screen needed you are already connected to stitch you should generate a new screen then use it on the app
+```
+
+**What happened:**
+- Generated a new mobile `Realm Codex` screen in Stitch and then implemented that screen inside the app as a backend-driven status surface.
+- Added a dedicated backend endpoint for the codex data, wired navigation from the Quest Board, and displayed live realm status, feature flags, and connected modules using the new screen.
+
+**Screenshot:** `iteration-21-realm-codex.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add Stitch realm codex screen - 10kg`
 
 ---
 

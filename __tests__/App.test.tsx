@@ -44,6 +44,7 @@ jest.mock('../src/api/gameStateApi', () => ({
   fetchRemoteAppConfig: jest.fn(),
   fetchRemoteDailySuggestions: jest.fn(),
   fetchRemoteGameState: jest.fn(),
+  fetchRemoteRealmCodex: jest.fn(),
   saveRemoteGameState: jest.fn(),
   updateRemoteQuest: jest.fn(),
   updateRemoteSortOption: jest.fn(),
@@ -64,6 +65,7 @@ import {
   fetchRemoteAppConfig,
   fetchRemoteDailySuggestions,
   fetchRemoteGameState,
+  fetchRemoteRealmCodex,
   saveRemoteGameState,
   updateRemoteQuest,
   updateRemoteSortOption,
@@ -80,6 +82,7 @@ const mockUpdateRemoteQuest = updateRemoteQuest as jest.Mock;
 const mockDeleteRemoteQuest = deleteRemoteQuest as jest.Mock;
 const mockCompleteRemoteQuest = completeRemoteQuest as jest.Mock;
 const mockFetchRemoteDailySuggestions = fetchRemoteDailySuggestions as jest.Mock;
+const mockFetchRemoteRealmCodex = fetchRemoteRealmCodex as jest.Mock;
 const mockUpdateRemoteTheme = updateRemoteTheme as jest.Mock;
 const mockUpdateRemoteSortOption = updateRemoteSortOption as jest.Mock;
 
@@ -479,6 +482,97 @@ function getDailySuggestionsForState(
   return suggestions;
 }
 
+function buildRealmCodexResponse() {
+  const suggestionDateKey = getDateKey();
+  const realmSeed = `0x${Number(suggestionDateKey.replace(/-/g, '')).toString(16).toUpperCase()}`;
+
+  return {
+    kicker: 'Realm Codex',
+    title: "The Weaver's Codex",
+    subtitle:
+      'A live readout of the backend state currently shaping Quest Forge inside the app.',
+    heartbeatLabel: 'Sanctum Heartbeat',
+    heartbeatStatus: 'Stable',
+    syncLatencyMs:
+      32 + mockBackendState.quests.length * 4 + mockRemoteAppConfig.configVersion,
+    summarySectionTitle: 'Realm Summary',
+    summarySectionIntro:
+      'This screen is backed by live server data so the app can reveal system state without another client rewrite.',
+    featureFlagsSectionTitle: 'Active Realm Flags',
+    featureFlagsSectionIntro:
+      'Each flag shows which surfaces the backend currently exposes inside the player app.',
+    modulesSectionTitle: 'Connected Modules',
+    modulesSectionIntro:
+      'These are the current app surfaces and systems wired into the active backend flow.',
+    configVersion: mockRemoteAppConfig.configVersion,
+    realmSeed,
+    activeTheme: mockBackendState.themeMode === 'dark' ? 'Dark Mode' : 'Light Mode',
+    activeSort: mockBackendState.sortOption,
+    questCount: mockBackendState.quests.length,
+    suggestionSeed: suggestionDateKey,
+    featureFlags: [
+      {
+        id: 'realm-sync-card',
+        label: 'Realm Sync Panel',
+        status: mockRemoteAppConfig.featureFlags.showRealmSyncCard
+          ? 'Enabled'
+          : 'Hidden',
+      },
+      {
+        id: 'suggestion-section',
+        label: 'Suggestion Feed',
+        status: mockRemoteAppConfig.featureFlags.showSuggestionSection
+          ? 'Enabled'
+          : 'Hidden',
+      },
+      {
+        id: 'filter-section',
+        label: 'Search And Filter',
+        status: mockRemoteAppConfig.featureFlags.showFilterSection
+          ? 'Enabled'
+          : 'Hidden',
+      },
+      {
+        id: 'achievement-section',
+        label: 'Achievement Ledger',
+        status: mockRemoteAppConfig.featureFlags.showAchievementSection
+          ? 'Enabled'
+          : 'Hidden',
+      },
+    ],
+    modules: [
+      {
+        id: 'quest-board',
+        name: 'Quest Board',
+        description: 'Primary mission board and daily task surface.',
+        status: 'Live',
+      },
+      {
+        id: 'hero-archive',
+        name: 'Hero Archive',
+        description: 'Progress summary and hero record ledger.',
+        status: 'Live',
+      },
+      {
+        id: 'suggestion-feed',
+        name: 'Suggestion Feed',
+        description: 'Backend-issued daily quest recommendations.',
+        status: mockRemoteAppConfig.featureFlags.showSuggestionSection
+          ? 'Live'
+          : 'Dormant',
+      },
+      {
+        id: 'realm-sync',
+        name: 'Realm Sync',
+        description: 'Pulls the latest backend copy into the running app.',
+        status: mockRemoteAppConfig.featureFlags.showRealmSyncCard
+          ? 'Live'
+          : 'Dormant',
+      },
+    ],
+  };
+}
+
 function normalizeGameState(gameState: typeof defaultRemoteGameState) {
   const quests = gameState.quests.map(quest => ({
     ...quest,
@@ -537,6 +631,7 @@ async function renderHydratedApp() {
   mockDeleteRemoteQuest.mockClear();
   mockCompleteRemoteQuest.mockClear();
   mockFetchRemoteDailySuggestions.mockClear();
+  mockFetchRemoteRealmCodex.mockClear();
   mockUpdateRemoteTheme.mockClear();
   mockUpdateRemoteSortOption.mockClear();
 
@@ -556,6 +651,7 @@ beforeEach(() => {
   mockDeleteRemoteQuest.mockReset();
   mockCompleteRemoteQuest.mockReset();
   mockFetchRemoteDailySuggestions.mockReset();
+  mockFetchRemoteRealmCodex.mockReset();
   mockUpdateRemoteTheme.mockReset();
   mockUpdateRemoteSortOption.mockReset();
   mockAsyncStorage.getItem.mockResolvedValue(null);
@@ -567,6 +663,9 @@ beforeEach(() => {
     suggestionDateKey: getDateKey(),
     suggestions: getDailySuggestionsForState(mockBackendState.quests, getDateKey()),
   }));
+  mockFetchRemoteRealmCodex.mockImplementation(async () =>
+    buildRealmCodexResponse(),
+  );
   mockFetchRemoteGameState.mockImplementation(async () => {
     mockBackendState = normalizeGameState(mockBackendState);
 
@@ -967,6 +1066,36 @@ test('backend feature flags can hide configured sections after a realm refresh',
   expect(
     root.findAll(node => node.props.children === 'Achievements').length,
   ).toBe(0);
+});
+
+test('opens the Stitch-generated Realm Codex screen with backend summary data', async () => {
+  const tree = await renderHydratedApp();
+  let root = tree.root;
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'navigate-to-realm-codex' }).props.onPress();
+    await flushMicrotasks();
+  });
+
+  root = tree.root;
+  const codexRender = JSON.stringify(tree.toJSON());
+
+  expect(mockFetchRemoteRealmCodex).toHaveBeenCalled();
+  expect(
+    root.findAll(node => node.props.children === "The Weaver's Codex").length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Realm Summary').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Active Realm Flags').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Connected Modules').length,
+  ).toBeGreaterThan(0);
+  expect(codexRender).toContain('"Quest Board"');
+  expect(codexRender).toContain('"Suggestion Feed"');
+  expect(codexRender).toContain('"Refresh Codex"');
 });
 
 test('completing a quest awards XP, updates rank, and saves remote game state', async () => {
@@ -1385,6 +1514,7 @@ test('completing a quest on the next day increases the streak', async () => {
     jest.useRealTimers();
   }
 });
+
 
 
 

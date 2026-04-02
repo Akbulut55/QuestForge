@@ -24,6 +24,7 @@ import {
   fetchRemoteAppConfig,
   fetchRemoteDailySuggestions,
   fetchRemoteGameState,
+  fetchRemoteRealmCodex,
   saveRemoteGameState,
   updateRemoteQuest,
   updateRemoteSortOption,
@@ -33,7 +34,7 @@ import {
 type Difficulty = 'Easy' | 'Medium' | 'Hard' | 'Epic';
 type Category = 'Main Quest' | 'Side Quest';
 type Status = 'Ready' | 'In Progress' | 'Completed';
-type ScreenName = 'quest-board' | 'add-quest' | 'progress';
+type ScreenName = 'quest-board' | 'add-quest' | 'progress' | 'realm-codex';
 type RankTitle = 'Novice' | 'Adventurer' | 'Knight' | 'Champion';
 type SortOption =
   | 'Newest first'
@@ -133,6 +134,38 @@ type ProgressStats = {
 type DailySuggestionsResponse = {
   suggestionDateKey: string;
   suggestions: SuggestedQuest[];
+};
+
+type RealmCodexResponse = {
+  kicker: string;
+  title: string;
+  subtitle: string;
+  heartbeatLabel: string;
+  heartbeatStatus: string;
+  syncLatencyMs: number;
+  summarySectionTitle: string;
+  summarySectionIntro: string;
+  featureFlagsSectionTitle: string;
+  featureFlagsSectionIntro: string;
+  modulesSectionTitle: string;
+  modulesSectionIntro: string;
+  configVersion: number;
+  realmSeed: string;
+  activeTheme: string;
+  activeSort: string;
+  questCount: number;
+  suggestionSeed: string;
+  featureFlags: Array<{
+    id: string;
+    label: string;
+    status: string;
+  }>;
+  modules: Array<{
+    id: string;
+    name: string;
+    description: string;
+    status: string;
+  }>;
 };
 
 type CompletionFeedback = {
@@ -1132,6 +1165,7 @@ function QuestBoardScreen({
   onEditQuest,
   onNavigateToAddQuest,
   onNavigateToProgress,
+  onNavigateToRealmCodex,
   onSelectSortOption,
   completionFeedback,
   isRefreshingAppConfig,
@@ -1151,6 +1185,7 @@ function QuestBoardScreen({
   onEditQuest: (questId: string) => void;
   onNavigateToAddQuest: () => void;
   onNavigateToProgress: () => void;
+  onNavigateToRealmCodex: () => void;
   onSelectSortOption: (sortOption: SortOption) => void;
   completionFeedback: CompletionFeedback | null;
   isRefreshingAppConfig: boolean;
@@ -1363,6 +1398,12 @@ function QuestBoardScreen({
           style={styles.secondaryActionButton}
           testID="navigate-to-progress-screen">
           <Text style={styles.secondaryActionText}>Open Progress</Text>
+        </Pressable>
+        <Pressable
+          onPress={onNavigateToRealmCodex}
+          style={styles.secondaryActionButton}
+          testID="navigate-to-realm-codex">
+          <Text style={styles.secondaryActionText}>Open Realm Codex</Text>
         </Pressable>
       </View>
 
@@ -1607,6 +1648,181 @@ function ProgressScreen({
   );
 }
 
+function RealmCodexScreen({
+  isRefreshingRealmCodex,
+  onBack,
+  onRefresh,
+  onToggleTheme,
+  realmCodex,
+  styles,
+  themeMode,
+}: {
+  isRefreshingRealmCodex: boolean;
+  onBack: () => void;
+  onRefresh: () => void;
+  onToggleTheme: () => void;
+  realmCodex: RealmCodexResponse;
+  styles: ReturnType<typeof createStyles>;
+  themeMode: ThemeMode;
+}) {
+  const isEnabledStatus = (status: string) =>
+    status === 'Enabled' || status === 'Live' || status === 'Stable';
+
+  return (
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}>
+      <View style={styles.screenHeader}>
+        <Pressable
+          onPress={onBack}
+          style={styles.backButton}
+          testID="back-from-realm-codex">
+          <Text style={styles.backButtonText}>Back</Text>
+        </Pressable>
+        <Text style={styles.screenLabel}>Quest Board</Text>
+        <ThemeToggle
+          onToggleTheme={onToggleTheme}
+          styles={styles}
+          themeMode={themeMode}
+        />
+      </View>
+
+      <Text style={styles.kicker}>{realmCodex.kicker}</Text>
+      <Text style={styles.title}>{realmCodex.title}</Text>
+      <Text style={styles.subtitle}>{realmCodex.subtitle}</Text>
+
+      <View style={styles.heroCard}>
+        <View style={styles.heroHeader}>
+          <View>
+            <Text style={styles.heroEyebrow}>{realmCodex.heartbeatLabel}</Text>
+            <Text style={styles.heroTitle}>{realmCodex.heartbeatStatus}</Text>
+          </View>
+          <View style={styles.heroOrb} />
+        </View>
+
+        <View style={styles.heroStatsRow}>
+          <HeroStat
+            accentStyle={styles.xpAccent}
+            label="Latency"
+            styles={styles}
+            value={`${realmCodex.syncLatencyMs}ms`}
+          />
+          <HeroStat
+            accentStyle={styles.levelAccent}
+            label="Config"
+            styles={styles}
+            value={`v${realmCodex.configVersion}`}
+          />
+          <HeroStat
+            accentStyle={styles.streakAccent}
+            label="Quests"
+            styles={styles}
+            value={`${realmCodex.questCount}`}
+          />
+        </View>
+
+        <Pressable
+          onPress={onRefresh}
+          style={styles.secondaryActionButton}
+          testID="refresh-realm-codex">
+          <Text style={styles.secondaryActionText}>
+            {isRefreshingRealmCodex ? 'Refreshing Codex...' : 'Refresh Codex'}
+          </Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.formCard}>
+        <Text style={styles.sectionTitle}>{realmCodex.summarySectionTitle}</Text>
+        <Text style={styles.formIntro}>{realmCodex.summarySectionIntro}</Text>
+
+        <View style={styles.progressGrid}>
+          <ProgressMetric
+            label="Realm Seed"
+            styles={styles}
+            value={realmCodex.realmSeed}
+          />
+          <ProgressMetric
+            label="Theme"
+            styles={styles}
+            value={realmCodex.activeTheme}
+          />
+          <ProgressMetric
+            label="Sort Order"
+            styles={styles}
+            value={realmCodex.activeSort}
+          />
+          <ProgressMetric
+            label="Suggestion Seed"
+            styles={styles}
+            value={realmCodex.suggestionSeed}
+          />
+        </View>
+      </View>
+
+      <View style={styles.formCard}>
+        <Text style={styles.sectionTitle}>{realmCodex.featureFlagsSectionTitle}</Text>
+        <Text style={styles.formIntro}>{realmCodex.featureFlagsSectionIntro}</Text>
+
+        {realmCodex.featureFlags.map(flag => {
+          const isEnabled = isEnabledStatus(flag.status);
+
+          return (
+            <View key={flag.id} style={styles.suggestionCard}>
+              <View style={styles.questHeaderRow}>
+                <Text style={styles.suggestionTitle}>{flag.label}</Text>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    isEnabled ? styles.statusBadgeDone : styles.statusBadgeActive,
+                  ]}>
+                  <Text
+                    style={[
+                      styles.statusBadgeText,
+                      isEnabled ? styles.statusBadgeTextDone : null,
+                    ]}>
+                    {flag.status}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+
+      <View style={styles.formCard}>
+        <Text style={styles.sectionTitle}>{realmCodex.modulesSectionTitle}</Text>
+        <Text style={styles.formIntro}>{realmCodex.modulesSectionIntro}</Text>
+
+        {realmCodex.modules.map(module => {
+          const isEnabled = isEnabledStatus(module.status);
+
+          return (
+            <View key={module.id} style={styles.suggestionCard}>
+              <View style={styles.questHeaderRow}>
+                <Text style={styles.suggestionTitle}>{module.name}</Text>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    isEnabled ? styles.statusBadgeDone : styles.statusBadgeActive,
+                  ]}>
+                  <Text
+                    style={[
+                      styles.statusBadgeText,
+                      isEnabled ? styles.statusBadgeTextDone : null,
+                    ]}>
+                    {module.status}
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.formHint}>{module.description}</Text>
+            </View>
+          );
+        })}
+      </View>
+    </ScrollView>
+  );
+}
+
 function AddQuestScreen({
   onBack,
   onSave,
@@ -1771,6 +1987,8 @@ function App() {
     useState<CompletionFeedback | null>(null);
   const [editingQuestId, setEditingQuestId] = useState<string | null>(null);
   const [isRefreshingAppConfig, setIsRefreshingAppConfig] = useState(false);
+  const [realmCodex, setRealmCodex] = useState<RealmCodexResponse | null>(null);
+  const [isRefreshingRealmCodex, setIsRefreshingRealmCodex] = useState(false);
   const [dailySuggestions, setDailySuggestions] = useState<SuggestedQuest[]>(
     () => getDailySuggestions(getDateKey(), initialQuests.map(normalizeQuest)),
   );
@@ -1813,6 +2031,12 @@ function App() {
     return nextDailySuggestions;
   };
 
+  const applyRemoteRealmCodex = (nextRealmCodex: RealmCodexResponse) => {
+    setRealmCodex(nextRealmCodex);
+
+    return nextRealmCodex;
+  };
+
   const refreshRemoteDailySuggestions = async () => {
     const nextDailySuggestions =
       await fetchRemoteDailySuggestions<DailySuggestionsResponse>();
@@ -1820,6 +2044,14 @@ function App() {
     applyRemoteDailySuggestions(nextDailySuggestions);
 
     return nextDailySuggestions;
+  };
+
+  const refreshRemoteRealmCodex = async () => {
+    const nextRealmCodex = await fetchRemoteRealmCodex<RealmCodexResponse>();
+
+    applyRemoteRealmCodex(nextRealmCodex);
+
+    return nextRealmCodex;
   };
 
   const runGameStateRequest = async <T extends GameStateResponse>(
@@ -1830,6 +2062,9 @@ function App() {
       const response = await request();
 
       applyRemoteGameState(response.gameState);
+      if (currentScreen === 'realm-codex') {
+        await refreshRemoteRealmCodex();
+      }
 
       return response;
     } catch {
@@ -1973,6 +2208,34 @@ function App() {
     );
   };
 
+  const handleOpenRealmCodex = async () => {
+    setCurrentScreen('realm-codex');
+    setIsRefreshingRealmCodex(true);
+
+    try {
+      setBackendError(null);
+      await refreshRemoteRealmCodex();
+    } catch {
+      setBackendError(backendUnavailableMessage);
+      setCurrentScreen('quest-board');
+    } finally {
+      setIsRefreshingRealmCodex(false);
+    }
+  };
+
+  const handleRefreshRealmCodex = async () => {
+    setIsRefreshingRealmCodex(true);
+
+    try {
+      setBackendError(null);
+      await refreshRemoteRealmCodex();
+    } catch {
+      setBackendError(backendUnavailableMessage);
+    } finally {
+      setIsRefreshingRealmCodex(false);
+    }
+  };
+
   const handleRefreshAppConfig = async () => {
     setIsRefreshingAppConfig(true);
 
@@ -1987,6 +2250,9 @@ function App() {
       applyRemoteGameState(nextGameState);
       applyRemoteAppConfig(nextAppConfig);
       applyRemoteDailySuggestions(nextDailySuggestions);
+      if (currentScreen === 'realm-codex') {
+        await refreshRemoteRealmCodex();
+      }
     } catch {
       setBackendError(backendUnavailableMessage);
     } finally {
@@ -2045,6 +2311,7 @@ function App() {
                   setCurrentScreen('add-quest');
                 }}
                 onNavigateToProgress={() => setCurrentScreen('progress')}
+                onNavigateToRealmCodex={handleOpenRealmCodex}
                 onRefreshAppConfig={handleRefreshAppConfig}
                 onSelectSortOption={handleSelectSortOption}
                 onToggleTheme={handleToggleTheme}
@@ -2064,6 +2331,23 @@ function App() {
                 themeMode={gameState.themeMode}
                 unlockedAchievementIds={gameState.unlockedAchievementIds}
               />
+            ) : currentScreen === 'realm-codex' ? (
+              realmCodex ? (
+                <RealmCodexScreen
+                  isRefreshingRealmCodex={isRefreshingRealmCodex}
+                  onBack={() => setCurrentScreen('quest-board')}
+                  onRefresh={handleRefreshRealmCodex}
+                  onToggleTheme={handleToggleTheme}
+                  realmCodex={realmCodex}
+                  styles={styles}
+                  themeMode={gameState.themeMode}
+                />
+              ) : (
+                <View style={styles.loadingState}>
+                  <Text style={styles.loadingKicker}>Opening Realm Codex</Text>
+                  <Text style={styles.loadingTitle}>Quest Forge</Text>
+                </View>
+              )
             ) : (
               <AddQuestScreen
                 onBack={returnToBoard}
@@ -2680,6 +2964,9 @@ function createStyles(theme: ThemePalette) {
 }
 
 export default App;
+
+
+
 
 
 

@@ -426,6 +426,98 @@ function getDailySuggestions(dateKey, quests) {
   return suggestions;
 }
 
+function createRealmSeed(dateKey) {
+  const numericSeed = Number(dateKey.replace(/-/g, ''));
+
+  return `0x${numericSeed.toString(16).toUpperCase()}`;
+}
+
+function buildRealmCodex(gameState, appConfig) {
+  const suggestionDateKey = getDateKey();
+  const realmSeed = createRealmSeed(suggestionDateKey);
+  const featureFlags = [
+    {
+      id: 'realm-sync-card',
+      label: 'Realm Sync Panel',
+      status: appConfig.featureFlags.showRealmSyncCard ? 'Enabled' : 'Hidden',
+    },
+    {
+      id: 'suggestion-section',
+      label: 'Suggestion Feed',
+      status: appConfig.featureFlags.showSuggestionSection ? 'Enabled' : 'Hidden',
+    },
+    {
+      id: 'filter-section',
+      label: 'Search And Filter',
+      status: appConfig.featureFlags.showFilterSection ? 'Enabled' : 'Hidden',
+    },
+    {
+      id: 'achievement-section',
+      label: 'Achievement Ledger',
+      status: appConfig.featureFlags.showAchievementSection ? 'Enabled' : 'Hidden',
+    },
+  ];
+  const modules = [
+    {
+      id: 'quest-board',
+      name: 'Quest Board',
+      description: 'Primary mission board and daily task surface.',
+      status: 'Live',
+    },
+    {
+      id: 'hero-archive',
+      name: 'Hero Archive',
+      description: 'Progress summary and hero record ledger.',
+      status: 'Live',
+    },
+    {
+      id: 'suggestion-feed',
+      name: 'Suggestion Feed',
+      description: 'Backend-issued daily quest recommendations.',
+      status: appConfig.featureFlags.showSuggestionSection ? 'Live' : 'Dormant',
+    },
+    {
+      id: 'achievement-ledger',
+      name: 'Achievement Ledger',
+      description: 'Badge and milestone visibility inside Progress.',
+      status: appConfig.featureFlags.showAchievementSection ? 'Live' : 'Dormant',
+    },
+    {
+      id: 'realm-sync',
+      name: 'Realm Sync',
+      description: 'Pulls the latest backend copy into the running app.',
+      status: appConfig.featureFlags.showRealmSyncCard ? 'Live' : 'Dormant',
+    },
+  ];
+
+  return {
+    kicker: 'Realm Codex',
+    title: "The Weaver's Codex",
+    subtitle:
+      'A live readout of the backend state currently shaping Quest Forge inside the app.',
+    heartbeatLabel: 'Sanctum Heartbeat',
+    heartbeatStatus: 'Stable',
+    syncLatencyMs: 32 + gameState.quests.length * 4 + appConfig.configVersion,
+    summarySectionTitle: 'Realm Summary',
+    summarySectionIntro:
+      'This screen is backed by live server data so the app can reveal system state without another client rewrite.',
+    featureFlagsSectionTitle: 'Active Realm Flags',
+    featureFlagsSectionIntro:
+      'Each flag shows which surfaces the backend currently exposes inside the player app.',
+    modulesSectionTitle: 'Connected Modules',
+    modulesSectionIntro:
+      'These are the current app surfaces and systems wired into the active backend flow.',
+    configVersion: appConfig.configVersion,
+    realmSeed,
+    activeTheme: gameState.themeMode === 'dark' ? 'Dark Mode' : 'Light Mode',
+    activeSort: gameState.sortOption,
+    questCount: gameState.quests.length,
+    suggestionSeed: suggestionDateKey,
+    featureFlags,
+    modules,
+  };
+}
+
 function normalizeAppConfig(appConfig) {
   return {
     configVersion:
@@ -706,6 +798,22 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.url === '/realm-codex' && req.method === 'GET') {
+    try {
+      const [gameState, appConfig] = await Promise.all([
+        readGameState(),
+        readAppConfig(),
+      ]);
+      sendJson(res, 200, buildRealmCodex(gameState, appConfig));
+    } catch (error) {
+      sendJson(res, 500, {
+        error: 'Unable to read realm codex.',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+    return;
+  }
+
   if (req.url === '/game-state' && req.method === 'GET') {
     try {
       const gameState = await readGameState();
@@ -973,6 +1081,7 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`QuestForge backend running at http://localhost:${PORT}`);
 });
+
 
 
 

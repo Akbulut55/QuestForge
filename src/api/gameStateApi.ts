@@ -54,6 +54,10 @@ export async function fetchRemoteDailySuggestions<T>(): Promise<T> {
   return requestJson<T>('/daily-suggestions');
 }
 
+export async function fetchRemoteRealmCodex<T>(): Promise<T> {
+  return requestJson<T>('/realm-codex');
+}
+
 export async function saveRemoteGameState<T>(gameState: T): Promise<T> {
   return requestJson<T>('/game-state', {
     method: 'PUT',
@@ -131,4 +135,5 @@ export async function updateRemoteSortOption<TSortOption, TResponse>(
     body: JSON.stringify({ sortOption }),
   });
 }
+
 
