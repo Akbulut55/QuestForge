@@ -85,6 +85,13 @@ type GameState = {
   sortOption: SortOption;
 };
 
+type AppFeatureFlags = {
+  showRealmSyncCard: boolean;
+  showSuggestionSection: boolean;
+  showFilterSection: boolean;
+  showAchievementSection: boolean;
+};
+
 type AppConfig = {
   configVersion: number;
   boardKicker: string;
@@ -105,6 +112,7 @@ type AppConfig = {
   progressSectionIntro: string;
   achievementSectionTitle: string;
   achievementSectionIntro: string;
+  featureFlags: AppFeatureFlags;
 };
 
 type GameStateResponse = {
@@ -254,6 +262,12 @@ function createDefaultAppConfig(): AppConfig {
     achievementSectionTitle: 'Achievements',
     achievementSectionIntro:
       'Badges unlock automatically from the progress you already build on the quest board.',
+    featureFlags: {
+      showRealmSyncCard: true,
+      showSuggestionSection: true,
+      showFilterSection: true,
+      showAchievementSection: true,
+    },
   };
 }
 
@@ -668,6 +682,24 @@ function normalizeRemoteAppConfig(config: AppConfig): AppConfig {
       config?.achievementSectionIntro,
       fallbackConfig.achievementSectionIntro,
     ),
+    featureFlags: {
+      showRealmSyncCard:
+        typeof config?.featureFlags?.showRealmSyncCard === 'boolean'
+          ? config.featureFlags.showRealmSyncCard
+          : fallbackConfig.featureFlags.showRealmSyncCard,
+      showSuggestionSection:
+        typeof config?.featureFlags?.showSuggestionSection === 'boolean'
+          ? config.featureFlags.showSuggestionSection
+          : fallbackConfig.featureFlags.showSuggestionSection,
+      showFilterSection:
+        typeof config?.featureFlags?.showFilterSection === 'boolean'
+          ? config.featureFlags.showFilterSection
+          : fallbackConfig.featureFlags.showFilterSection,
+      showAchievementSection:
+        typeof config?.featureFlags?.showAchievementSection === 'boolean'
+          ? config.featureFlags.showAchievementSection
+          : fallbackConfig.featureFlags.showAchievementSection,
+    },
   };
 }
 
@@ -1249,65 +1281,70 @@ function QuestBoardScreen({
         </Animated.View>
       ) : null}
 
-      <View style={styles.boardActionCard} testID="realm-sync-card">
-        <Text style={styles.sectionTitle}>Realm Sync</Text>
-        <Text style={styles.formIntro}>
-          Config v{appConfig.configVersion}. {appConfig.realmSyncMessage}
-        </Text>
-        <Pressable
-          onPress={onRefreshAppConfig}
-          style={styles.secondaryActionButton}
-          testID="refresh-app-config">
-          <Text style={styles.secondaryActionText}>
-            {isRefreshingAppConfig ? 'Syncing Realm...' : 'Refresh Realm Copy'}
+      {appConfig.featureFlags.showRealmSyncCard ? (
+        <View style={styles.boardActionCard} testID="realm-sync-card">
+          <Text style={styles.sectionTitle}>Realm Sync</Text>
+          <Text style={styles.formIntro}>
+            Config v{appConfig.configVersion}. {appConfig.realmSyncMessage}
           </Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.boardActionCard}>
-        <Text style={styles.sectionTitle}>{appConfig.suggestionSectionTitle}</Text>
-        <Text style={styles.formIntro}>
-          Fresh quest ideas now come from a backend-generated daily feed so the
-          board can change without another mobile rebuild.
-        </Text>
-        <Text style={styles.formHint}>Realm seed: {dailySuggestionDateKey}</Text>
-
-        {dailySuggestions.length > 0 ? (
-          dailySuggestions.map((suggestion, index) => (
-            <View
-              key={`${suggestion.title}-${index}`}
-              style={styles.suggestionCard}
-              testID={`daily-suggestion-card-${index}`}>
-              <Text style={styles.suggestionTitle}>{suggestion.title}</Text>
-              <View style={styles.metaRow}>
-                <View style={styles.metaPill}>
-                  <Text style={styles.metaLabel}>Difficulty</Text>
-                  <Text style={styles.metaValue}>{suggestion.difficulty}</Text>
-                </View>
-                <View style={styles.metaPill}>
-                  <Text style={styles.metaLabel}>Category</Text>
-                  <Text style={styles.metaValue}>{suggestion.category}</Text>
-                </View>
-              </View>
-              <Pressable
-                onPress={() => onAddSuggestedQuest(suggestion)}
-                style={styles.cardSecondaryButton}
-                testID={`add-suggested-quest-${index}`}>
-                <Text style={styles.cardSecondaryButtonText}>
-                  Add Suggested Quest
-                </Text>
-              </Pressable>
-            </View>
-          ))
-        ) : (
-          <View style={styles.emptyStateCard}>
-            <Text style={styles.emptyStateTitle}>No fresh suggestions today</Text>
-            <Text style={styles.emptyStateText}>
-              Your current quest log already covers the local suggestion pool.
+          <Pressable
+            onPress={onRefreshAppConfig}
+            style={styles.secondaryActionButton}
+            testID="refresh-app-config">
+            <Text style={styles.secondaryActionText}>
+              {isRefreshingAppConfig ? 'Syncing Realm...' : 'Refresh Realm Copy'}
             </Text>
-          </View>
-        )}
-      </View>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {appConfig.featureFlags.showSuggestionSection ? (
+        <View style={styles.boardActionCard}>
+          <Text style={styles.sectionTitle}>{appConfig.suggestionSectionTitle}</Text>
+          <Text style={styles.formIntro}>
+            Fresh quest ideas now come from a backend-generated daily feed so the
+            board can change without another mobile rebuild.
+          </Text>
+          <Text style={styles.formHint}>Realm seed: {dailySuggestionDateKey}</Text>
+
+          {dailySuggestions.length > 0 ? (
+            dailySuggestions.map((suggestion, index) => (
+              <View
+                key={`${suggestion.title}-${index}`}
+                style={styles.suggestionCard}
+                testID={`daily-suggestion-card-${index}`}>
+                <Text style={styles.suggestionTitle}>{suggestion.title}</Text>
+                <View style={styles.metaRow}>
+                  <View style={styles.metaPill}>
+                    <Text style={styles.metaLabel}>Difficulty</Text>
+                    <Text style={styles.metaValue}>{suggestion.difficulty}</Text>
+                  </View>
+                  <View style={styles.metaPill}>
+                    <Text style={styles.metaLabel}>Category</Text>
+                    <Text style={styles.metaValue}>{suggestion.category}</Text>
+                  </View>
+                </View>
+                <Pressable
+                  onPress={() => onAddSuggestedQuest(suggestion)}
+                  style={styles.cardSecondaryButton}
+                  testID={`add-suggested-quest-${index}`}>
+                  <Text style={styles.cardSecondaryButtonText}>
+                    Add Suggested Quest
+                  </Text>
+                </Pressable>
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyStateCard}>
+              <Text style={styles.emptyStateTitle}>No fresh suggestions today</Text>
+              <Text style={styles.emptyStateText}>
+                Your current quest log already covers the local suggestion pool.
+              </Text>
+            </View>
+          )}
+        </View>
+      ) : null}
+
 
       <View style={styles.boardActionCard}>
         <Text style={styles.sectionTitle}>{appConfig.addQuestSectionTitle}</Text>
@@ -1329,63 +1366,65 @@ function QuestBoardScreen({
         </Pressable>
       </View>
 
-      <View style={styles.filterCard}>
-        <Text style={styles.sectionTitle}>{appConfig.filterSectionTitle}</Text>
-        <Text style={styles.formIntro}>
-          Narrow the board by title, difficulty, category, and completion
-          status.
-        </Text>
+      {appConfig.featureFlags.showFilterSection ? (
+        <View style={styles.filterCard}>
+          <Text style={styles.sectionTitle}>{appConfig.filterSectionTitle}</Text>
+          <Text style={styles.formIntro}>
+            Narrow the board by title, difficulty, category, and completion
+            status.
+          </Text>
 
-        <View style={styles.formField}>
-          <Text style={styles.formLabel}>Search By Title</Text>
-          <TextInput
-            onChangeText={setSearchQuery}
-            placeholder="Search quests"
-            placeholderTextColor={styles.themePlaceholder.color}
-            style={styles.titleInput}
-            testID="quest-search-input"
-            value={searchQuery}
+          <View style={styles.formField}>
+            <Text style={styles.formLabel}>Search By Title</Text>
+            <TextInput
+              onChangeText={setSearchQuery}
+              placeholder="Search quests"
+              placeholderTextColor={styles.themePlaceholder.color}
+              style={styles.titleInput}
+              testID="quest-search-input"
+              value={searchQuery}
+            />
+          </View>
+
+          <SectionPicker
+            label="Difficulty Filter"
+            onSelect={value =>
+              setSelectedDifficultyFilter(value as DifficultyFilter)
+            }
+            options={difficultyFilterOptions}
+            selectedValue={selectedDifficultyFilter}
+            styles={styles}
+            testIdPrefix="difficulty-filter"
+          />
+
+          <SectionPicker
+            label="Category Filter"
+            onSelect={value => setSelectedCategoryFilter(value as CategoryFilter)}
+            options={categoryFilterOptions}
+            selectedValue={selectedCategoryFilter}
+            styles={styles}
+            testIdPrefix="category-filter"
+          />
+
+          <SectionPicker
+            label="Status Filter"
+            onSelect={value => setSelectedStatusFilter(value as StatusFilter)}
+            options={statusFilterOptions}
+            selectedValue={selectedStatusFilter}
+            styles={styles}
+            testIdPrefix="status-filter"
+          />
+
+          <SectionPicker
+            label="Sort Quests"
+            onSelect={value => onSelectSortOption(value as SortOption)}
+            options={sortOptions}
+            selectedValue={selectedSortOption}
+            styles={styles}
+            testIdPrefix="sort-option"
           />
         </View>
-
-        <SectionPicker
-          label="Difficulty Filter"
-          onSelect={value =>
-            setSelectedDifficultyFilter(value as DifficultyFilter)
-          }
-          options={difficultyFilterOptions}
-          selectedValue={selectedDifficultyFilter}
-          styles={styles}
-          testIdPrefix="difficulty-filter"
-        />
-
-        <SectionPicker
-          label="Category Filter"
-          onSelect={value => setSelectedCategoryFilter(value as CategoryFilter)}
-          options={categoryFilterOptions}
-          selectedValue={selectedCategoryFilter}
-          styles={styles}
-          testIdPrefix="category-filter"
-        />
-
-        <SectionPicker
-          label="Status Filter"
-          onSelect={value => setSelectedStatusFilter(value as StatusFilter)}
-          options={statusFilterOptions}
-          selectedValue={selectedStatusFilter}
-          styles={styles}
-          testIdPrefix="status-filter"
-        />
-
-        <SectionPicker
-          label="Sort Quests"
-          onSelect={value => onSelectSortOption(value as SortOption)}
-          options={sortOptions}
-          selectedValue={selectedSortOption}
-          styles={styles}
-          testIdPrefix="sort-option"
-        />
-      </View>
+      ) : null}
 
       {!hasVisibleQuests ? (
         <View style={styles.emptyStateCard}>
@@ -1547,21 +1586,23 @@ function ProgressScreen({
         </View>
       </View>
 
-      <View style={styles.formCard}>
-        <Text style={styles.sectionTitle}>{appConfig.achievementSectionTitle}</Text>
-        <Text style={styles.formIntro}>{appConfig.achievementSectionIntro}</Text>
+      {appConfig.featureFlags.showAchievementSection ? (
+        <View style={styles.formCard}>
+          <Text style={styles.sectionTitle}>{appConfig.achievementSectionTitle}</Text>
+          <Text style={styles.formIntro}>{appConfig.achievementSectionIntro}</Text>
 
-        <View style={styles.achievementGrid}>
-          {achievementDefinitions.map(achievement => (
-            <AchievementBadge
-              achievement={achievement}
-              isUnlocked={unlockedAchievementIds.includes(achievement.id)}
-              key={achievement.id}
-              styles={styles}
-            />
-          ))}
+          <View style={styles.achievementGrid}>
+            {achievementDefinitions.map(achievement => (
+              <AchievementBadge
+                achievement={achievement}
+                isUnlocked={unlockedAchievementIds.includes(achievement.id)}
+                key={achievement.id}
+                styles={styles}
+              />
+            ))}
+          </View>
         </View>
-      </View>
+      ) : null}
     </ScrollView>
   );
 }
@@ -2639,6 +2680,8 @@ function createStyles(theme: ThemePalette) {
 }
 
 export default App;
+
+
 
 
 

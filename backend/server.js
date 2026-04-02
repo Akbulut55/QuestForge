@@ -99,6 +99,12 @@ const defaultAppConfig = {
   progressSectionIntro: 'This screen summarizes the quest board without creating any new data or changing your current flow.',
   achievementSectionTitle: 'Achievements',
   achievementSectionIntro: 'Badges unlock automatically from the progress you already build on the quest board.',
+  featureFlags: {
+    showRealmSyncCard: true,
+    showSuggestionSection: true,
+    showFilterSection: true,
+    showAchievementSection: true,
+  },
 };
 
 const suggestionTemplates = [
@@ -498,6 +504,24 @@ function normalizeAppConfig(appConfig) {
       appConfig?.achievementSectionIntro,
       defaultAppConfig.achievementSectionIntro,
     ),
+    featureFlags: {
+      showRealmSyncCard:
+        typeof appConfig?.featureFlags?.showRealmSyncCard === 'boolean'
+          ? appConfig.featureFlags.showRealmSyncCard
+          : defaultAppConfig.featureFlags.showRealmSyncCard,
+      showSuggestionSection:
+        typeof appConfig?.featureFlags?.showSuggestionSection === 'boolean'
+          ? appConfig.featureFlags.showSuggestionSection
+          : defaultAppConfig.featureFlags.showSuggestionSection,
+      showFilterSection:
+        typeof appConfig?.featureFlags?.showFilterSection === 'boolean'
+          ? appConfig.featureFlags.showFilterSection
+          : defaultAppConfig.featureFlags.showFilterSection,
+      showAchievementSection:
+        typeof appConfig?.featureFlags?.showAchievementSection === 'boolean'
+          ? appConfig.featureFlags.showAchievementSection
+          : defaultAppConfig.featureFlags.showAchievementSection,
+    },
   };
 }
 
@@ -949,5 +973,6 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`QuestForge backend running at http://localhost:${PORT}`);
 });
+
 
 

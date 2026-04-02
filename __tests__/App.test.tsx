@@ -124,6 +124,12 @@ type TestAppConfig = {
   progressSectionIntro: string;
   achievementSectionTitle: string;
   achievementSectionIntro: string;
+  featureFlags: {
+    showRealmSyncCard: boolean;
+    showSuggestionSection: boolean;
+    showFilterSection: boolean;
+    showAchievementSection: boolean;
+  };
 };
 
 const defaultRemoteGameState: TestGameState = {
@@ -191,6 +197,12 @@ const defaultRemoteAppConfig: TestAppConfig = {
   achievementSectionTitle: 'Achievements',
   achievementSectionIntro:
     'Badges unlock automatically from the progress you already build on the quest board.',
+  featureFlags: {
+    showRealmSyncCard: true,
+    showSuggestionSection: true,
+    showFilterSection: true,
+    showAchievementSection: true,
+  },
 };
 
 const completionXpByDifficulty = {
@@ -914,6 +926,49 @@ test('loads backend-driven progress copy after realm sync refresh', async () => 
   );
 });
 
+test('backend feature flags can hide configured sections after a realm refresh', async () => {
+  const tree = await renderHydratedApp();
+  let root = tree.root;
+
+  mockRemoteAppConfig = {
+    ...mockRemoteAppConfig,
+    configVersion: 4,
+    featureFlags: {
+      showRealmSyncCard: false,
+      showSuggestionSection: false,
+      showFilterSection: false,
+      showAchievementSection: false,
+    },
+  };
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'refresh-app-config' }).props.onPress();
+    await flushMicrotasks();
+  });
+
+  root = tree.root;
+
+  expect(
+    root.findAll(node => node.props.children === 'Realm Sync').length,
+  ).toBe(0);
+  expect(
+    root.findAll(node => node.props.children === 'Daily Suggestions').length,
+  ).toBe(0);
+  expect(
+    root.findAll(node => node.props.children === 'Search And Filter').length,
+  ).toBe(0);
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'navigate-to-progress-screen' }).props.onPress();
+  });
+
+  root = tree.root;
+
+  expect(
+    root.findAll(node => node.props.children === 'Achievements').length,
+  ).toBe(0);
+});
+
 test('completing a quest awards XP, updates rank, and saves remote game state', async () => {
   const tree = await renderHydratedApp();
 
@@ -1330,6 +1385,7 @@ test('completing a quest on the next day increases the streak', async () => {
     jest.useRealTimers();
   }
 });
+
 
 
 

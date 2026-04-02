@@ -25,8 +25,8 @@ After teacher feedback, the project direction was corrected beginning in Iterati
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 19 |
-| Total Weight (kg) | 200 |
+| Total Iterations | 20 |
+| Total Weight (kg) | 210 |
 | Total Time (min) | Not tracked |
 | Failed Attempts | Not tracked |
 
@@ -844,6 +844,32 @@ do all 4 iterations and after each iteration commit them and update mobile.md wh
 **Screenshot:** `iteration-19-backend-daily-suggestions.png`
 
 **Commit:** `[NAIM: Quest Blacksmith] Move daily suggestions to backend - 10kg`
+
+---
+
+### Iteration 20
+
+| Field | Value |
+|-------|-------|
+| Feature | `Backend-driven feature flags` |
+| Weight | `10 kg` |
+| Tool Used | `Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+do all 4 iterations and after each iteration commit them and update mobile.md when there is a new screen needed you are already connected to stitch you should generate a new screen then use it on the app
+```
+
+**What happened:**
+- Added simple feature flags to the backend app config so the server can decide whether the app shows realm sync, daily suggestions, search/filter controls, and achievements.
+- After a realm refresh, the app now changes visible sections from backend config alone, which makes the UI feel more like an app that evolves from server-driven iterations.
+
+**Screenshot:** `iteration-20-backend-feature-flags.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add backend feature flags - 10kg`
 
 ---
 
