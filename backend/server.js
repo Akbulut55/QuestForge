@@ -11,6 +11,23 @@ const appConfigFilePath = path.join(dataDirectory, 'app-config.json');
 
 const difficultyOptions = ['Easy', 'Medium', 'Hard', 'Epic'];
 const categoryOptions = ['Main Quest', 'Side Quest'];
+const questTagOptions = [
+  'General',
+  'Chores',
+  'Work',
+  'Study',
+  'Health',
+  'Fitness',
+  'Errands',
+  'Home',
+  'Focus',
+  'Planning',
+  'Creative',
+  'Finance',
+  'Social',
+  'Admin',
+  'Self Care',
+];
 const sortOptions = [
   'Newest first',
   'Oldest first',
@@ -34,6 +51,9 @@ const achievementDefinitions = [
 const defaultQuestSectionOrder = ['main', 'side', 'completed'];
 const themePackOptions = ['ethereal-forge', 'luminous-paladin', 'void-drifter'];
 const rankThresholds = [
+  { minimumXp: 340, title: 'Mythic' },
+  { minimumXp: 240, title: 'Legend' },
+  { minimumXp: 160, title: 'Warden' },
   { minimumXp: 100, title: 'Champion' },
   { minimumXp: 50, title: 'Knight' },
   { minimumXp: 20, title: 'Adventurer' },
@@ -46,6 +66,7 @@ const defaultGameState = {
     rankTitle: 'Novice',
     streakCount: 0,
     lastCompletedDate: null,
+    activeDateKeys: [getDateKey()],
   },
   quests: [
     {
@@ -53,11 +74,14 @@ const defaultGameState = {
       title: 'Defeat the Laundry Dragon',
       description:
         'Clear the laundry pile, sort the essentials, and leave the guild hall ready for the next work cycle.',
+      tag: 'Chores',
       dueDate: null,
       difficulty: 'Epic',
       xpReward: 50,
       status: 'In Progress',
       category: 'Main Quest',
+      completedAt: null,
+      failedAt: null,
       createdAt: 1,
     },
     {
@@ -65,11 +89,14 @@ const defaultGameState = {
       title: 'Brew a Focus Potion',
       description:
         'Prepare your desk, water, and playlist so the next study session begins with less resistance.',
+      tag: 'Study',
       dueDate: null,
       difficulty: 'Medium',
       xpReward: 20,
       status: 'Ready',
       category: 'Side Quest',
+      completedAt: null,
+      failedAt: null,
       createdAt: 2,
     },
     {
@@ -77,11 +104,14 @@ const defaultGameState = {
       title: 'Sharpen the Study Blade',
       description:
         'Review one core topic and write down the sharpest insight before you close the session.',
+      tag: 'Study',
       dueDate: null,
       difficulty: 'Easy',
       xpReward: 10,
       status: 'Completed',
       category: 'Side Quest',
+      completedAt: getDateKey(),
+      failedAt: null,
       createdAt: 3,
     },
   ],
@@ -97,8 +127,8 @@ const defaultAppConfig = {
   boardSubtitle: 'Turn your everyday tasks into a progression path worth chasing.',
   heroEyebrow: 'Hero Overview',
   boardHeroTitlePrefix: 'Rank Title',
-  boardHeroInsight: 'The backend can rotate this hero-card guidance without another mobile rebuild.',
-  realmSyncMessage: 'Refresh this screen to pull the latest board copy from the backend.',
+  boardHeroInsight: 'Your next rank is earned one quest at a time.',
+  realmSyncMessage: 'Sync the board to refresh today’s realm updates.',
   suggestionSectionTitle: 'Daily Suggestions',
   addQuestSectionTitle: 'Forge New Quest',
   filterSectionTitle: 'Search And Filter',
@@ -108,12 +138,12 @@ const defaultAppConfig = {
   questSectionOrder: defaultQuestSectionOrder,
   progressKicker: 'Profile',
   progressTitle: 'Hero Summary',
-  progressSubtitle: 'Track the progress you have forged from quests already living in your current log.',
+  progressSubtitle: 'See how your quests, streaks, and ranks are shaping your legend.',
   progressHeroEyebrow: 'Current Progress',
   progressSectionTitle: 'Quest Progress',
-  progressSectionIntro: 'This screen summarizes the quest board without creating any new data or changing your current flow.',
+  progressSectionIntro: 'Review your totals, streaks, and milestones in one place.',
   achievementSectionTitle: 'Achievements',
-  achievementSectionIntro: 'Badges unlock automatically from the progress you already build on the quest board.',
+  achievementSectionIntro: 'Badges unlock as your legend grows.',
   featureFlags: {
     showRealmSyncCard: true,
     showSuggestionSection: true,
@@ -129,43 +159,110 @@ const defaultAppConfig = {
 const suggestionTemplates = [
   {
     title: 'Refill the Mana Flask',
+    description:
+      'Refill your water bottle and reset your desk before the next focus session begins.',
+    tag: 'Health',
     difficulty: 'Easy',
     category: 'Side Quest',
   },
   {
     title: 'Map the Day Ahead',
+    description:
+      'Sketch the top priorities for today so the main quest line stays clear.',
+    tag: 'Planning',
     difficulty: 'Easy',
     category: 'Main Quest',
   },
   {
     title: 'Train the Focus Familiar',
+    description:
+      'Silence distractions and prepare one clean work block with a single outcome.',
+    tag: 'Focus',
     difficulty: 'Medium',
     category: 'Side Quest',
   },
   {
     title: 'Polish the Guild Resume',
+    description:
+      'Improve one practical part of your portfolio, CV, or professional profile.',
+    tag: 'Work',
     difficulty: 'Medium',
     category: 'Main Quest',
   },
   {
     title: 'Clear the Inbox Cavern',
+    description:
+      'Answer or archive the messages that keep pulling your attention away.',
+    tag: 'Admin',
     difficulty: 'Hard',
     category: 'Main Quest',
   },
   {
     title: 'Raid the Laundry Keep',
+    description:
+      'Wash, dry, and fold one full load before the pile grows stronger.',
+    tag: 'Chores',
     difficulty: 'Hard',
     category: 'Side Quest',
   },
   {
     title: 'Forge a Weekly Master Plan',
+    description:
+      'Lay out your week with deadlines, recovery time, and one stretch goal.',
+    tag: 'Planning',
     difficulty: 'Epic',
     category: 'Main Quest',
   },
   {
     title: 'Protect the Evening Wind-Down',
+    description:
+      'Create a calm finish to the day so tomorrow begins with more energy.',
+    tag: 'Self Care',
     difficulty: 'Easy',
     category: 'Side Quest',
+  },
+  {
+    title: 'Restore the Study Desk',
+    description: 'Reset your workspace so the next session starts clean and focused.',
+    tag: 'Study',
+    difficulty: 'Easy',
+    category: 'Side Quest',
+  },
+  {
+    title: 'Collect the Expense Receipts',
+    description:
+      'Gather the finance trail before admin tasks become a bigger boss fight.',
+    tag: 'Finance',
+    difficulty: 'Medium',
+    category: 'Side Quest',
+  },
+  {
+    title: 'Deliver the Guild Check-In',
+    description: 'Send the update your teammate, client, or manager is waiting on.',
+    tag: 'Work',
+    difficulty: 'Medium',
+    category: 'Main Quest',
+  },
+  {
+    title: 'Lift the Iron Sigils',
+    description: 'Complete a short workout or movement ritual to keep momentum alive.',
+    tag: 'Fitness',
+    difficulty: 'Hard',
+    category: 'Side Quest',
+  },
+  {
+    title: 'Prepare the Market Run',
+    description: 'Handle the errands that unblock the rest of the week.',
+    tag: 'Errands',
+    difficulty: 'Medium',
+    category: 'Side Quest',
+  },
+  {
+    title: 'Shape a Creative Relic',
+    description: 'Make visible progress on a design, sketch, draft, or passion project.',
+    tag: 'Creative',
+    difficulty: 'Hard',
+    category: 'Main Quest',
   },
 ];
 
@@ -221,6 +318,10 @@ function normalizeDueDate(dueDate) {
   return parseDateKey(trimmedDueDate) ? trimmedDueDate : null;
 }
 
+function normalizeResolvedDate(resolvedDate) {
+  return normalizeDueDate(resolvedDate);
+}
+
 function getQuestDueStateLabel(quest, todayKey = getDateKey()) {
   const dueDate = normalizeDueDate(quest?.dueDate);
 
@@ -230,6 +331,10 @@ function getQuestDueStateLabel(quest, todayKey = getDateKey()) {
 
   if (quest.status === 'Completed') {
     return 'Completed';
+  }
+
+  if (quest.status === 'Failed') {
+    return 'Failed';
   }
 
   const dateDifference = getDateDifferenceInDays(todayKey, dueDate);
@@ -247,6 +352,32 @@ function getQuestDueStateLabel(quest, todayKey = getDateKey()) {
   }
 
   return 'Upcoming';
+}
+
+function getQuestResolvedDate(quest) {
+  if (quest.status === 'Completed') {
+    return normalizeResolvedDate(quest.completedAt);
+  }
+
+  if (quest.status === 'Failed') {
+    return normalizeResolvedDate(quest.failedAt);
+  }
+
+  return null;
+}
+
+function normalizeActiveDateKeys(activeDateKeys) {
+  if (!Array.isArray(activeDateKeys)) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      activeDateKeys
+        .map(activeDateKey => normalizeResolvedDate(activeDateKey))
+        .filter(activeDateKey => activeDateKey !== null),
+    ),
+  ).sort();
 }
 
 function normalizeStreakProgress(streakCount, lastCompletedDate) {
@@ -317,7 +448,12 @@ function getRankTitleForXp(xp) {
   return rankThresholds.find(threshold => xp >= threshold.minimumXp)?.title ?? 'Novice';
 }
 
-function createHeroProgress(xp, streakCount = 0, lastCompletedDate = null) {
+function createHeroProgress(
+  xp,
+  streakCount = 0,
+  lastCompletedDate = null,
+  activeDateKeys = [],
+) {
   const normalizedStreak = normalizeStreakProgress(streakCount, lastCompletedDate);
 
   return {
@@ -325,6 +461,7 @@ function createHeroProgress(xp, streakCount = 0, lastCompletedDate = null) {
     rankTitle: getRankTitleForXp(xp),
     streakCount: normalizedStreak.streakCount,
     lastCompletedDate: normalizedStreak.lastCompletedDate,
+    activeDateKeys: normalizeActiveDateKeys(activeDateKeys),
   };
 }
 
@@ -345,7 +482,7 @@ function normalizeQuest(quest) {
   const category = categoryOptions.includes(quest?.category)
     ? quest.category
     : 'Side Quest';
-  const status = ['Ready', 'In Progress', 'Completed'].includes(quest?.status)
+  const status = ['Ready', 'In Progress', 'Completed', 'Failed'].includes(quest?.status)
     ? quest.status
     : 'Ready';
   const title = typeof quest?.title === 'string' && quest.title.trim().length > 0
@@ -357,22 +494,39 @@ function normalizeQuest(quest) {
     title,
     description:
       typeof quest?.description === 'string' ? quest.description.trim() : '',
+    tag:
+      typeof quest?.tag === 'string' && quest.tag.trim().length > 0
+        ? quest.tag.trim()
+        : 'General',
     dueDate: normalizeDueDate(quest?.dueDate),
     difficulty,
     xpReward: completionXpByDifficulty[difficulty],
     status,
     category,
+    completedAt:
+      status === 'Completed'
+        ? normalizeResolvedDate(quest?.completedAt) ?? getDateKey()
+        : null,
+    failedAt:
+      status === 'Failed'
+        ? normalizeResolvedDate(quest?.failedAt) ?? getDateKey()
+        : null,
     createdAt: typeof quest?.createdAt === 'number' ? quest.createdAt : Date.now(),
   };
 }
 
 function getProgressStats(quests) {
   const totalCompleted = quests.filter(quest => quest.status === 'Completed').length;
+  const totalFailed = quests.filter(quest => quest.status === 'Failed').length;
+  const activeCount = quests.filter(
+    quest => quest.status === 'Ready' || quest.status === 'In Progress',
+  ).length;
 
   return {
     totalCreated: quests.length,
     totalCompleted,
-    activeCount: quests.length - totalCompleted,
+    totalFailed,
+    activeCount,
     completedCount: totalCompleted,
   };
 }
@@ -432,6 +586,10 @@ function normalizeGameState(gameState) {
     normalizedXp,
     gameState?.hero?.streakCount,
     gameState?.hero?.lastCompletedDate ?? null,
+    gameState?.hero?.activeDateKeys ??
+      normalizedQuests
+        .map(quest => getQuestResolvedDate(quest))
+        .filter(activeDateKey => activeDateKey !== null),
   );
 
   return {
@@ -721,6 +879,10 @@ function getQuestProgressPercent(status) {
     return 100;
   }
 
+  if (status === 'Failed') {
+    return 100;
+  }
+
   if (status === 'In Progress') {
     return 68;
   }
@@ -732,6 +894,8 @@ function getQuestGuidanceText(quest) {
   const statusGuidance =
     quest.status === 'Completed'
       ? 'This ritual is already sealed, so any next step is about reflection or refinement.'
+      : quest.status === 'Failed'
+        ? 'This quest was marked as failed, so the next move is to learn from it or forge a better version.'
       : quest.status === 'In Progress'
         ? 'Momentum is already gathering around this quest, so keep the next action small and focused.'
         : 'This quest is prepared and waiting for the first deliberate move.';
@@ -755,7 +919,7 @@ function buildQuestDetails(quest) {
   const ritualProgressPercent = getQuestProgressPercent(quest.status);
   const hasQuestNotes = typeof quest.description === 'string' && quest.description.length > 0;
   const primaryActionType =
-    quest.status === 'Completed'
+    quest.status === 'Completed' || quest.status === 'Failed'
       ? 'none'
       : quest.status === 'In Progress'
         ? 'complete'
@@ -766,14 +930,17 @@ function buildQuestDetails(quest) {
     kicker: 'Quest Details',
     title: quest.title,
     subtitle:
-      'A backend-forged quest dossier that lets the app open one mission in focus without inventing a separate quest flow.',
+      'Open one quest in focus, inspect its notes, and decide the next move in the journey.',
     questId: quest.id,
     statusLabel: quest.status,
     categoryLabel: quest.category,
+    tagLabel: quest.tag,
     summaryEyebrow: 'Quest Summary',
     summaryTitle:
       quest.status === 'Completed'
         ? 'Ritual Sealed'
+        : quest.status === 'Failed'
+          ? 'Ritual Broken'
         : quest.status === 'In Progress'
           ? 'Ritual In Motion'
           : 'Ritual Prepared',
@@ -784,6 +951,8 @@ function buildQuestDetails(quest) {
     progressStatusText:
       quest.status === 'Completed'
         ? 'This quest already lives in the completed ledger and its reward has been claimed.'
+        : quest.status === 'Failed'
+          ? 'This quest now lives in the history ledger as a failed attempt.'
         : quest.status === 'In Progress'
           ? 'The ritual is active now, so completing it will seal the quest and grant the reward.'
           : 'The ritual is ready to begin whenever the guild needs this quest to move.',
@@ -794,12 +963,17 @@ function buildQuestDetails(quest) {
     primaryActionLabel:
       quest.status === 'Completed'
         ? 'Ritual Complete'
+        : quest.status === 'Failed'
+          ? 'Quest Failed'
         : quest.status === 'In Progress'
           ? 'Complete Ritual'
           : 'Start Quest',
     primaryActionType,
+    tertiaryActionType:
+      quest.status === 'Ready' || quest.status === 'In Progress' ? 'fail' : 'none',
+    tertiaryActionLabel: 'Mark Failed',
     secondaryActionLabel: 'Edit Quest',
-    canComplete: quest.status !== 'Completed',
+    canComplete: quest.status !== 'Completed' && quest.status !== 'Failed',
   };
 }
 
@@ -968,6 +1142,8 @@ function isValidQuestDraft(questDraft) {
     questDraft.title.trim().length > 0 &&
     (typeof questDraft.description === 'undefined' ||
       typeof questDraft.description === 'string') &&
+    (typeof questDraft.tag === 'undefined' ||
+      questTagOptions.includes(questDraft.tag)) &&
     (typeof questDraft.dueDate === 'undefined' ||
       questDraft.dueDate === null ||
       (typeof questDraft.dueDate === 'string' &&
@@ -1087,6 +1263,15 @@ function getQuestRouteMatch(url) {
     return {
       questId: decodeURIComponent(startMatch[1]),
       action: 'start',
+    };
+  }
+
+  const failMatch = url.match(/^\/quests\/([^/]+)\/fail$/);
+
+  if (failMatch) {
+    return {
+      questId: decodeURIComponent(failMatch[1]),
+      action: 'fail',
     };
   }
 
@@ -1237,6 +1422,34 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.url === '/progress/reset' && req.method === 'POST') {
+    try {
+      const nextGameState = normalizeGameState({
+        hero: {
+          xp: 0,
+          rankTitle: 'Novice',
+          streakCount: 0,
+          lastCompletedDate: null,
+          activeDateKeys: [],
+        },
+        quests: [],
+        themeMode: 'dark',
+        themePackId: 'ethereal-forge',
+        unlockedAchievementIds: [],
+        sortOption: 'Newest first',
+      });
+
+      await writeGameState(nextGameState);
+      sendJson(res, 200, { gameState: nextGameState });
+    } catch (error) {
+      sendJson(res, 500, {
+        error: 'Unable to reset progress.',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+    return;
+  }
+
   if (req.url === '/quests' && req.method === 'POST') {
     try {
       const questDraft = await readRequestBody(req);
@@ -1252,6 +1465,7 @@ const server = http.createServer(async (req, res) => {
       const nextQuest = normalizeQuest({
         title: questDraft.title,
         description: questDraft.description,
+        tag: questDraft.tag,
         dueDate: questDraft.dueDate,
         difficulty: questDraft.difficulty,
         category: questDraft.category,
@@ -1299,6 +1513,7 @@ const server = http.createServer(async (req, res) => {
         ...questToUpdate,
         title: questDraft.title,
         description: questDraft.description,
+        tag: questDraft.tag,
         dueDate: questDraft.dueDate,
         difficulty: questDraft.difficulty,
         category: questDraft.category,
@@ -1363,7 +1578,7 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      if (questToComplete.status === 'Completed') {
+      if (questToComplete.status !== 'In Progress') {
         sendJson(res, 200, {
           gameState: currentGameState,
           completionFeedback: null,
@@ -1372,21 +1587,31 @@ const server = http.createServer(async (req, res) => {
       }
 
       const xpGained = completionXpByDifficulty[questToComplete.difficulty];
+      const completionDateKey = getDateKey();
       const updatedStreak = getNextStreakProgress(
         currentGameState.hero.streakCount,
         currentGameState.hero.lastCompletedDate,
-        getDateKey(),
+        completionDateKey,
       );
       const nextHero = createHeroProgress(
         currentGameState.hero.xp + xpGained,
         updatedStreak.streakCount,
         updatedStreak.lastCompletedDate,
+        [
+          ...(currentGameState.hero.activeDateKeys ?? []),
+          completionDateKey,
+        ],
       );
       const nextGameState = buildNextGameState(currentGameState, {
         hero: nextHero,
         quests: currentGameState.quests.map(quest =>
           quest.id === questRouteMatch.questId
-            ? { ...quest, status: 'Completed' }
+            ? {
+                ...quest,
+                status: 'Completed',
+                completedAt: completionDateKey,
+                failedAt: null,
+              }
             : quest,
         ),
       });
@@ -1442,6 +1667,52 @@ const server = http.createServer(async (req, res) => {
     } catch (error) {
       sendJson(res, 500, {
         error: 'Unable to start quest.',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+    return;
+  }
+
+  if (questRouteMatch?.action === 'fail' && req.method === 'POST') {
+    try {
+      const currentGameState = await readGameState();
+      const questToFail = currentGameState.quests.find(
+        quest => quest.id === questRouteMatch.questId,
+      );
+
+      if (!questToFail) {
+        sendJson(res, 404, {
+          error: 'Quest not found.',
+        });
+        return;
+      }
+
+      if (questToFail.status === 'Completed' || questToFail.status === 'Failed') {
+        sendJson(res, 200, {
+          gameState: currentGameState,
+        });
+        return;
+      }
+
+      const failedDateKey = getDateKey();
+      const nextGameState = buildNextGameState(currentGameState, {
+        quests: currentGameState.quests.map(quest =>
+          quest.id === questRouteMatch.questId
+            ? {
+                ...quest,
+                status: 'Failed',
+                completedAt: null,
+                failedAt: failedDateKey,
+              }
+            : quest,
+        ),
+      });
+
+      await writeGameState(nextGameState);
+      sendJson(res, 200, { gameState: nextGameState });
+    } catch (error) {
+      sendJson(res, 500, {
+        error: 'Unable to fail quest.',
         details: error instanceof Error ? error.message : 'Unknown error',
       });
     }

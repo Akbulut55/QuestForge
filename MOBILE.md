@@ -25,8 +25,8 @@ After teacher feedback, the project direction was corrected beginning in Iterati
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 29 |
-| Total Weight (kg) | 300 |
+| Total Iterations | 30 |
+| Total Weight (kg) | 310 |
 | Total Time (min) | Not tracked |
 | Failed Attempts | Not tracked |
 
@@ -1104,6 +1104,32 @@ do 27 28 29
 **Screenshot:** `iteration-29-quest-due-dates.png`
 
 **Commit:** `[NAIM: Quest Blacksmith] Add quest due dates - 10kg`
+
+---
+
+### Iteration 30
+
+| Field | Value |
+|-------|-------|
+| Feature | `Quest system overhaul with history, streak calendar, tags, richer suggestions, rank progress, and reset flow` |
+| Weight | `10 kg` |
+| Tool Used | `Stitch + Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+add more suggested quests and add a short description to them so user would know what is it actually, filter and search should be expandable it takes too much space when its always maximized, i dont want a quest detail button i should click at that quest and it should show me details, there should be more ranks and a rank progress, i dont want to see all completed quests in the main screen there should be a history screen for all quests and there should be filters for day month year and completed failed quests, there should be categories for quests like tags such as chores, work, study etc. add many app related tags, remove placeholder texts like in the daily suggestion it says fresh quest ideas now come from a backend-generated daily feed etc. a user shouldnt see something like that, replace realm sync section with a sync button but put that button next to light/dark mode button, profile should be more personalized, there should be a streak screen shows a calendar to user so user can see which days they were active, reset all progress/achievements and make all these changes as iteration 30
+```
+
+**What happened:**
+- Used Stitch to generate new `Quest History` and `Streak Calendar` screen directions, then implemented both screens inside the app and connected them to the current backend-driven quest flow.
+- Expanded the quest system with richer daily suggestions, quest tags, clickable quest cards for details, more ranks plus rank progress, a dedicated history archive with day/month/year and completed/failed filters, a calendar-based streak screen, a personalized profile, a top-bar sync button, and a full reset journey flow that clears progress and achievements.
+
+**Screenshot:** `iteration-30-quest-system-overhaul.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Expand quest system and history flow - 10kg`
 
 ---
 

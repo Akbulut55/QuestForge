@@ -21,12 +21,14 @@ import {
   completeRemoteQuest,
   createRemoteQuest,
   deleteRemoteQuest,
+  failRemoteQuest,
   fetchRemoteAppConfig,
   fetchRemoteDailySuggestions,
   fetchRemoteGameState,
   fetchRemoteQuestDetails,
   fetchRemoteRealmCodex,
   fetchRemoteThemeSanctum,
+  resetRemoteProgress,
   saveRemoteGameState,
   startRemoteQuest,
   updateRemoteQuest,
@@ -37,15 +39,18 @@ import {
 
 type Difficulty = 'Easy' | 'Medium' | 'Hard' | 'Epic';
 type Category = 'Main Quest' | 'Side Quest';
-type Status = 'Ready' | 'In Progress' | 'Completed';
+type Status = 'Ready' | 'In Progress' | 'Completed' | 'Failed';
 type ScreenName =
   | 'quest-board'
   | 'add-quest'
   | 'progress'
+  | 'history'
+  | 'streak'
   | 'realm-codex'
   | 'theme-sanctum'
   | 'quest-details';
-type RankTitle = 'Novice' | 'Adventurer' | 'Knight' | 'Champion';
+type RankTitle = string;
+type QuestTag = string;
 type QuestBoardSectionKey = 'main' | 'side' | 'completed';
 type SortOption =
   | 'Newest first'
@@ -61,7 +66,9 @@ type AchievementId =
   | 'quest-master';
 type DifficultyFilter = 'All' | Difficulty;
 type CategoryFilter = 'All' | Category;
-type StatusFilter = 'All' | 'Active' | 'Completed';
+type StatusFilter = 'All' | 'Ready' | 'In Progress';
+type HistoryPeriodFilter = 'Day' | 'Month' | 'Year';
+type HistoryStatusFilter = 'All' | 'Completed' | 'Failed';
 type ThemeMode = 'dark' | 'light';
 type ThemePackId = 'ethereal-forge' | 'luminous-paladin' | 'void-drifter';
 
@@ -69,17 +76,21 @@ type Quest = {
   id: string;
   title: string;
   description: string;
+  tag: QuestTag;
   dueDate: string | null;
   difficulty: Difficulty;
   xpReward: number;
   status: Status;
   category: Category;
+  completedAt: string | null;
+  failedAt: string | null;
   createdAt: number;
 };
 
 type QuestDraft = {
   title: string;
   description?: string;
+  tag?: QuestTag;
   dueDate?: string | null;
   difficulty: Difficulty;
   category: Category;
@@ -92,6 +103,7 @@ type HeroProgress = {
   rankTitle: RankTitle;
   streakCount: number;
   lastCompletedDate: string | null;
+  activeDateKeys: string[];
 };
 
 type GameState = {
@@ -151,6 +163,7 @@ type CompleteQuestResponse = GameStateResponse & {
 type ProgressStats = {
   totalCreated: number;
   totalCompleted: number;
+  totalFailed: number;
   activeCount: number;
   completedCount: number;
 };
@@ -220,6 +233,7 @@ type QuestDetailsResponse = {
   questId: string;
   statusLabel: Status;
   categoryLabel: Category;
+  tagLabel: QuestTag;
   summaryEyebrow: string;
   summaryTitle: string;
   difficultyLabel: Difficulty;
@@ -233,6 +247,8 @@ type QuestDetailsResponse = {
   dueStateLabel: string;
   primaryActionType: 'start' | 'complete' | 'none';
   primaryActionLabel: string;
+  tertiaryActionType: 'fail' | 'none';
+  tertiaryActionLabel: string;
   secondaryActionLabel: string;
   canComplete: boolean;
 };
@@ -441,7 +457,30 @@ const categoryFilterOptions: CategoryFilter[] = [
   'Main Quest',
   'Side Quest',
 ];
-const statusFilterOptions: StatusFilter[] = ['All', 'Active', 'Completed'];
+const statusFilterOptions: StatusFilter[] = ['All', 'Ready', 'In Progress'];
+const historyPeriodOptions: HistoryPeriodFilter[] = ['Day', 'Month', 'Year'];
+const historyStatusOptions: HistoryStatusFilter[] = [
+  'All',
+  'Completed',
+  'Failed',
+];
+const questTagOptions: QuestTag[] = [
+  'General',
+  'Chores',
+  'Work',
+  'Study',
+  'Health',
+  'Fitness',
+  'Errands',
+  'Home',
+  'Focus',
+  'Planning',
+  'Creative',
+  'Finance',
+  'Social',
+  'Admin',
+  'Self Care',
+];
 const defaultQuestSectionOrder: QuestBoardSectionKey[] = [
   'main',
   'side',
@@ -463,10 +502,8 @@ function createDefaultAppConfig(): AppConfig {
       'Turn your everyday tasks into a progression path worth chasing.',
     heroEyebrow: 'Hero Overview',
     boardHeroTitlePrefix: 'Rank Title',
-    boardHeroInsight:
-      'The backend can rotate this hero-card guidance without another mobile rebuild.',
-    realmSyncMessage:
-      'Refresh this screen to pull the latest board copy from the backend.',
+    boardHeroInsight: 'Your next rank is earned one quest at a time.',
+    realmSyncMessage: 'Sync the board to refresh today’s realm updates.',
     suggestionSectionTitle: 'Daily Suggestions',
     addQuestSectionTitle: 'Forge New Quest',
     filterSectionTitle: 'Search And Filter',
@@ -477,14 +514,13 @@ function createDefaultAppConfig(): AppConfig {
     progressKicker: 'Profile',
     progressTitle: 'Hero Summary',
     progressSubtitle:
-      'Track the progress you have forged from quests already living in your current log.',
+      'See how your quests, streaks, and ranks are shaping your legend.',
     progressHeroEyebrow: 'Current Progress',
     progressSectionTitle: 'Quest Progress',
     progressSectionIntro:
-      'This screen summarizes the quest board without creating any new data or changing your current flow.',
+      'Review your totals, streaks, and milestones in one place.',
     achievementSectionTitle: 'Achievements',
-    achievementSectionIntro:
-      'Badges unlock automatically from the progress you already build on the quest board.',
+    achievementSectionIntro: 'Badges unlock as your legend grows.',
     featureFlags: {
       showRealmSyncCard: true,
       showSuggestionSection: true,
@@ -511,11 +547,14 @@ const initialQuests: Quest[] = [
     title: 'Defeat the Laundry Dragon',
     description:
       'Clear the laundry pile, sort the essentials, and leave the guild hall ready for the next work cycle.',
+    tag: 'Chores',
     dueDate: null,
     difficulty: 'Epic',
     xpReward: 50,
     status: 'In Progress',
     category: 'Main Quest',
+    completedAt: null,
+    failedAt: null,
     createdAt: 1,
   },
   {
@@ -523,11 +562,14 @@ const initialQuests: Quest[] = [
     title: 'Brew a Focus Potion',
     description:
       'Prepare your desk, water, and playlist so the next study session begins with less resistance.',
+    tag: 'Study',
     dueDate: null,
     difficulty: 'Medium',
     xpReward: 20,
     status: 'Ready',
     category: 'Side Quest',
+    completedAt: null,
+    failedAt: null,
     createdAt: 2,
   },
   {
@@ -535,11 +577,14 @@ const initialQuests: Quest[] = [
     title: 'Sharpen the Study Blade',
     description:
       'Review one core topic and write down the sharpest insight before you close the session.',
+    tag: 'Study',
     dueDate: null,
     difficulty: 'Easy',
     xpReward: 10,
     status: 'Completed',
     category: 'Side Quest',
+    completedAt: getDateKey(),
+    failedAt: null,
     createdAt: 3,
   },
 ];
@@ -547,43 +592,115 @@ const initialQuests: Quest[] = [
 const suggestionTemplates: SuggestedQuest[] = [
   {
     title: 'Refill the Mana Flask',
+    description:
+      'Refill your water bottle and reset your desk before the next focus session begins.',
+    tag: 'Health',
     difficulty: 'Easy',
     category: 'Side Quest',
   },
   {
     title: 'Map the Day Ahead',
+    description:
+      'Sketch the top priorities for today so the main quest line stays clear.',
+    tag: 'Planning',
     difficulty: 'Easy',
     category: 'Main Quest',
   },
   {
     title: 'Train the Focus Familiar',
+    description:
+      'Silence distractions and prepare one clean work block with a single outcome.',
+    tag: 'Focus',
     difficulty: 'Medium',
     category: 'Side Quest',
   },
   {
     title: 'Polish the Guild Resume',
+    description:
+      'Improve one practical part of your portfolio, CV, or professional profile.',
+    tag: 'Work',
     difficulty: 'Medium',
     category: 'Main Quest',
   },
   {
     title: 'Clear the Inbox Cavern',
+    description:
+      'Answer or archive the messages that keep pulling your attention away.',
+    tag: 'Admin',
     difficulty: 'Hard',
     category: 'Main Quest',
   },
   {
     title: 'Raid the Laundry Keep',
+    description:
+      'Wash, dry, and fold one full load before the pile grows stronger.',
+    tag: 'Chores',
     difficulty: 'Hard',
     category: 'Side Quest',
   },
   {
     title: 'Forge a Weekly Master Plan',
+    description:
+      'Lay out your week with deadlines, recovery time, and one stretch goal.',
+    tag: 'Planning',
     difficulty: 'Epic',
     category: 'Main Quest',
   },
   {
     title: 'Protect the Evening Wind-Down',
+    description:
+      'Create a calm finish to the day so tomorrow begins with more energy.',
+    tag: 'Self Care',
     difficulty: 'Easy',
     category: 'Side Quest',
+  },
+  {
+    title: 'Restore the Study Desk',
+    description:
+      'Reset your workspace so the next session starts clean and focused.',
+    tag: 'Study',
+    difficulty: 'Easy',
+    category: 'Side Quest',
+  },
+  {
+    title: 'Collect the Expense Receipts',
+    description:
+      'Gather the finance trail before admin tasks become a bigger boss fight.',
+    tag: 'Finance',
+    difficulty: 'Medium',
+    category: 'Side Quest',
+  },
+  {
+    title: 'Deliver the Guild Check-In',
+    description:
+      'Send the update your teammate, client, or manager is waiting on.',
+    tag: 'Work',
+    difficulty: 'Medium',
+    category: 'Main Quest',
+  },
+  {
+    title: 'Lift the Iron Sigils',
+    description:
+      'Complete a short workout or movement ritual to keep momentum alive.',
+    tag: 'Fitness',
+    difficulty: 'Hard',
+    category: 'Side Quest',
+  },
+  {
+    title: 'Prepare the Market Run',
+    description:
+      'Handle the errands that unblock the rest of the week.',
+    tag: 'Errands',
+    difficulty: 'Medium',
+    category: 'Side Quest',
+  },
+  {
+    title: 'Shape a Creative Relic',
+    description:
+      'Make visible progress on a design, sketch, draft, or passion project.',
+    tag: 'Creative',
+    difficulty: 'Hard',
+    category: 'Main Quest',
   },
 ];
 
@@ -616,6 +733,9 @@ const achievementDefinitions: AchievementDefinition[] = [
 ];
 
 const rankThresholds: Array<{ minimumXp: number; title: RankTitle }> = [
+  { minimumXp: 340, title: 'Mythic' },
+  { minimumXp: 240, title: 'Legend' },
+  { minimumXp: 160, title: 'Warden' },
   { minimumXp: 100, title: 'Champion' },
   { minimumXp: 50, title: 'Knight' },
   { minimumXp: 20, title: 'Adventurer' },
@@ -642,19 +762,49 @@ function getRankTitleForXp(xp: number): RankTitle {
 }
 
 function getLevelForXp(xp: number) {
-  if (xp >= 100) {
-    return '04';
+  const rankIndex = rankThresholds.findIndex(threshold => xp >= threshold.minimumXp);
+  const normalizedRankIndex =
+    rankIndex === -1 ? rankThresholds.length - 1 : rankThresholds.length - rankIndex;
+
+  return `${normalizedRankIndex}`.padStart(2, '0');
+}
+
+function getRankProgress(xp: number) {
+  const orderedThresholds = [...rankThresholds].sort(
+    (leftRank, rightRank) => leftRank.minimumXp - rightRank.minimumXp,
+  );
+  const currentRank =
+    [...orderedThresholds]
+      .reverse()
+      .find(rankThreshold => xp >= rankThreshold.minimumXp) ??
+    orderedThresholds[0];
+  const currentRankIndex = orderedThresholds.findIndex(
+    rankThreshold => rankThreshold.title === currentRank.title,
+  );
+  const nextRank = orderedThresholds[currentRankIndex + 1] ?? null;
+
+  if (!nextRank) {
+    return {
+      currentRankTitle: currentRank.title,
+      nextRankTitle: currentRank.title,
+      progressPercent: 100,
+      progressText: 'You have reached the highest known rank.',
+    };
   }
 
-  if (xp >= 50) {
-    return '03';
-  }
+  const span = nextRank.minimumXp - currentRank.minimumXp;
+  const progressPercent = Math.min(
+    100,
+    Math.max(0, ((xp - currentRank.minimumXp) / span) * 100),
+  );
+  const xpRemaining = Math.max(0, nextRank.minimumXp - xp);
 
-  if (xp >= 20) {
-    return '02';
-  }
-
-  return '01';
+  return {
+    currentRankTitle: currentRank.title,
+    nextRankTitle: nextRank.title,
+    progressPercent,
+    progressText: `${xpRemaining} XP to ${nextRank.title}`,
+  };
 }
 
 function getDateKey(date = new Date()) {
@@ -705,6 +855,10 @@ function normalizeDueDate(dueDate: string | null | undefined) {
   return parseDateKey(trimmedDueDate) ? trimmedDueDate : null;
 }
 
+function normalizeResolvedDate(resolvedDate: string | null | undefined) {
+  return normalizeDueDate(resolvedDate);
+}
+
 function getQuestDueStateLabel(
   quest: Pick<Quest, 'status' | 'dueDate'>,
   todayKey = getDateKey(),
@@ -717,6 +871,10 @@ function getQuestDueStateLabel(
 
   if (quest.status === 'Completed') {
     return 'Completed';
+  }
+
+  if (quest.status === 'Failed') {
+    return 'Failed';
   }
 
   const dateDifference = getDateDifferenceInDays(todayKey, dueDate);
@@ -745,6 +903,57 @@ function getQuestDueDetails(quest: Pick<Quest, 'status' | 'dueDate'>) {
     dueStateLabel,
     isUrgent: dueStateLabel === 'Due Today' || dueStateLabel === 'Overdue',
   };
+}
+
+function getQuestResolvedDate(quest: Pick<Quest, 'status' | 'completedAt' | 'failedAt'>) {
+  if (quest.status === 'Completed') {
+    return normalizeResolvedDate(quest.completedAt);
+  }
+
+  if (quest.status === 'Failed') {
+    return normalizeResolvedDate(quest.failedAt);
+  }
+
+  return null;
+}
+
+function normalizeActiveDateKeys(activeDateKeys: string[] | null | undefined) {
+  if (!Array.isArray(activeDateKeys)) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      activeDateKeys
+        .map(activeDateKey => normalizeResolvedDate(activeDateKey))
+        .filter((activeDateKey): activeDateKey is string => activeDateKey !== null),
+    ),
+  ).sort();
+}
+
+function getBestStreak(activeDateKeys: string[]) {
+  if (activeDateKeys.length === 0) {
+    return 0;
+  }
+
+  let bestStreak = 1;
+  let currentStreak = 1;
+
+  for (let index = 1; index < activeDateKeys.length; index += 1) {
+    const previousDateKey = activeDateKeys[index - 1];
+    const currentDateKey = activeDateKeys[index];
+    const dateDifference = getDateDifferenceInDays(previousDateKey, currentDateKey);
+
+    if (dateDifference === 1) {
+      currentStreak += 1;
+      bestStreak = Math.max(bestStreak, currentStreak);
+      continue;
+    }
+
+    currentStreak = 1;
+  }
+
+  return bestStreak;
 }
 
 function normalizeStreakProgress(
@@ -786,6 +995,7 @@ function createHeroProgress(
   xp: number,
   streakCount = 0,
   lastCompletedDate: string | null = null,
+  activeDateKeys: string[] = [],
 ): HeroProgress {
   const normalizedStreak = normalizeStreakProgress(
     streakCount,
@@ -797,6 +1007,7 @@ function createHeroProgress(
     rankTitle: getRankTitleForXp(xp),
     streakCount: normalizedStreak.streakCount,
     lastCompletedDate: normalizedStreak.lastCompletedDate,
+    activeDateKeys: normalizeActiveDateKeys(activeDateKeys),
   };
 }
 
@@ -812,13 +1023,34 @@ function calculateCompletedQuestXp(quests: Quest[]) {
 
 function normalizeQuest(quest: Omit<Quest, 'id'> & Partial<Pick<Quest, 'id'>>) {
   const xpReward = completionXpByDifficulty[quest.difficulty];
+  const normalizedStatus: Status =
+    quest.status === 'Completed' ||
+    quest.status === 'In Progress' ||
+    quest.status === 'Failed'
+      ? quest.status
+      : 'Ready';
+  const completedAt =
+    normalizedStatus === 'Completed'
+      ? normalizeResolvedDate(quest.completedAt) ?? getDateKey()
+      : null;
+  const failedAt =
+    normalizedStatus === 'Failed'
+      ? normalizeResolvedDate(quest.failedAt) ?? getDateKey()
+      : null;
 
   return {
     ...quest,
     id: quest.id ?? createQuestId(),
     description:
       typeof quest.description === 'string' ? quest.description.trim() : '',
+    tag:
+      typeof quest.tag === 'string' && quest.tag.trim().length > 0
+        ? quest.tag.trim()
+        : 'General',
     dueDate: normalizeDueDate(quest.dueDate),
+    status: normalizedStatus,
+    completedAt,
+    failedAt,
     createdAt: typeof quest.createdAt === 'number' ? quest.createdAt : Date.now(),
     xpReward,
   };
@@ -826,7 +1058,14 @@ function normalizeQuest(quest: Omit<Quest, 'id'> & Partial<Pick<Quest, 'id'>>) {
 
 function createInitialGameState(): GameState {
   const normalizedQuests = initialQuests.map(normalizeQuest);
-  const hero = createHeroProgress(calculateCompletedQuestXp(normalizedQuests));
+  const hero = createHeroProgress(
+    calculateCompletedQuestXp(normalizedQuests),
+    0,
+    null,
+    normalizedQuests
+      .map(quest => getQuestResolvedDate(quest))
+      .filter((activeDateKey): activeDateKey is string => activeDateKey !== null),
+  );
 
   return {
     hero,
@@ -843,7 +1082,14 @@ function createInitialGameState(): GameState {
 
 function migrateLegacyQuests(quests: Quest[]): GameState {
   const normalizedQuests = quests.map(normalizeQuest);
-  const hero = createHeroProgress(calculateCompletedQuestXp(normalizedQuests));
+  const hero = createHeroProgress(
+    calculateCompletedQuestXp(normalizedQuests),
+    0,
+    null,
+    normalizedQuests
+      .map(quest => getQuestResolvedDate(quest))
+      .filter((activeDateKey): activeDateKey is string => activeDateKey !== null),
+  );
 
   return {
     hero,
@@ -869,6 +1115,10 @@ function normalizeStoredGameState(state: GameState): GameState {
     normalizedXp,
     state.hero?.streakCount,
     state.hero?.lastCompletedDate ?? null,
+    state.hero?.activeDateKeys ??
+      normalizedQuests
+        .map(quest => getQuestResolvedDate(quest))
+        .filter((activeDateKey): activeDateKey is string => activeDateKey !== null),
   );
 
   return {
@@ -1123,7 +1373,9 @@ function questMatchesFilters({
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const matchesSearch =
     normalizedQuery.length === 0 ||
-    quest.title.toLowerCase().includes(normalizedQuery);
+    quest.title.toLowerCase().includes(normalizedQuery) ||
+    quest.description.toLowerCase().includes(normalizedQuery) ||
+    quest.tag.toLowerCase().includes(normalizedQuery);
   const matchesDifficulty =
     selectedDifficultyFilter === 'All' ||
     quest.difficulty === selectedDifficultyFilter;
@@ -1131,25 +1383,29 @@ function questMatchesFilters({
     selectedCategoryFilter === 'All' || quest.category === selectedCategoryFilter;
   const matchesStatus =
     selectedStatusFilter === 'All' ||
-    (selectedStatusFilter === 'Completed' && quest.status === 'Completed') ||
-    (selectedStatusFilter === 'Active' && quest.status !== 'Completed');
+    quest.status === selectedStatusFilter;
 
   return matchesSearch && matchesDifficulty && matchesCategory && matchesStatus;
 }
 
 function getProgressStats(quests: Quest[]): ProgressStats {
   const totalCompleted = quests.filter(quest => quest.status === 'Completed').length;
+  const totalFailed = quests.filter(quest => quest.status === 'Failed').length;
+  const activeCount = quests.filter(
+    quest => quest.status === 'Ready' || quest.status === 'In Progress',
+  ).length;
 
   return {
     totalCreated: quests.length,
     totalCompleted,
-    activeCount: quests.length - totalCompleted,
+    totalFailed,
+    activeCount,
     completedCount: totalCompleted,
   };
 }
 
 function getQuestPrimaryActionLabel(status: Status) {
-  if (status === 'Completed') {
+  if (status === 'Completed' || status === 'Failed') {
     return 'Ritual Complete';
   }
 
@@ -1158,6 +1414,105 @@ function getQuestPrimaryActionLabel(status: Status) {
   }
 
   return 'Start Quest';
+}
+
+function matchesHistoryPeriod(
+  resolvedDate: string | null,
+  historyPeriodFilter: HistoryPeriodFilter,
+  todayKey = getDateKey(),
+) {
+  if (!resolvedDate) {
+    return false;
+  }
+
+  const todayDate = parseDateKey(todayKey);
+  const resolvedDay = parseDateKey(resolvedDate);
+
+  if (!todayDate || !resolvedDay) {
+    return false;
+  }
+
+  if (historyPeriodFilter === 'Day') {
+    return resolvedDate === todayKey;
+  }
+
+  if (historyPeriodFilter === 'Month') {
+    return (
+      resolvedDay.getFullYear() === todayDate.getFullYear() &&
+      resolvedDay.getMonth() === todayDate.getMonth()
+    );
+  }
+
+  return resolvedDay.getFullYear() === todayDate.getFullYear();
+}
+
+function getFavoriteTag(quests: Quest[]) {
+  const tagCounts = quests.reduce<Record<string, number>>((counts, quest) => {
+    counts[quest.tag] = (counts[quest.tag] ?? 0) + 1;
+
+    return counts;
+  }, {});
+  const [favoriteTag] = Object.entries(tagCounts).sort((leftEntry, rightEntry) => {
+    if (rightEntry[1] !== leftEntry[1]) {
+      return rightEntry[1] - leftEntry[1];
+    }
+
+    return leftEntry[0].localeCompare(rightEntry[0]);
+  })[0] ?? ['General', 0];
+
+  return favoriteTag;
+}
+
+function sortHistoryQuests(quests: Quest[]) {
+  return [...quests].sort((leftQuest, rightQuest) => {
+    const leftResolvedDate = getQuestResolvedDate(leftQuest) ?? '';
+    const rightResolvedDate = getQuestResolvedDate(rightQuest) ?? '';
+
+    if (leftResolvedDate !== rightResolvedDate) {
+      return rightResolvedDate.localeCompare(leftResolvedDate);
+    }
+
+    return rightQuest.createdAt - leftQuest.createdAt;
+  });
+}
+
+function buildCalendarDays(
+  activeDateKeys: string[],
+  referenceDate = new Date(),
+) {
+  const year = referenceDate.getFullYear();
+  const monthIndex = referenceDate.getMonth();
+  const firstOfMonth = new Date(year, monthIndex, 1);
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  const leadingEmptyDays = firstOfMonth.getDay();
+  const activeDateSet = new Set(activeDateKeys);
+  const todayKey = getDateKey(referenceDate);
+  const calendarDays: Array<
+    | null
+    | {
+        dayNumber: number;
+        dateKey: string;
+        isActive: boolean;
+        isToday: boolean;
+      }
+  > = [];
+
+  for (let index = 0; index < leadingEmptyDays; index += 1) {
+    calendarDays.push(null);
+  }
+
+  for (let dayNumber = 1; dayNumber <= daysInMonth; dayNumber += 1) {
+    const dateKey = getDateKey(new Date(year, monthIndex, dayNumber));
+
+    calendarDays.push({
+      dayNumber,
+      dateKey,
+      isActive: activeDateSet.has(dateKey),
+      isToday: dateKey === todayKey,
+    });
+  }
+
+  return calendarDays;
 }
 
 function shouldUnlockAchievement({
@@ -1444,27 +1799,35 @@ function QuestCard({
   onEdit?: (questId: string) => void;
   onOpenDetails?: (questId: string) => void;
 }) {
-  const isComplete = quest.status === 'Completed';
+  const isResolved =
+    quest.status === 'Completed' || quest.status === 'Failed';
   const dueDetails = getQuestDueDetails(quest);
 
   return (
-    <View style={[styles.questCard, isComplete && styles.questCardCompleted]}>
+    <Pressable
+      onPress={onOpenDetails ? () => onOpenDetails(quest.id) : undefined}
+      style={[styles.questCard, isResolved && styles.questCardCompleted]}
+      testID={`open-quest-details-${quest.id}`}>
       <View style={styles.questHeaderRow}>
         <Text style={styles.questTitle}>{quest.title}</Text>
         <View
           style={[
             styles.statusBadge,
-            isComplete ? styles.statusBadgeDone : styles.statusBadgeActive,
+            isResolved ? styles.statusBadgeDone : styles.statusBadgeActive,
           ]}>
           <Text
             style={[
               styles.statusBadgeText,
-              isComplete && styles.statusBadgeTextDone,
+              isResolved && styles.statusBadgeTextDone,
             ]}>
             {quest.status}
           </Text>
         </View>
       </View>
+
+      <Text style={styles.questDescription}>
+        {quest.description || 'No quest note recorded yet.'}
+      </Text>
 
       <View style={styles.metaRow}>
         <View style={styles.metaPill}>
@@ -1500,16 +1863,18 @@ function QuestCard({
         </View>
       </View>
 
-      {onOpenDetails ? (
-        <Pressable
-          onPress={() => onOpenDetails(quest.id)}
-          style={styles.cardSecondaryButton}
-          testID={`open-quest-details-${quest.id}`}>
-          <Text style={styles.cardSecondaryButtonText}>Quest Details</Text>
-        </Pressable>
-      ) : null}
+      <View style={styles.metaRow}>
+        <View style={styles.metaPill}>
+          <Text style={styles.metaLabel}>Tag</Text>
+          <Text style={styles.metaValue}>{quest.tag}</Text>
+        </View>
+        <View style={styles.metaPill}>
+          <Text style={styles.metaLabel}>Quest Path</Text>
+          <Text style={styles.metaValue}>{quest.category}</Text>
+        </View>
+      </View>
 
-      {!isComplete && onPrimaryAction ? (
+      {!isResolved && onPrimaryAction ? (
         <Pressable
           onPress={() => onPrimaryAction(quest.id)}
           style={styles.completeButton}
@@ -1528,7 +1893,7 @@ function QuestCard({
           <Text style={styles.cardSecondaryButtonText}>Edit Quest</Text>
         </Pressable>
       ) : null}
-    </View>
+    </Pressable>
   );
 }
 
@@ -1548,7 +1913,9 @@ function QuestBoardScreen({
   onEditQuest,
   onOpenQuestDetails,
   onNavigateToAddQuest,
+  onNavigateToHistory,
   onNavigateToProgress,
+  onNavigateToStreak,
   onNavigateToRealmCodex,
   onNavigateToThemeSanctum,
   onSelectSortOption,
@@ -1570,7 +1937,9 @@ function QuestBoardScreen({
   onEditQuest: (questId: string) => void;
   onOpenQuestDetails: (questId: string) => void;
   onNavigateToAddQuest: () => void;
+  onNavigateToHistory: () => void;
   onNavigateToProgress: () => void;
+  onNavigateToStreak: () => void;
   onNavigateToRealmCodex: () => void;
   onNavigateToThemeSanctum: () => void;
   onSelectSortOption: (sortOption: SortOption) => void;
@@ -1584,8 +1953,10 @@ function QuestBoardScreen({
     useState<CategoryFilter>('All');
   const [selectedStatusFilter, setSelectedStatusFilter] =
     useState<StatusFilter>('All');
+  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const feedbackOpacity = useRef(new Animated.Value(0)).current;
   const feedbackTranslateY = useRef(new Animated.Value(-12)).current;
+  const rankProgress = getRankProgress(hero.xp);
 
   useEffect(() => {
     if (!completionFeedback) {
@@ -1611,7 +1982,9 @@ function QuestBoardScreen({
   }, [completionFeedback, feedbackOpacity, feedbackTranslateY]);
 
   const visibleQuests = sortQuests(
-    quests.filter(quest =>
+    quests.filter(
+      quest =>
+        (quest.status === 'Ready' || quest.status === 'In Progress') &&
       questMatchesFilters({
         quest,
         searchQuery,
@@ -1623,17 +1996,12 @@ function QuestBoardScreen({
     selectedSortOption,
   );
 
-  const mainQuests = visibleQuests.filter(
-    quest => quest.category === 'Main Quest' && quest.status !== 'Completed',
-  );
-  const sideQuests = visibleQuests.filter(
-    quest => quest.category === 'Side Quest' && quest.status !== 'Completed',
-  );
-  const completedQuests = visibleQuests.filter(
-    quest => quest.status === 'Completed',
-  );
+  const mainQuests = visibleQuests.filter(quest => quest.category === 'Main Quest');
+  const sideQuests = visibleQuests.filter(quest => quest.category === 'Side Quest');
   const hasVisibleQuests = visibleQuests.length > 0;
-  const questSections = appConfig.questSectionOrder.map(sectionKey => {
+  const questSections = appConfig.questSectionOrder
+    .filter(sectionKey => sectionKey !== 'completed')
+    .map(sectionKey => {
     if (sectionKey === 'main') {
       return {
         key: 'main',
@@ -1651,9 +2019,9 @@ function QuestBoardScreen({
     }
 
     return {
-      key: 'completed',
-      title: appConfig.completedQuestSectionTitle,
-      quests: completedQuests,
+      key: 'side',
+      title: appConfig.sideQuestSectionTitle,
+      quests: sideQuests,
     };
   });
 
@@ -1666,11 +2034,21 @@ function QuestBoardScreen({
           <Text style={styles.kicker}>{appConfig.boardKicker}</Text>
           <Text style={styles.title}>Quest Forge</Text>
         </View>
-        <ThemeToggle
-          onToggleTheme={onToggleTheme}
-          styles={styles}
-          themeMode={themeMode}
-        />
+        <View style={styles.topBarActions}>
+          <Pressable
+            onPress={onRefreshAppConfig}
+            style={styles.iconUtilityButton}
+            testID="refresh-app-config">
+            <Text style={styles.iconUtilityButtonText}>
+              {isRefreshingAppConfig ? '...' : 'Sync'}
+            </Text>
+          </Pressable>
+          <ThemeToggle
+            onToggleTheme={onToggleTheme}
+            styles={styles}
+            themeMode={themeMode}
+          />
+        </View>
       </View>
 
       <Text style={styles.subtitle}>{appConfig.boardSubtitle}</Text>
@@ -1706,7 +2084,24 @@ function QuestBoardScreen({
             value={`${hero.streakCount}d`}
           />
         </View>
-        <Text style={styles.heroSupportText}>{appConfig.boardHeroInsight}</Text>
+
+        <View style={styles.detailsProgressSection}>
+          <View style={styles.detailsProgressHeader}>
+            <Text style={styles.formLabel}>Rank Progress</Text>
+            <Text style={styles.detailsProgressValue}>
+              {Math.round(rankProgress.progressPercent)}%
+            </Text>
+          </View>
+          <View style={styles.detailsProgressTrack}>
+            <View
+              style={[
+                styles.detailsProgressFill,
+                { width: `${rankProgress.progressPercent}%` },
+              ]}
+            />
+          </View>
+        </View>
+        <Text style={styles.heroSupportText}>{rankProgress.progressText}</Text>
       </View>
 
       {completionFeedback ? (
@@ -1729,31 +2124,13 @@ function QuestBoardScreen({
         </Animated.View>
       ) : null}
 
-      {appConfig.featureFlags.showRealmSyncCard ? (
-        <View style={styles.boardActionCard} testID="realm-sync-card">
-          <Text style={styles.sectionTitle}>Realm Sync</Text>
-          <Text style={styles.formIntro}>
-            Config v{appConfig.configVersion}. {appConfig.realmSyncMessage}
-          </Text>
-          <Pressable
-            onPress={onRefreshAppConfig}
-            style={styles.secondaryActionButton}
-            testID="refresh-app-config">
-            <Text style={styles.secondaryActionText}>
-              {isRefreshingAppConfig ? 'Syncing Realm...' : 'Refresh Realm Copy'}
-            </Text>
-          </Pressable>
-        </View>
-      ) : null}
-
       {appConfig.featureFlags.showSuggestionSection ? (
         <View style={styles.boardActionCard}>
           <Text style={styles.sectionTitle}>{appConfig.suggestionSectionTitle}</Text>
           <Text style={styles.formIntro}>
-            Fresh quest ideas now come from a backend-generated daily feed so the
-            board can change without another mobile rebuild.
+            A fresh set of quests is ready for today&apos;s adventure.
           </Text>
-          <Text style={styles.formHint}>Realm seed: {dailySuggestionDateKey}</Text>
+          <Text style={styles.formHint}>Forged for {dailySuggestionDateKey}</Text>
 
           {dailySuggestions.length > 0 ? (
             dailySuggestions.map((suggestion, index) => (
@@ -1762,6 +2139,7 @@ function QuestBoardScreen({
                 style={styles.suggestionCard}
                 testID={`daily-suggestion-card-${index}`}>
                 <Text style={styles.suggestionTitle}>{suggestion.title}</Text>
+                <Text style={styles.questDescription}>{suggestion.description}</Text>
                 <View style={styles.metaRow}>
                   <View style={styles.metaPill}>
                     <Text style={styles.metaLabel}>Difficulty</Text>
@@ -1770,6 +2148,10 @@ function QuestBoardScreen({
                   <View style={styles.metaPill}>
                     <Text style={styles.metaLabel}>Category</Text>
                     <Text style={styles.metaValue}>{suggestion.category}</Text>
+                  </View>
+                  <View style={styles.metaPill}>
+                    <Text style={styles.metaLabel}>Tag</Text>
+                    <Text style={styles.metaValue}>{suggestion.tag}</Text>
                   </View>
                 </View>
                 <Pressable
@@ -1794,12 +2176,11 @@ function QuestBoardScreen({
       ) : null}
 
 
-      <View style={styles.boardActionCard}>
-        <Text style={styles.sectionTitle}>{appConfig.addQuestSectionTitle}</Text>
-        <Text style={styles.formIntro}>
-          Open the dedicated Add Quest screen to create a new mission for your
-          quest log.
-        </Text>
+        <View style={styles.boardActionCard}>
+          <Text style={styles.sectionTitle}>{appConfig.addQuestSectionTitle}</Text>
+          <Text style={styles.formIntro}>
+            Shape your next quest, review your journey, or dive into your streak.
+          </Text>
         {appConfig.featureFlags.showAddQuestScreen ? (
           <Pressable
             onPress={onNavigateToAddQuest}
@@ -1813,9 +2194,21 @@ function QuestBoardScreen({
             onPress={onNavigateToProgress}
             style={styles.secondaryActionButton}
             testID="navigate-to-progress-screen">
-            <Text style={styles.secondaryActionText}>Open Progress</Text>
+            <Text style={styles.secondaryActionText}>Open Profile</Text>
           </Pressable>
         ) : null}
+        <Pressable
+          onPress={onNavigateToHistory}
+          style={styles.secondaryActionButton}
+          testID="navigate-to-history-screen">
+          <Text style={styles.secondaryActionText}>Open History</Text>
+        </Pressable>
+        <Pressable
+          onPress={onNavigateToStreak}
+          style={styles.secondaryActionButton}
+          testID="navigate-to-streak-screen">
+          <Text style={styles.secondaryActionText}>Open Streak</Text>
+        </Pressable>
         {appConfig.featureFlags.showRealmCodexScreen ? (
           <Pressable
             onPress={onNavigateToRealmCodex}
@@ -1836,61 +2229,79 @@ function QuestBoardScreen({
 
       {appConfig.featureFlags.showFilterSection ? (
         <View style={styles.filterCard}>
-          <Text style={styles.sectionTitle}>{appConfig.filterSectionTitle}</Text>
-          <Text style={styles.formIntro}>
-            Narrow the board by title, difficulty, category, and completion
-            status.
-          </Text>
-
-          <View style={styles.formField}>
-            <Text style={styles.formLabel}>Search By Title</Text>
-            <TextInput
-              onChangeText={setSearchQuery}
-              placeholder="Search quests"
-              placeholderTextColor={styles.themePlaceholder.color}
-              style={styles.titleInput}
-              testID="quest-search-input"
-              value={searchQuery}
-            />
+          <View style={styles.filterHeaderRow}>
+            <Text style={styles.sectionTitle}>{appConfig.filterSectionTitle}</Text>
+            <Pressable
+              onPress={() => setIsFilterExpanded(expanded => !expanded)}
+              style={styles.inlineUtilityButton}
+              testID="toggle-filter-panel">
+              <Text style={styles.inlineUtilityButtonText}>
+                {isFilterExpanded ? 'Hide' : 'Show'}
+              </Text>
+            </Pressable>
           </View>
 
-          <SectionPicker
-            label="Difficulty Filter"
-            onSelect={value =>
-              setSelectedDifficultyFilter(value as DifficultyFilter)
-            }
-            options={difficultyFilterOptions}
-            selectedValue={selectedDifficultyFilter}
-            styles={styles}
-            testIdPrefix="difficulty-filter"
-          />
+          <Text style={styles.formHint}>
+            {isFilterExpanded
+              ? 'Search by title, notes, or tags and keep the board focused on active quests.'
+              : 'Expand to search, filter, and sort your active quest board.'}
+          </Text>
 
-          <SectionPicker
-            label="Category Filter"
-            onSelect={value => setSelectedCategoryFilter(value as CategoryFilter)}
-            options={categoryFilterOptions}
-            selectedValue={selectedCategoryFilter}
-            styles={styles}
-            testIdPrefix="category-filter"
-          />
+          {isFilterExpanded ? (
+            <>
+              <View style={styles.formField}>
+                <Text style={styles.formLabel}>Search Quest Board</Text>
+                <TextInput
+                  onChangeText={setSearchQuery}
+                  placeholder="Search titles, notes, or tags"
+                  placeholderTextColor={styles.themePlaceholder.color}
+                  style={styles.titleInput}
+                  testID="quest-search-input"
+                  value={searchQuery}
+                />
+              </View>
 
-          <SectionPicker
-            label="Status Filter"
-            onSelect={value => setSelectedStatusFilter(value as StatusFilter)}
-            options={statusFilterOptions}
-            selectedValue={selectedStatusFilter}
-            styles={styles}
-            testIdPrefix="status-filter"
-          />
+              <SectionPicker
+                label="Difficulty Filter"
+                onSelect={value =>
+                  setSelectedDifficultyFilter(value as DifficultyFilter)
+                }
+                options={difficultyFilterOptions}
+                selectedValue={selectedDifficultyFilter}
+                styles={styles}
+                testIdPrefix="difficulty-filter"
+              />
 
-          <SectionPicker
-            label="Sort Quests"
-            onSelect={value => onSelectSortOption(value as SortOption)}
-            options={sortOptions}
-            selectedValue={selectedSortOption}
-            styles={styles}
-            testIdPrefix="sort-option"
-          />
+              <SectionPicker
+                label="Category Filter"
+                onSelect={value =>
+                  setSelectedCategoryFilter(value as CategoryFilter)
+                }
+                options={categoryFilterOptions}
+                selectedValue={selectedCategoryFilter}
+                styles={styles}
+                testIdPrefix="category-filter"
+              />
+
+              <SectionPicker
+                label="Status Filter"
+                onSelect={value => setSelectedStatusFilter(value as StatusFilter)}
+                options={statusFilterOptions}
+                selectedValue={selectedStatusFilter}
+                styles={styles}
+                testIdPrefix="status-filter"
+              />
+
+              <SectionPicker
+                label="Sort Quests"
+                onSelect={value => onSelectSortOption(value as SortOption)}
+                options={sortOptions}
+                selectedValue={selectedSortOption}
+                styles={styles}
+                testIdPrefix="sort-option"
+              />
+            </>
+          ) : null}
         </View>
       ) : null}
 
@@ -1934,6 +2345,9 @@ function ProgressScreen({
   quests,
   unlockedAchievementIds,
   onBack,
+  onNavigateToHistory,
+  onNavigateToStreak,
+  onResetJourney,
   onToggleTheme,
   styles,
   themeMode,
@@ -1943,11 +2357,17 @@ function ProgressScreen({
   quests: Quest[];
   unlockedAchievementIds: AchievementId[];
   onBack: () => void;
+  onNavigateToHistory: () => void;
+  onNavigateToStreak: () => void;
+  onResetJourney: () => void;
   onToggleTheme: () => void;
   styles: ReturnType<typeof createStyles>;
   themeMode: ThemeMode;
 }) {
   const stats = getProgressStats(quests);
+  const rankProgress = getRankProgress(hero.xp);
+  const favoriteTag = getFavoriteTag(quests);
+  const bestStreak = getBestStreak(hero.activeDateKeys);
 
   return (
     <ScrollView
@@ -1970,7 +2390,10 @@ function ProgressScreen({
 
       <Text style={styles.kicker}>{appConfig.progressKicker}</Text>
       <Text style={styles.title}>{appConfig.progressTitle}</Text>
-      <Text style={styles.subtitle}>{appConfig.progressSubtitle}</Text>
+      <Text style={styles.subtitle}>
+        {hero.rankTitle} of the {favoriteTag} path. Your codex keeps track of
+        every quest, streak, and badge you forge.
+      </Text>
 
       <View style={styles.heroCard}>
         <View style={styles.heroHeader}>
@@ -2001,11 +2424,32 @@ function ProgressScreen({
             value={`${hero.streakCount}d`}
           />
         </View>
+
+        <View style={styles.detailsProgressSection}>
+          <View style={styles.detailsProgressHeader}>
+            <Text style={styles.formLabel}>Rank Progress</Text>
+            <Text style={styles.detailsProgressValue}>
+              {Math.round(rankProgress.progressPercent)}%
+            </Text>
+          </View>
+          <View style={styles.detailsProgressTrack}>
+            <View
+              style={[
+                styles.detailsProgressFill,
+                { width: `${rankProgress.progressPercent}%` },
+              ]}
+            />
+          </View>
+        </View>
+        <Text style={styles.heroSupportText}>{rankProgress.progressText}</Text>
       </View>
 
       <View style={styles.formCard}>
         <Text style={styles.sectionTitle}>{appConfig.progressSectionTitle}</Text>
-        <Text style={styles.formIntro}>{appConfig.progressSectionIntro}</Text>
+        <Text style={styles.formIntro}>
+          Best streak: {bestStreak} days. Favorite tag: {favoriteTag}. Keep
+          shaping the board to build a stronger legend.
+        </Text>
 
         <View style={styles.progressGrid}>
           <ProgressMetric
@@ -2017,6 +2461,11 @@ function ProgressScreen({
             label="Total Quests Completed"
             styles={styles}
             value={`${stats.totalCompleted}`}
+          />
+          <ProgressMetric
+            label="Failed Quests"
+            styles={styles}
+            value={`${stats.totalFailed}`}
           />
           <ProgressMetric
             label="Active Quests"
@@ -2034,6 +2483,25 @@ function ProgressScreen({
             value={`${hero.streakCount} days`}
           />
         </View>
+
+        <Pressable
+          onPress={onNavigateToHistory}
+          style={styles.secondaryActionButton}
+          testID="navigate-to-history-screen-from-progress">
+          <Text style={styles.secondaryActionText}>Open Quest History</Text>
+        </Pressable>
+        <Pressable
+          onPress={onNavigateToStreak}
+          style={styles.secondaryActionButton}
+          testID="navigate-to-streak-screen-from-progress">
+          <Text style={styles.secondaryActionText}>Open Streak Calendar</Text>
+        </Pressable>
+        <Pressable
+          onPress={onResetJourney}
+          style={styles.deleteButton}
+          testID="reset-progress-button">
+          <Text style={styles.deleteButtonText}>Reset Journey</Text>
+        </Pressable>
       </View>
 
       {appConfig.featureFlags.showAchievementSection ? (
@@ -2368,10 +2836,300 @@ function ThemeSanctumScreen({
   );
 }
 
+function HistoryScreen({
+  onBack,
+  onToggleTheme,
+  quests,
+  styles,
+  themeMode,
+}: {
+  onBack: () => void;
+  onToggleTheme: () => void;
+  quests: Quest[];
+  styles: ReturnType<typeof createStyles>;
+  themeMode: ThemeMode;
+}) {
+  const [historyPeriodFilter, setHistoryPeriodFilter] =
+    useState<HistoryPeriodFilter>('Month');
+  const [historyStatusFilter, setHistoryStatusFilter] =
+    useState<HistoryStatusFilter>('All');
+  const historyQuests = sortHistoryQuests(
+    quests.filter(
+      quest => quest.status === 'Completed' || quest.status === 'Failed',
+    ),
+  );
+  const filteredHistoryQuests = historyQuests.filter(quest => {
+    const resolvedDate = getQuestResolvedDate(quest);
+    const matchesStatus =
+      historyStatusFilter === 'All' || quest.status === historyStatusFilter;
+
+    return (
+      matchesStatus &&
+      matchesHistoryPeriod(resolvedDate, historyPeriodFilter)
+    );
+  });
+  const historyStats = getProgressStats(quests);
+
+  return (
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}>
+      <View style={styles.screenHeader}>
+        <Pressable
+          onPress={onBack}
+          style={styles.backButton}
+          testID="back-from-history-screen">
+          <Text style={styles.backButtonText}>Back</Text>
+        </Pressable>
+        <Text style={styles.screenLabel}>Quest Board</Text>
+        <ThemeToggle
+          onToggleTheme={onToggleTheme}
+          styles={styles}
+          themeMode={themeMode}
+        />
+      </View>
+
+      <Text style={styles.kicker}>Quest History</Text>
+      <Text style={styles.title}>Archive Of The Realm</Text>
+      <Text style={styles.subtitle}>
+        Review the quests you completed, the ones that failed, and the pace of
+        your journey across day, month, and year windows.
+      </Text>
+
+      <View style={styles.heroCard}>
+        <View style={styles.heroStatsRow}>
+          <HeroStat
+            accentStyle={styles.xpAccent}
+            label="Completed"
+            styles={styles}
+            value={`${historyStats.totalCompleted}`}
+          />
+          <HeroStat
+            accentStyle={styles.levelAccent}
+            label="Failed"
+            styles={styles}
+            value={`${historyStats.totalFailed}`}
+          />
+          <HeroStat
+            accentStyle={styles.streakAccent}
+            label="Archived"
+            styles={styles}
+            value={`${historyQuests.length}`}
+          />
+        </View>
+      </View>
+
+      <View style={styles.filterCard}>
+        <SectionPicker
+          label="Time Window"
+          onSelect={value => setHistoryPeriodFilter(value as HistoryPeriodFilter)}
+          options={historyPeriodOptions}
+          selectedValue={historyPeriodFilter}
+          styles={styles}
+          testIdPrefix="history-period-filter"
+        />
+        <SectionPicker
+          label="Outcome"
+          onSelect={value => setHistoryStatusFilter(value as HistoryStatusFilter)}
+          options={historyStatusOptions}
+          selectedValue={historyStatusFilter}
+          styles={styles}
+          testIdPrefix="history-status-filter"
+        />
+      </View>
+
+      {filteredHistoryQuests.length === 0 ? (
+        <View style={styles.emptyStateCard}>
+          <Text style={styles.emptyStateTitle}>No quests in this archive view</Text>
+          <Text style={styles.emptyStateText}>
+            Change the time window or outcome filter to widen the ledger.
+          </Text>
+        </View>
+      ) : (
+        filteredHistoryQuests.map(quest => {
+          const resolvedDate = getQuestResolvedDate(quest) ?? 'Unknown';
+
+          return (
+            <View
+              key={`${quest.id}-${resolvedDate}`}
+              style={styles.suggestionCard}
+              testID={`history-quest-${quest.id}`}>
+              <View style={styles.questHeaderRow}>
+                <Text style={styles.suggestionTitle}>{quest.title}</Text>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    quest.status === 'Completed'
+                      ? styles.statusBadgeDone
+                      : styles.statusBadgeActive,
+                  ]}>
+                  <Text
+                    style={[
+                      styles.statusBadgeText,
+                      quest.status === 'Completed'
+                        ? styles.statusBadgeTextDone
+                        : null,
+                    ]}>
+                    {quest.status}
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.questDescription}>{quest.description}</Text>
+              <View style={styles.metaRow}>
+                <View style={styles.metaPill}>
+                  <Text style={styles.metaLabel}>Resolved</Text>
+                  <Text style={styles.metaValue}>{resolvedDate}</Text>
+                </View>
+                <View style={styles.metaPill}>
+                  <Text style={styles.metaLabel}>XP Result</Text>
+                  <Text style={styles.metaValue}>
+                    {quest.status === 'Completed' ? `+${quest.xpReward}` : '0'}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.metaRow}>
+                <View style={styles.metaPill}>
+                  <Text style={styles.metaLabel}>Tag</Text>
+                  <Text style={styles.metaValue}>{quest.tag}</Text>
+                </View>
+                <View style={styles.metaPill}>
+                  <Text style={styles.metaLabel}>Difficulty</Text>
+                  <Text style={styles.metaValue}>{quest.difficulty}</Text>
+                </View>
+              </View>
+            </View>
+          );
+        })
+      )}
+    </ScrollView>
+  );
+}
+
+function StreakScreen({
+  hero,
+  onBack,
+  onToggleTheme,
+  styles,
+  themeMode,
+}: {
+  hero: HeroProgress;
+  onBack: () => void;
+  onToggleTheme: () => void;
+  styles: ReturnType<typeof createStyles>;
+  themeMode: ThemeMode;
+}) {
+  const today = new Date();
+  const calendarDays = buildCalendarDays(hero.activeDateKeys, today);
+  const bestStreak = getBestStreak(hero.activeDateKeys);
+  const activeDaysThisMonth = hero.activeDateKeys.filter(activeDateKey =>
+    matchesHistoryPeriod(activeDateKey, 'Month', getDateKey(today)),
+  ).length;
+  const monthLabel = today.toLocaleString(undefined, {
+    month: 'long',
+    year: 'numeric',
+  });
+
+  return (
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}>
+      <View style={styles.screenHeader}>
+        <Pressable
+          onPress={onBack}
+          style={styles.backButton}
+          testID="back-from-streak-screen">
+          <Text style={styles.backButtonText}>Back</Text>
+        </Pressable>
+        <Text style={styles.screenLabel}>Quest Board</Text>
+        <ThemeToggle
+          onToggleTheme={onToggleTheme}
+          styles={styles}
+          themeMode={themeMode}
+        />
+      </View>
+
+      <Text style={styles.kicker}>Streak Calendar</Text>
+      <Text style={styles.title}>Keep The Flame Alive</Text>
+      <Text style={styles.subtitle}>
+        Your calendar reveals the rhythm of your questing and the days when you
+        kept the guild moving.
+      </Text>
+
+      <View style={styles.heroCard}>
+        <View style={styles.heroStatsRow}>
+          <HeroStat
+            accentStyle={styles.streakAccent}
+            label="Current"
+            styles={styles}
+            value={`${hero.streakCount}d`}
+          />
+          <HeroStat
+            accentStyle={styles.levelAccent}
+            label="Best"
+            styles={styles}
+            value={`${bestStreak}d`}
+          />
+          <HeroStat
+            accentStyle={styles.xpAccent}
+            label="This Month"
+            styles={styles}
+            value={`${activeDaysThisMonth}`}
+          />
+        </View>
+      </View>
+
+      <View style={styles.formCard}>
+        <Text style={styles.sectionTitle}>{monthLabel}</Text>
+        <View style={styles.calendarWeekRow}>
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(weekDay => (
+            <Text key={weekDay} style={styles.calendarWeekday}>
+              {weekDay}
+            </Text>
+          ))}
+        </View>
+        <View style={styles.calendarGrid}>
+          {calendarDays.map((calendarDay, index) =>
+            calendarDay ? (
+              <View
+                key={calendarDay.dateKey}
+                style={[
+                  styles.calendarDay,
+                  calendarDay.isActive && styles.calendarDayActive,
+                  calendarDay.isToday && styles.calendarDayToday,
+                ]}>
+                <Text
+                  style={[
+                    styles.calendarDayText,
+                    calendarDay.isActive && styles.calendarDayTextActive,
+                    calendarDay.isToday && styles.calendarDayTextToday,
+                  ]}>
+                  {calendarDay.dayNumber}
+                </Text>
+              </View>
+            ) : (
+              <View key={`empty-day-${index}`} style={styles.calendarDayEmpty} />
+            ),
+          )}
+        </View>
+      </View>
+
+      <View style={styles.formCard}>
+        <Text style={styles.sectionTitle}>Streak Insight</Text>
+        <Text style={styles.formIntro}>
+          Last active day: {hero.lastCompletedDate ?? 'No streak yet'}.
+          {` `}
+          Your next milestone is {Math.max(3, hero.streakCount + 1)} days.
+        </Text>
+      </View>
+    </ScrollView>
+  );
+}
+
 function QuestDetailsScreen({
   onBack,
   onPrimaryAction,
   onEdit,
+  onFail,
   onToggleTheme,
   questDetails,
   styles,
@@ -2380,6 +3138,7 @@ function QuestDetailsScreen({
   onBack: () => void;
   onPrimaryAction: (questId: string) => void;
   onEdit: (questId: string) => void;
+  onFail: (questId: string) => void;
   onToggleTheme: () => void;
   questDetails: QuestDetailsResponse;
   styles: ReturnType<typeof createStyles>;
@@ -2427,6 +3186,11 @@ function QuestDetailsScreen({
         <View style={styles.detailsCategoryBadge}>
           <Text style={styles.detailsCategoryBadgeText}>
             {questDetails.categoryLabel}
+          </Text>
+        </View>
+        <View style={styles.detailsCategoryBadge}>
+          <Text style={styles.detailsCategoryBadgeText}>
+            {questDetails.tagLabel}
           </Text>
         </View>
       </View>
@@ -2500,8 +3264,7 @@ function QuestDetailsScreen({
       <View style={styles.boardActionCard}>
         <Text style={styles.sectionTitle}>Quest Actions</Text>
         <Text style={styles.formIntro}>
-          This Stitch-based dossier keeps the quest readable while reusing the
-          existing backend quest actions underneath.
+          Choose the next move for this quest and keep the board in motion.
         </Text>
 
         {questDetails.primaryActionType !== 'none' ? (
@@ -2519,7 +3282,9 @@ function QuestDetailsScreen({
               {questDetails.primaryActionLabel}
             </Text>
             <Text style={styles.emptyStateText}>
-              This quest is already sealed inside the completed ledger.
+              {questDetails.statusLabel === 'Failed'
+                ? 'This quest has been sealed inside the failed archive.'
+                : 'This quest is already sealed inside the completed ledger.'}
             </Text>
           </View>
         )}
@@ -2532,6 +3297,16 @@ function QuestDetailsScreen({
             {questDetails.secondaryActionLabel}
           </Text>
         </Pressable>
+        {questDetails.tertiaryActionType === 'fail' ? (
+          <Pressable
+            onPress={() => onFail(questDetails.questId)}
+            style={styles.deleteButton}
+            testID="fail-quest-from-details">
+            <Text style={styles.deleteButtonText}>
+              {questDetails.tertiaryActionLabel}
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
     </ScrollView>
   );
@@ -2558,6 +3333,7 @@ function AddQuestScreen({
   const [questTitle, setQuestTitle] = useState('');
   const [questDescription, setQuestDescription] = useState('');
   const [questDueDate, setQuestDueDate] = useState('');
+  const [selectedTag, setSelectedTag] = useState<QuestTag>('General');
   const [selectedDifficulty, setSelectedDifficulty] =
     useState<Difficulty>('Easy');
   const [selectedCategory, setSelectedCategory] =
@@ -2568,6 +3344,7 @@ function AddQuestScreen({
       setQuestTitle(questToEdit.title);
       setQuestDescription(questToEdit.description);
       setQuestDueDate(questToEdit.dueDate ?? '');
+      setSelectedTag(questToEdit.tag);
       setSelectedDifficulty(questToEdit.difficulty);
       setSelectedCategory(questToEdit.category);
       return;
@@ -2576,6 +3353,7 @@ function AddQuestScreen({
     setQuestTitle('');
     setQuestDescription('');
     setQuestDueDate('');
+    setSelectedTag('General');
     setSelectedDifficulty('Easy');
     setSelectedCategory('Side Quest');
   }, [questToEdit]);
@@ -2594,6 +3372,7 @@ function AddQuestScreen({
     onSave({
       title,
       description: questDescription.trim(),
+      tag: selectedTag,
       dueDate: normalizeDueDate(questDueDate),
       difficulty: selectedDifficulty,
       category: selectedCategory,
@@ -2637,10 +3416,10 @@ function AddQuestScreen({
             : 'Keep this screen focused on creating one new quest at a time.'}
         </Text>
 
-        {questToEdit?.status === 'Completed' ? (
+        {questToEdit?.status === 'Completed' || questToEdit?.status === 'Failed' ? (
           <Text style={styles.formHint}>
-            Completed quest edits only update the saved details. Earned XP and
-            streak history stay as they are.
+            Archived quest edits only update the saved details. Earned XP,
+            streak history, and archive outcome stay as they are.
           </Text>
         ) : null}
 
@@ -2688,6 +3467,15 @@ function AddQuestScreen({
               : 'Enter a valid `YYYY-MM-DD` date before saving this quest.'}
           </Text>
         </View>
+
+        <SectionPicker
+          label="Tag"
+          onSelect={value => setSelectedTag(value as QuestTag)}
+          options={questTagOptions}
+          selectedValue={selectedTag}
+          styles={styles}
+          testIdPrefix="tag-option"
+        />
 
         <SectionPicker
           label="Difficulty"
@@ -3015,6 +3803,16 @@ function App() {
     }
   };
 
+  const handleFailQuest = async (questId: string) => {
+    const response = await runGameStateRequest(() =>
+      failRemoteQuest<GameStateResponse>(questId),
+    );
+
+    if (response) {
+      returnToBoard();
+    }
+  };
+
   const handleToggleTheme = async () => {
     const nextThemeMode: ThemeMode =
       gameState.themeMode === 'dark' ? 'light' : 'dark';
@@ -3070,6 +3868,26 @@ function App() {
     }
 
     setCurrentScreen('progress');
+  };
+
+  const handleOpenHistory = () => {
+    setCurrentScreen('history');
+  };
+
+  const handleOpenStreak = () => {
+    setCurrentScreen('streak');
+  };
+
+  const handleResetJourney = async () => {
+    const response = await runGameStateRequest(() =>
+      resetRemoteProgress<GameStateResponse>(),
+    );
+
+    if (response) {
+      setCompletionFeedback(null);
+      await refreshRemoteDailySuggestions();
+      returnToBoard();
+    }
   };
 
   const handleOpenRealmCodex = async () => {
@@ -3219,7 +4037,9 @@ function App() {
                   }}
                   onOpenQuestDetails={handleOpenQuestDetails}
                   onNavigateToAddQuest={handleOpenAddQuest}
+                  onNavigateToHistory={handleOpenHistory}
                   onNavigateToProgress={handleOpenProgress}
+                  onNavigateToStreak={handleOpenStreak}
                   onNavigateToRealmCodex={handleOpenRealmCodex}
                   onNavigateToThemeSanctum={handleOpenThemeSanctum}
                   onRefreshAppConfig={handleRefreshAppConfig}
@@ -3235,11 +4055,30 @@ function App() {
                   appConfig={appConfig}
                   hero={gameState.hero}
                   onBack={() => setCurrentScreen('quest-board')}
+                  onNavigateToHistory={handleOpenHistory}
+                  onNavigateToStreak={handleOpenStreak}
+                  onResetJourney={handleResetJourney}
                   onToggleTheme={handleToggleTheme}
                   quests={gameState.quests}
                   styles={styles}
                   themeMode={gameState.themeMode}
                   unlockedAchievementIds={gameState.unlockedAchievementIds}
+                />
+              ) : currentScreen === 'history' ? (
+                <HistoryScreen
+                  onBack={() => setCurrentScreen('quest-board')}
+                  onToggleTheme={handleToggleTheme}
+                  quests={gameState.quests}
+                  styles={styles}
+                  themeMode={gameState.themeMode}
+                />
+              ) : currentScreen === 'streak' ? (
+                <StreakScreen
+                  hero={gameState.hero}
+                  onBack={() => setCurrentScreen('quest-board')}
+                  onToggleTheme={handleToggleTheme}
+                  styles={styles}
+                  themeMode={gameState.themeMode}
                 />
               ) : currentScreen === 'realm-codex' ? (
                 realmCodex ? (
@@ -3280,6 +4119,7 @@ function App() {
                 questDetails ? (
                   <QuestDetailsScreen
                     onBack={returnToBoard}
+                    onFail={handleFailQuest}
                     onPrimaryAction={handleQuestPrimaryAction}
                     onEdit={questId => {
                       setEditingQuestId(questId);
@@ -3530,6 +4370,11 @@ function createStyles(theme: ThemePalette) {
       flexDirection: 'row',
       justifyContent: 'space-between',
     },
+    topBarActions: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 10,
+    },
     heroEyebrow: {
       color: theme.textMuted,
       fontSize: 12,
@@ -3658,6 +4503,12 @@ function createStyles(theme: ThemePalette) {
       fontWeight: '700',
       lineHeight: 24,
     },
+    questDescription: {
+      color: theme.subtitle,
+      fontSize: 14,
+      lineHeight: 21,
+      marginTop: 10,
+    },
     completionBanner: {
       backgroundColor: `${theme.success}18`,
       borderColor: theme.success,
@@ -3702,6 +4553,12 @@ function createStyles(theme: ThemePalette) {
       shadowOpacity: 0.1,
       shadowRadius: 22,
     },
+    filterHeaderRow: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 12,
+      justifyContent: 'space-between',
+    },
     primaryActionButton: {
       alignItems: 'center',
       backgroundColor: theme.amber,
@@ -3741,6 +4598,23 @@ function createStyles(theme: ThemePalette) {
       fontSize: 16,
       fontWeight: '700',
       letterSpacing: 0.3,
+    },
+    inlineUtilityButton: {
+      alignItems: 'center',
+      backgroundColor: `${theme.surfaceHigh}f2`,
+      borderColor: theme.ghostBorder,
+      borderRadius: 999,
+      borderWidth: 1,
+      justifyContent: 'center',
+      minHeight: 38,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+    },
+    inlineUtilityButtonText: {
+      color: theme.blueSoft,
+      fontSize: 13,
+      fontWeight: '700',
+      letterSpacing: 0.2,
     },
     formCard: {
       backgroundColor: theme.surface,
@@ -3801,6 +4675,23 @@ function createStyles(theme: ThemePalette) {
     },
     themePlaceholder: {
       color: theme.placeholder,
+    },
+    iconUtilityButton: {
+      alignItems: 'center',
+      backgroundColor: `${theme.surfaceHigh}f2`,
+      borderColor: theme.ghostBorder,
+      borderRadius: 999,
+      borderWidth: 1,
+      height: 44,
+      justifyContent: 'center',
+      minWidth: 44,
+      paddingHorizontal: 14,
+    },
+    iconUtilityButtonText: {
+      color: theme.blueSoft,
+      fontSize: 18,
+      fontWeight: '700',
+      lineHeight: 20,
     },
     optionRow: {
       flexDirection: 'row',
@@ -4037,6 +4928,61 @@ function createStyles(theme: ThemePalette) {
       color: theme.textPrimary,
       fontSize: 24,
       fontWeight: '700',
+    },
+    calendarWeekRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+    },
+    calendarWeekday: {
+      color: theme.textMuted,
+      flex: 1,
+      fontSize: 12,
+      fontWeight: '700',
+      textAlign: 'center',
+      textTransform: 'uppercase',
+    },
+    calendarGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    calendarDay: {
+      alignItems: 'center',
+      backgroundColor: theme.surfaceLow,
+      borderColor: theme.ghostBorder,
+      borderRadius: 16,
+      borderWidth: 1,
+      height: 42,
+      justifyContent: 'center',
+      width: '13%',
+    },
+    calendarDayActive: {
+      backgroundColor: `${theme.blue}22`,
+      borderColor: `${theme.blue}55`,
+    },
+    calendarDayToday: {
+      borderColor: theme.amber,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.18,
+      shadowRadius: 10,
+    },
+    calendarDayText: {
+      color: theme.textMuted,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    calendarDayTextActive: {
+      color: theme.blueSoft,
+      fontWeight: '700',
+    },
+    calendarDayTextToday: {
+      color: theme.amberSoft,
+    },
+    calendarDayEmpty: {
+      height: 42,
+      width: '13%',
     },
     achievementGrid: {
       gap: 12,

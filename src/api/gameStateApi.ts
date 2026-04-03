@@ -130,6 +130,20 @@ export async function startRemoteQuest<TResponse>(
   });
 }
 
+export async function failRemoteQuest<TResponse>(
+  questId: string,
+): Promise<TResponse> {
+  return requestJson<TResponse>(`/quests/${encodeURIComponent(questId)}/fail`, {
+    method: 'POST',
+  });
+}
+
+export async function resetRemoteProgress<TResponse>(): Promise<TResponse> {
+  return requestJson<TResponse>('/progress/reset', {
+    method: 'POST',
+  });
+}
+
 export async function updateRemoteTheme<TThemeMode, TResponse>(
   themeMode: TThemeMode,
 ): Promise<TResponse> {
