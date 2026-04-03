@@ -1,7 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useEffectEvent, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
+  AppState,
+  type AppStateStatus,
   Pressable,
   ScrollView,
   StatusBar,
@@ -37,6 +39,7 @@ import {
   updateRemoteTheme,
   updateRemoteThemePack,
 } from './src/api/gameStateApi';
+import { sendQuestReminderNotification } from './src/notifications/questNotifications';
 
 type Difficulty = 'Easy' | 'Medium' | 'Hard' | 'Epic';
 type Category = 'Main Quest' | 'Side Quest';
@@ -85,6 +88,8 @@ type Quest = {
   category: Category;
   completedAt: string | null;
   failedAt: string | null;
+  dueSoonReminderAt: string | null;
+  overdueReminderAt: string | null;
   createdAt: number;
 };
 
@@ -257,6 +262,13 @@ type QuestDetailsResponse = {
 type CompletionFeedback = {
   questTitle: string;
   xpGained: number;
+};
+
+type ReminderPrompt = {
+  questId: string;
+  title: string;
+  dueLabel: string;
+  dueStateLabel: string;
 };
 
 type AchievementDefinition = {
@@ -506,7 +518,7 @@ function createDefaultAppConfig(): AppConfig {
     boardHeroInsight: 'Your next rank is earned one quest at a time.',
     realmSyncMessage: 'Sync the board to refresh today’s realm updates.',
     suggestionSectionTitle: 'Daily Suggestions',
-    addQuestSectionTitle: 'Forge New Quest',
+    addQuestSectionTitle: 'Guild Hub',
     filterSectionTitle: 'Search And Filter',
     mainQuestSectionTitle: 'Main Quest',
     sideQuestSectionTitle: 'Side Quests',
@@ -556,6 +568,8 @@ const initialQuests: Quest[] = [
     category: 'Main Quest',
     completedAt: null,
     failedAt: null,
+    dueSoonReminderAt: null,
+    overdueReminderAt: null,
     createdAt: 1,
   },
   {
@@ -571,6 +585,8 @@ const initialQuests: Quest[] = [
     category: 'Side Quest',
     completedAt: null,
     failedAt: null,
+    dueSoonReminderAt: null,
+    overdueReminderAt: null,
     createdAt: 2,
   },
   {
@@ -586,6 +602,8 @@ const initialQuests: Quest[] = [
     category: 'Side Quest',
     completedAt: getDateKey(),
     failedAt: null,
+    dueSoonReminderAt: null,
+    overdueReminderAt: null,
     createdAt: 3,
   },
 ];
@@ -598,6 +616,7 @@ const suggestionTemplates: SuggestedQuest[] = [
     tag: 'Health',
     difficulty: 'Easy',
     category: 'Side Quest',
+    dueDate: null,
   },
   {
     title: 'Map the Day Ahead',
@@ -606,6 +625,7 @@ const suggestionTemplates: SuggestedQuest[] = [
     tag: 'Planning',
     difficulty: 'Easy',
     category: 'Main Quest',
+    dueDate: null,
   },
   {
     title: 'Train the Focus Familiar',
@@ -614,6 +634,7 @@ const suggestionTemplates: SuggestedQuest[] = [
     tag: 'Focus',
     difficulty: 'Medium',
     category: 'Side Quest',
+    dueDate: null,
   },
   {
     title: 'Polish the Guild Resume',
@@ -622,6 +643,7 @@ const suggestionTemplates: SuggestedQuest[] = [
     tag: 'Work',
     difficulty: 'Medium',
     category: 'Main Quest',
+    dueDate: null,
   },
   {
     title: 'Clear the Inbox Cavern',
@@ -630,6 +652,7 @@ const suggestionTemplates: SuggestedQuest[] = [
     tag: 'Admin',
     difficulty: 'Hard',
     category: 'Main Quest',
+    dueDate: null,
   },
   {
     title: 'Raid the Laundry Keep',
@@ -638,6 +661,7 @@ const suggestionTemplates: SuggestedQuest[] = [
     tag: 'Chores',
     difficulty: 'Hard',
     category: 'Side Quest',
+    dueDate: null,
   },
   {
     title: 'Forge a Weekly Master Plan',
@@ -646,6 +670,7 @@ const suggestionTemplates: SuggestedQuest[] = [
     tag: 'Planning',
     difficulty: 'Epic',
     category: 'Main Quest',
+    dueDate: null,
   },
   {
     title: 'Protect the Evening Wind-Down',
@@ -654,6 +679,7 @@ const suggestionTemplates: SuggestedQuest[] = [
     tag: 'Self Care',
     difficulty: 'Easy',
     category: 'Side Quest',
+    dueDate: null,
   },
   {
     title: 'Restore the Study Desk',
@@ -662,6 +688,7 @@ const suggestionTemplates: SuggestedQuest[] = [
     tag: 'Study',
     difficulty: 'Easy',
     category: 'Side Quest',
+    dueDate: null,
   },
   {
     title: 'Collect the Expense Receipts',
@@ -670,6 +697,7 @@ const suggestionTemplates: SuggestedQuest[] = [
     tag: 'Finance',
     difficulty: 'Medium',
     category: 'Side Quest',
+    dueDate: null,
   },
   {
     title: 'Deliver the Guild Check-In',
@@ -678,6 +706,7 @@ const suggestionTemplates: SuggestedQuest[] = [
     tag: 'Work',
     difficulty: 'Medium',
     category: 'Main Quest',
+    dueDate: null,
   },
   {
     title: 'Lift the Iron Sigils',
@@ -686,6 +715,7 @@ const suggestionTemplates: SuggestedQuest[] = [
     tag: 'Fitness',
     difficulty: 'Hard',
     category: 'Side Quest',
+    dueDate: null,
   },
   {
     title: 'Prepare the Market Run',
@@ -694,6 +724,7 @@ const suggestionTemplates: SuggestedQuest[] = [
     tag: 'Errands',
     difficulty: 'Medium',
     category: 'Side Quest',
+    dueDate: null,
   },
   {
     title: 'Shape a Creative Relic',
@@ -702,6 +733,25 @@ const suggestionTemplates: SuggestedQuest[] = [
     tag: 'Creative',
     difficulty: 'Hard',
     category: 'Main Quest',
+    dueDate: null,
+  },
+  {
+    title: 'Sprint Through the Study Trial',
+    description:
+      'Give yourself one intense study burst and close the loop before the window slips away.',
+    tag: 'Study',
+    difficulty: 'Medium',
+    category: 'Side Quest',
+    dueDate: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    title: 'Ship the Guild Update',
+    description:
+      'Finish the work update while the context is still hot and send it before the timer runs out.',
+    tag: 'Work',
+    difficulty: 'Hard',
+    category: 'Main Quest',
+    dueDate: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
   },
 ];
 
@@ -734,12 +784,14 @@ const achievementDefinitions: AchievementDefinition[] = [
 ];
 
 const rankThresholds: Array<{ minimumXp: number; title: RankTitle }> = [
-  { minimumXp: 340, title: 'Mythic' },
-  { minimumXp: 240, title: 'Legend' },
-  { minimumXp: 160, title: 'Warden' },
-  { minimumXp: 100, title: 'Champion' },
-  { minimumXp: 50, title: 'Knight' },
-  { minimumXp: 20, title: 'Adventurer' },
+  { minimumXp: 2100, title: 'Ascendant' },
+  { minimumXp: 1560, title: 'Mythic' },
+  { minimumXp: 1160, title: 'Legend' },
+  { minimumXp: 820, title: 'Warden' },
+  { minimumXp: 540, title: 'Champion' },
+  { minimumXp: 320, title: 'Knight' },
+  { minimumXp: 150, title: 'Adventurer' },
+  { minimumXp: 60, title: 'Apprentice' },
   { minimumXp: 0, title: 'Novice' },
 ];
 
@@ -853,20 +905,69 @@ function normalizeDueDate(dueDate: string | null | undefined) {
 
   const trimmedDueDate = dueDate.trim();
 
-  return parseDateKey(trimmedDueDate) ? trimmedDueDate : null;
+  if (parseDateKey(trimmedDueDate)) {
+    return trimmedDueDate;
+  }
+
+  const parsedDueMoment = new Date(trimmedDueDate);
+
+  return Number.isNaN(parsedDueMoment.getTime())
+    ? null
+    : parsedDueMoment.toISOString();
 }
 
 function normalizeResolvedDate(resolvedDate: string | null | undefined) {
   return normalizeDueDate(resolvedDate);
 }
 
+function parseDueMoment(dueDate: string | null | undefined) {
+  const normalizedDueDate = normalizeDueDate(dueDate);
+
+  if (!normalizedDueDate) {
+    return null;
+  }
+
+  if (parseDateKey(normalizedDueDate)) {
+    return {
+      isDateOnly: true,
+      date: parseDateKey(normalizedDueDate) as Date,
+      value: normalizedDueDate,
+    };
+  }
+
+  return {
+    isDateOnly: false,
+    date: new Date(normalizedDueDate),
+    value: normalizedDueDate,
+  };
+}
+
+function formatDueDateLabel(dueDate: string | null | undefined) {
+  const dueMoment = parseDueMoment(dueDate);
+
+  if (!dueMoment) {
+    return 'No due date';
+  }
+
+  if (dueMoment.isDateOnly) {
+    return dueMoment.value;
+  }
+
+  return dueMoment.date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 function getQuestDueStateLabel(
   quest: Pick<Quest, 'status' | 'dueDate'>,
   todayKey = getDateKey(),
 ) {
-  const dueDate = normalizeDueDate(quest.dueDate);
+  const dueMoment = parseDueMoment(quest.dueDate);
 
-  if (!dueDate) {
+  if (!dueMoment) {
     return 'Flexible';
   }
 
@@ -878,17 +979,35 @@ function getQuestDueStateLabel(
     return 'Failed';
   }
 
-  const dateDifference = getDateDifferenceInDays(todayKey, dueDate);
+  if (dueMoment.isDateOnly) {
+    const dateDifference = getDateDifferenceInDays(todayKey, dueMoment.value);
 
-  if (dateDifference === null) {
-    return 'Flexible';
+    if (dateDifference === null) {
+      return 'Flexible';
+    }
+
+    if (dateDifference < 0) {
+      return 'Overdue';
+    }
+
+    if (dateDifference === 0) {
+      return 'Due Today';
+    }
+
+    return 'Upcoming';
   }
 
-  if (dateDifference < 0) {
+  const dueTimeDifferenceMs = dueMoment.date.getTime() - Date.now();
+
+  if (dueTimeDifferenceMs < 0) {
     return 'Overdue';
   }
 
-  if (dateDifference === 0) {
+  if (dueTimeDifferenceMs <= 2 * 60 * 60 * 1000) {
+    return 'Due Soon';
+  }
+
+  if (getDateKey(dueMoment.date) === todayKey) {
     return 'Due Today';
   }
 
@@ -896,14 +1015,40 @@ function getQuestDueStateLabel(
 }
 
 function getQuestDueDetails(quest: Pick<Quest, 'status' | 'dueDate'>) {
-  const dueDate = normalizeDueDate(quest.dueDate);
   const dueStateLabel = getQuestDueStateLabel(quest);
 
   return {
-    dueDateLabel: dueDate ?? 'No due date',
+    dueDateLabel: formatDueDateLabel(quest.dueDate),
     dueStateLabel,
-    isUrgent: dueStateLabel === 'Due Today' || dueStateLabel === 'Overdue',
+    isUrgent:
+      dueStateLabel === 'Due Soon' ||
+      dueStateLabel === 'Due Today' ||
+      dueStateLabel === 'Overdue',
+    isOverdue: dueStateLabel === 'Overdue',
+    isDueSoon: dueStateLabel === 'Due Soon',
   };
+}
+
+function shouldSendDueSoonReminder(quest: Quest) {
+  const dueDetails = getQuestDueDetails(quest);
+
+  return (
+    quest.status === 'In Progress' &&
+    quest.dueDate !== null &&
+    dueDetails.isDueSoon &&
+    quest.dueSoonReminderAt !== quest.dueDate
+  );
+}
+
+function shouldSendOverdueReminder(quest: Quest) {
+  const dueDetails = getQuestDueDetails(quest);
+
+  return (
+    quest.status === 'In Progress' &&
+    quest.dueDate !== null &&
+    dueDetails.isOverdue &&
+    quest.overdueReminderAt !== quest.dueDate
+  );
 }
 
 function getQuestResolvedDate(quest: Pick<Quest, 'status' | 'completedAt' | 'failedAt'>) {
@@ -1052,6 +1197,16 @@ function normalizeQuest(quest: Omit<Quest, 'id'> & Partial<Pick<Quest, 'id'>>) {
     status: normalizedStatus,
     completedAt,
     failedAt,
+    dueSoonReminderAt:
+      typeof quest.dueSoonReminderAt === 'string' &&
+      quest.dueSoonReminderAt.trim().length > 0
+        ? quest.dueSoonReminderAt.trim()
+        : null,
+    overdueReminderAt:
+      typeof quest.overdueReminderAt === 'string' &&
+      quest.overdueReminderAt.trim().length > 0
+        ? quest.overdueReminderAt.trim()
+        : null,
     createdAt: typeof quest.createdAt === 'number' ? quest.createdAt : Date.now(),
     xpReward,
   };
@@ -1637,14 +1792,30 @@ function HeroStat({
   value,
   accentStyle,
   styles,
+  onPress,
+  testID,
 }: {
   label: string;
   value: string;
   accentStyle?: object;
   styles: ReturnType<typeof createStyles>;
+  onPress?: () => void;
+  testID?: string;
 }) {
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={onPress}
+        style={[styles.heroStat, styles.heroStatInteractive]}
+        testID={testID}>
+        <Text style={styles.heroStatLabel}>{label}</Text>
+        <Text style={[styles.heroStatValue, accentStyle]}>{value}</Text>
+      </Pressable>
+    );
+  }
+
   return (
-    <View style={styles.heroStat}>
+    <View style={styles.heroStat} testID={testID}>
       <Text style={styles.heroStatLabel}>{label}</Text>
       <Text style={[styles.heroStatValue, accentStyle]}>{value}</Text>
     </View>
@@ -1787,6 +1958,64 @@ function ThemeToggle({
   );
 }
 
+function ReminderPromptOverlay({
+  reminderPrompt,
+  onComplete,
+  onDismiss,
+  onViewQuest,
+  styles,
+}: {
+  reminderPrompt: ReminderPrompt;
+  onComplete: (questId: string) => void;
+  onDismiss: () => void;
+  onViewQuest: (questId: string) => void;
+  styles: ReturnType<typeof createStyles>;
+}) {
+  return (
+    <View style={styles.reminderOverlay} testID="quest-reminder-overlay">
+      <Pressable onPress={onDismiss} style={styles.reminderOverlayBackdrop} />
+      <View style={styles.reminderCard}>
+        <Text style={styles.kicker}>Quest Reminder</Text>
+        <Text style={styles.sectionTitle}>{reminderPrompt.title}</Text>
+        <Text style={styles.formIntro}>
+          This quest is now {reminderPrompt.dueStateLabel.toLowerCase()}.
+          {` `}Did you complete it?
+        </Text>
+        <View style={styles.metaRow}>
+          <View style={styles.metaPill}>
+            <Text style={styles.metaLabel}>Deadline</Text>
+            <Text style={styles.metaValue}>{reminderPrompt.dueLabel}</Text>
+          </View>
+          <View style={[styles.metaPill, styles.metaPillHighlight]}>
+            <Text style={styles.metaLabel}>Status Check</Text>
+            <Text style={[styles.metaValue, styles.metaValueHighlight]}>
+              {reminderPrompt.dueStateLabel}
+            </Text>
+          </View>
+        </View>
+        <Pressable
+          onPress={() => onComplete(reminderPrompt.questId)}
+          style={styles.primaryActionButton}
+          testID="reminder-complete-quest">
+          <Text style={styles.primaryActionText}>Mark Complete</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => onViewQuest(reminderPrompt.questId)}
+          style={styles.secondaryActionButton}
+          testID="reminder-view-quest">
+          <Text style={styles.secondaryActionText}>View Quest</Text>
+        </Pressable>
+        <Pressable
+          onPress={onDismiss}
+          style={styles.cardSecondaryButton}
+          testID="reminder-dismiss-quest">
+          <Text style={styles.cardSecondaryButtonText}>Still Working</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
 function QuestCard({
   quest,
   styles,
@@ -1807,7 +2036,12 @@ function QuestCard({
   return (
     <Pressable
       onPress={onOpenDetails ? () => onOpenDetails(quest.id) : undefined}
-      style={[styles.questCard, isResolved && styles.questCardCompleted]}
+      style={[
+        styles.questCard,
+        isResolved && styles.questCardCompleted,
+        dueDetails.isDueSoon && styles.questCardDueSoon,
+        dueDetails.isOverdue && styles.questCardOverdue,
+      ]}
       testID={`open-quest-details-${quest.id}`}>
       <View style={styles.questHeaderRow}>
         <Text style={styles.questTitle}>{quest.title}</Text>
@@ -2081,7 +2315,9 @@ function QuestBoardScreen({
           <HeroStat
             accentStyle={styles.streakAccent}
             label="Streak"
+            onPress={onNavigateToStreak}
             styles={styles}
+            testID="hero-streak-button"
             value={`${hero.streakCount}d`}
           />
         </View>
@@ -2129,41 +2365,78 @@ function QuestBoardScreen({
         <View style={styles.boardActionCard}>
           <Text style={styles.sectionTitle}>{appConfig.suggestionSectionTitle}</Text>
           <Text style={styles.formIntro}>
-            A fresh set of quests is ready for today&apos;s adventure.
+            Fresh quest ideas picked for today&apos;s momentum.
           </Text>
           <Text style={styles.formHint}>Forged for {dailySuggestionDateKey}</Text>
 
           {dailySuggestions.length > 0 ? (
             dailySuggestions.map((suggestion, index) => (
-              <View
-                key={`${suggestion.title}-${index}`}
-                style={styles.suggestionCard}
-                testID={`daily-suggestion-card-${index}`}>
-                <Text style={styles.suggestionTitle}>{suggestion.title}</Text>
-                <Text style={styles.questDescription}>{suggestion.description}</Text>
-                <View style={styles.metaRow}>
-                  <View style={styles.metaPill}>
-                    <Text style={styles.metaLabel}>Difficulty</Text>
-                    <Text style={styles.metaValue}>{suggestion.difficulty}</Text>
+              (() => {
+                const suggestionDueDetails = getQuestDueDetails({
+                  status: 'Ready',
+                  dueDate: suggestion.dueDate ?? null,
+                });
+
+                return (
+                  <View
+                    key={`${suggestion.title}-${index}`}
+                    style={styles.suggestionCard}
+                    testID={`daily-suggestion-card-${index}`}>
+                    <Text style={styles.suggestionTitle}>{suggestion.title}</Text>
+                    <Text style={styles.questDescription}>{suggestion.description}</Text>
+                    <View style={styles.metaRow}>
+                      <View style={styles.metaPill}>
+                        <Text style={styles.metaLabel}>Difficulty</Text>
+                        <Text style={styles.metaValue}>{suggestion.difficulty}</Text>
+                      </View>
+                      <View style={styles.metaPill}>
+                        <Text style={styles.metaLabel}>Category</Text>
+                        <Text style={styles.metaValue}>{suggestion.category}</Text>
+                      </View>
+                      <View style={styles.metaPill}>
+                        <Text style={styles.metaLabel}>Tag</Text>
+                        <Text style={styles.metaValue}>{suggestion.tag}</Text>
+                      </View>
+                    </View>
+                    {suggestion.dueDate ? (
+                      <View style={styles.metaRow}>
+                        <View style={styles.metaPill}>
+                          <Text style={styles.metaLabel}>Deadline</Text>
+                          <Text style={styles.metaValue}>
+                            {suggestionDueDetails.dueDateLabel}
+                          </Text>
+                        </View>
+                        <View
+                          style={[
+                            styles.metaPill,
+                            suggestionDueDetails.isUrgent
+                              ? styles.metaPillHighlight
+                              : null,
+                          ]}>
+                          <Text style={styles.metaLabel}>Reminder</Text>
+                          <Text
+                            style={[
+                              styles.metaValue,
+                              suggestionDueDetails.isUrgent
+                                ? styles.metaValueHighlight
+                                : null,
+                            ]}>
+                            {suggestionDueDetails.dueStateLabel}
+                          </Text>
+                        </View>
+                      </View>
+                    ) : null}
+                    <Pressable
+                      onPress={() => onAddSuggestedQuest(suggestion)}
+                      style={styles.cardSecondaryButton}
+                      testID={`add-suggested-quest-${index}`}>
+                      <Text style={styles.cardSecondaryButtonText}>
+                        Add Suggested Quest
+                      </Text>
+                    </Pressable>
                   </View>
-                  <View style={styles.metaPill}>
-                    <Text style={styles.metaLabel}>Category</Text>
-                    <Text style={styles.metaValue}>{suggestion.category}</Text>
-                  </View>
-                  <View style={styles.metaPill}>
-                    <Text style={styles.metaLabel}>Tag</Text>
-                    <Text style={styles.metaValue}>{suggestion.tag}</Text>
-                  </View>
-                </View>
-                <Pressable
-                  onPress={() => onAddSuggestedQuest(suggestion)}
-                  style={styles.cardSecondaryButton}
-                  testID={`add-suggested-quest-${index}`}>
-                  <Text style={styles.cardSecondaryButtonText}>
-                    Add Suggested Quest
-                  </Text>
-                </Pressable>
-              </View>
+                );
+              })()
             ))
           ) : (
             <View style={styles.emptyStateCard}>
@@ -2180,14 +2453,14 @@ function QuestBoardScreen({
         <View style={styles.boardActionCard}>
           <Text style={styles.sectionTitle}>{appConfig.addQuestSectionTitle}</Text>
           <Text style={styles.formIntro}>
-            Shape your next quest, review your journey, or dive into your streak.
+            Shape your next quest, check your profile, or review quest history.
           </Text>
         {appConfig.featureFlags.showAddQuestScreen ? (
           <Pressable
             onPress={onNavigateToAddQuest}
             style={styles.primaryActionButton}
             testID="navigate-to-add-quest">
-            <Text style={styles.primaryActionText}>Open Add Quest</Text>
+            <Text style={styles.primaryActionText}>Quest Forge</Text>
           </Pressable>
         ) : null}
         {appConfig.featureFlags.showProgressScreen ? (
@@ -2195,27 +2468,21 @@ function QuestBoardScreen({
             onPress={onNavigateToProgress}
             style={styles.secondaryActionButton}
             testID="navigate-to-progress-screen">
-            <Text style={styles.secondaryActionText}>Open Profile</Text>
+            <Text style={styles.secondaryActionText}>Profile</Text>
           </Pressable>
         ) : null}
         <Pressable
           onPress={onNavigateToHistory}
           style={styles.secondaryActionButton}
           testID="navigate-to-history-screen">
-          <Text style={styles.secondaryActionText}>Open History</Text>
-        </Pressable>
-        <Pressable
-          onPress={onNavigateToStreak}
-          style={styles.secondaryActionButton}
-          testID="navigate-to-streak-screen">
-          <Text style={styles.secondaryActionText}>Open Streak</Text>
+          <Text style={styles.secondaryActionText}>History</Text>
         </Pressable>
         {appConfig.featureFlags.showRealmCodexScreen ? (
           <Pressable
             onPress={onNavigateToRealmCodex}
             style={styles.secondaryActionButton}
             testID="navigate-to-realm-codex">
-            <Text style={styles.secondaryActionText}>Open Realm Codex</Text>
+            <Text style={styles.secondaryActionText}>Realm Codex</Text>
           </Pressable>
         ) : null}
         {appConfig.featureFlags.showThemeSanctumScreen ? (
@@ -2223,7 +2490,7 @@ function QuestBoardScreen({
             onPress={onNavigateToThemeSanctum}
             style={styles.secondaryActionButton}
             testID="navigate-to-theme-sanctum">
-            <Text style={styles.secondaryActionText}>Open Theme Sanctum</Text>
+            <Text style={styles.secondaryActionText}>Theme Sanctum</Text>
           </Pressable>
         ) : null}
       </View>
@@ -2489,13 +2756,13 @@ function ProgressScreen({
           onPress={onNavigateToHistory}
           style={styles.secondaryActionButton}
           testID="navigate-to-history-screen-from-progress">
-          <Text style={styles.secondaryActionText}>Open Quest History</Text>
+          <Text style={styles.secondaryActionText}>Quest History</Text>
         </Pressable>
         <Pressable
           onPress={onNavigateToStreak}
           style={styles.secondaryActionButton}
           testID="navigate-to-streak-screen-from-progress">
-          <Text style={styles.secondaryActionText}>Open Streak Calendar</Text>
+          <Text style={styles.secondaryActionText}>Streak Calendar</Text>
         </Pressable>
         <Pressable
           onPress={onResetJourney}
@@ -3399,9 +3666,9 @@ function AddQuestScreen({
         />
       </View>
 
-      <Text style={styles.kicker}>{isEditing ? 'Edit Quest' : 'Add Quest'}</Text>
+      <Text style={styles.kicker}>{isEditing ? 'Edit Quest' : 'Quest Forge'}</Text>
       <Text style={styles.title}>
-        {isEditing ? 'Refine Quest Details' : 'Forge New Quest'}
+        {isEditing ? 'Refine Quest Details' : 'Shape Your Next Quest'}
       </Text>
       <Text style={styles.subtitle}>
         {isEditing
@@ -3456,7 +3723,7 @@ function AddQuestScreen({
           <TextInput
             autoCapitalize="none"
             onChangeText={setQuestDueDate}
-            placeholder="YYYY-MM-DD"
+            placeholder="YYYY-MM-DD or 2026-04-03T18:00"
             placeholderTextColor={styles.themePlaceholder.color}
             style={styles.titleInput}
             testID="quest-due-date-input"
@@ -3464,8 +3731,8 @@ function AddQuestScreen({
           />
           <Text style={styles.formHint}>
             {isValidDueDate
-              ? 'Use the `YYYY-MM-DD` format or leave it empty for a flexible quest.'
-              : 'Enter a valid `YYYY-MM-DD` date before saving this quest.'}
+              ? 'Use `YYYY-MM-DD` for all-day quests or a full date-time for reminder-based quests.'
+              : 'Enter a valid `YYYY-MM-DD` date or full date-time before saving this quest.'}
           </Text>
         </View>
 
@@ -3540,12 +3807,15 @@ function App() {
   const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null);
   const [questDetails, setQuestDetails] = useState<QuestDetailsResponse | null>(null);
   const [isRefreshingQuestDetails, setIsRefreshingQuestDetails] = useState(false);
+  const [reminderPrompt, setReminderPrompt] = useState<ReminderPrompt | null>(null);
   const [dailySuggestions, setDailySuggestions] = useState<SuggestedQuest[]>(
     () => getDailySuggestions(getDateKey(), initialQuests.map(normalizeQuest)),
   );
   const [dailySuggestionDateKey, setDailySuggestionDateKey] = useState(
     getDateKey(),
   );
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const isProcessingRemindersRef = useRef(false);
 
   const currentTheme = getThemePalette(gameState.themeMode, gameState.themePackId);
   const styles = createStyles(currentTheme);
@@ -3636,6 +3906,99 @@ function App() {
 
     return nextQuestDetails;
   };
+
+  const persistGameStateSnapshot = async (nextGameState: GameState) => {
+    try {
+      setBackendError(null);
+      const savedGameState = await saveRemoteGameState<GameState>(nextGameState);
+
+      return applyRemoteGameState(savedGameState);
+    } catch {
+      setBackendError(backendUnavailableMessage);
+
+      return null;
+    }
+  };
+
+  const processQuestReminders = useEffectEvent(
+    async (gameStateSnapshot: GameState) => {
+    if (
+      !isHydrated ||
+      backendError !== null ||
+      isProcessingRemindersRef.current
+    ) {
+      return;
+    }
+
+    const dueSoonQuests = gameStateSnapshot.quests.filter(shouldSendDueSoonReminder);
+    const overdueQuests = gameStateSnapshot.quests.filter(shouldSendOverdueReminder);
+
+    if (dueSoonQuests.length === 0 && overdueQuests.length === 0) {
+      return;
+    }
+
+    isProcessingRemindersRef.current = true;
+
+    try {
+      await Promise.all(
+        dueSoonQuests.map(quest =>
+          sendQuestReminderNotification(
+            'Quest Due Soon',
+            `${quest.title} is running out of time.`,
+            `due-soon-${quest.id}`,
+          ),
+        ),
+      );
+      await Promise.all(
+        overdueQuests.map(quest =>
+          sendQuestReminderNotification(
+            'Quest Overdue',
+            `${quest.title} is overdue. Did you complete it?`,
+            `overdue-${quest.id}`,
+          ),
+        ),
+      );
+
+      const nextGameState = normalizeStoredGameState({
+        ...gameStateSnapshot,
+        quests: gameStateSnapshot.quests.map(quest => ({
+          ...quest,
+          dueSoonReminderAt: dueSoonQuests.some(
+            dueSoonQuest => dueSoonQuest.id === quest.id,
+          )
+            ? quest.dueDate
+            : quest.dueSoonReminderAt,
+          overdueReminderAt: overdueQuests.some(
+            overdueQuest => overdueQuest.id === quest.id,
+          )
+            ? quest.dueDate
+            : quest.overdueReminderAt,
+        })),
+      });
+      const savedGameState = await persistGameStateSnapshot(nextGameState);
+
+      if (overdueQuests.length > 0 && reminderPrompt === null) {
+        const promptQuestId = overdueQuests[0].id;
+        const promptQuest =
+          savedGameState?.quests.find(quest => quest.id === promptQuestId) ??
+          nextGameState.quests.find(quest => quest.id === promptQuestId);
+
+        if (promptQuest) {
+          const dueDetails = getQuestDueDetails(promptQuest);
+
+          setReminderPrompt({
+            questId: promptQuest.id,
+            title: promptQuest.title,
+            dueLabel: dueDetails.dueDateLabel,
+            dueStateLabel: dueDetails.dueStateLabel,
+          });
+        }
+      }
+    } finally {
+      isProcessingRemindersRef.current = false;
+    }
+    },
+  );
 
   const runGameStateRequest = async <T extends GameStateResponse>(
     request: () => Promise<T>,
@@ -3737,6 +4100,35 @@ function App() {
     setEditingQuestId(null);
   }, [appConfig, currentScreen]);
 
+  useEffect(() => {
+    if (!isHydrated || backendError !== null || appStateRef.current !== 'active') {
+      return;
+    }
+
+    processQuestReminders(gameState);
+  }, [backendError, gameState, isHydrated]);
+
+  useEffect(() => {
+    const appStateSubscription = AppState.addEventListener(
+      'change',
+      (nextAppState: AppStateStatus) => {
+        const shouldCheckReminders =
+          appStateRef.current.match(/inactive|background/) &&
+          nextAppState === 'active';
+
+        appStateRef.current = nextAppState;
+
+        if (shouldCheckReminders) {
+          processQuestReminders(gameState);
+        }
+      },
+    );
+
+    return () => {
+      appStateSubscription.remove();
+    };
+  }, [gameState, isHydrated, backendError]);
+
   const returnToBoard = () => {
     setEditingQuestId(null);
     setSelectedQuestId(null);
@@ -3778,6 +4170,9 @@ function App() {
     );
 
     if (response) {
+      if (reminderPrompt?.questId === questId) {
+        setReminderPrompt(null);
+      }
       await refreshRemoteDailySuggestions();
       returnToBoard();
     }
@@ -3800,6 +4195,9 @@ function App() {
     );
 
     if (response?.completionFeedback) {
+      if (reminderPrompt?.questId === questId) {
+        setReminderPrompt(null);
+      }
       setCompletionFeedback(response.completionFeedback);
     }
   };
@@ -3810,8 +4208,25 @@ function App() {
     );
 
     if (response) {
+      if (reminderPrompt?.questId === questId) {
+        setReminderPrompt(null);
+      }
       returnToBoard();
     }
+  };
+
+  const handleDismissReminderPrompt = () => {
+    setReminderPrompt(null);
+  };
+
+  const handleReminderViewQuest = async (questId: string) => {
+    setReminderPrompt(null);
+    await handleOpenQuestDetails(questId);
+  };
+
+  const handleReminderCompleteQuest = async (questId: string) => {
+    setReminderPrompt(null);
+    await handleQuestPrimaryAction(questId);
   };
 
   const handleToggleTheme = async () => {
@@ -3886,6 +4301,7 @@ function App() {
 
     if (response) {
       setCompletionFeedback(null);
+      setReminderPrompt(null);
       await refreshRemoteDailySuggestions();
       returnToBoard();
     }
@@ -4172,6 +4588,15 @@ function App() {
                   themeMode={gameState.themeMode}
                 />
               )}
+              {reminderPrompt ? (
+                <ReminderPromptOverlay
+                  onComplete={handleReminderCompleteQuest}
+                  onDismiss={handleDismissReminderPrompt}
+                  onViewQuest={handleReminderViewQuest}
+                  reminderPrompt={reminderPrompt}
+                  styles={styles}
+                />
+              ) : null}
             </>
           )}
         </View>
@@ -4434,6 +4859,9 @@ function createStyles(theme: ThemePalette) {
       borderColor: theme.ghostBorder,
       paddingHorizontal: 14,
       paddingVertical: 16,
+    },
+    heroStatInteractive: {
+      borderColor: `${theme.blue}48`,
     },
     heroStatLabel: {
       color: theme.textMuted,
@@ -4789,6 +5217,27 @@ function createStyles(theme: ThemePalette) {
       fontSize: 14,
       lineHeight: 21,
     },
+    reminderOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      justifyContent: 'flex-end',
+      padding: 20,
+      zIndex: 20,
+    },
+    reminderOverlayBackdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(3, 8, 18, 0.72)',
+    },
+    reminderCard: {
+      backgroundColor: theme.surface,
+      borderColor: `${theme.blue}42`,
+      borderRadius: 24,
+      borderWidth: 1,
+      padding: 20,
+      shadowColor: theme.blue,
+      shadowOffset: { width: 0, height: 18 },
+      shadowOpacity: 0.24,
+      shadowRadius: 26,
+    },
     sectionTitle: {
       color: theme.textPrimary,
       fontSize: 22,
@@ -4810,6 +5259,16 @@ function createStyles(theme: ThemePalette) {
     questCardCompleted: {
       backgroundColor: `${theme.success}12`,
       borderColor: `${theme.success}35`,
+    },
+    questCardDueSoon: {
+      borderColor: `${theme.amber}55`,
+      shadowColor: theme.amber,
+      shadowOpacity: 0.14,
+    },
+    questCardOverdue: {
+      borderColor: `${theme.blue}55`,
+      shadowColor: theme.blue,
+      shadowOpacity: 0.16,
     },
     questHeaderRow: {
       alignItems: 'flex-start',

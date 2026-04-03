@@ -51,12 +51,14 @@ const achievementDefinitions = [
 const defaultQuestSectionOrder = ['main', 'side', 'completed'];
 const themePackOptions = ['ethereal-forge', 'luminous-paladin', 'void-drifter'];
 const rankThresholds = [
-  { minimumXp: 340, title: 'Mythic' },
-  { minimumXp: 240, title: 'Legend' },
-  { minimumXp: 160, title: 'Warden' },
-  { minimumXp: 100, title: 'Champion' },
-  { minimumXp: 50, title: 'Knight' },
-  { minimumXp: 20, title: 'Adventurer' },
+  { minimumXp: 2100, title: 'Ascendant' },
+  { minimumXp: 1560, title: 'Mythic' },
+  { minimumXp: 1160, title: 'Legend' },
+  { minimumXp: 820, title: 'Warden' },
+  { minimumXp: 540, title: 'Champion' },
+  { minimumXp: 320, title: 'Knight' },
+  { minimumXp: 150, title: 'Adventurer' },
+  { minimumXp: 60, title: 'Apprentice' },
   { minimumXp: 0, title: 'Novice' },
 ];
 
@@ -82,6 +84,8 @@ const defaultGameState = {
       category: 'Main Quest',
       completedAt: null,
       failedAt: null,
+      dueSoonReminderAt: null,
+      overdueReminderAt: null,
       createdAt: 1,
     },
     {
@@ -97,6 +101,8 @@ const defaultGameState = {
       category: 'Side Quest',
       completedAt: null,
       failedAt: null,
+      dueSoonReminderAt: null,
+      overdueReminderAt: null,
       createdAt: 2,
     },
     {
@@ -112,6 +118,8 @@ const defaultGameState = {
       category: 'Side Quest',
       completedAt: getDateKey(),
       failedAt: null,
+      dueSoonReminderAt: null,
+      overdueReminderAt: null,
       createdAt: 3,
     },
   ],
@@ -130,7 +138,7 @@ const defaultAppConfig = {
   boardHeroInsight: 'Your next rank is earned one quest at a time.',
   realmSyncMessage: 'Sync the board to refresh today’s realm updates.',
   suggestionSectionTitle: 'Daily Suggestions',
-  addQuestSectionTitle: 'Forge New Quest',
+  addQuestSectionTitle: 'Guild Hub',
   filterSectionTitle: 'Search And Filter',
   mainQuestSectionTitle: 'Main Quest',
   sideQuestSectionTitle: 'Side Quests',
@@ -164,6 +172,7 @@ const suggestionTemplates = [
     tag: 'Health',
     difficulty: 'Easy',
     category: 'Side Quest',
+    dueDate: null,
   },
   {
     title: 'Map the Day Ahead',
@@ -172,6 +181,7 @@ const suggestionTemplates = [
     tag: 'Planning',
     difficulty: 'Easy',
     category: 'Main Quest',
+    dueDate: null,
   },
   {
     title: 'Train the Focus Familiar',
@@ -180,6 +190,7 @@ const suggestionTemplates = [
     tag: 'Focus',
     difficulty: 'Medium',
     category: 'Side Quest',
+    dueDate: null,
   },
   {
     title: 'Polish the Guild Resume',
@@ -188,6 +199,7 @@ const suggestionTemplates = [
     tag: 'Work',
     difficulty: 'Medium',
     category: 'Main Quest',
+    dueDate: null,
   },
   {
     title: 'Clear the Inbox Cavern',
@@ -196,6 +208,7 @@ const suggestionTemplates = [
     tag: 'Admin',
     difficulty: 'Hard',
     category: 'Main Quest',
+    dueDate: null,
   },
   {
     title: 'Raid the Laundry Keep',
@@ -204,6 +217,7 @@ const suggestionTemplates = [
     tag: 'Chores',
     difficulty: 'Hard',
     category: 'Side Quest',
+    dueDate: null,
   },
   {
     title: 'Forge a Weekly Master Plan',
@@ -212,6 +226,7 @@ const suggestionTemplates = [
     tag: 'Planning',
     difficulty: 'Epic',
     category: 'Main Quest',
+    dueDate: null,
   },
   {
     title: 'Protect the Evening Wind-Down',
@@ -220,6 +235,7 @@ const suggestionTemplates = [
     tag: 'Self Care',
     difficulty: 'Easy',
     category: 'Side Quest',
+    dueDate: null,
   },
   {
     title: 'Restore the Study Desk',
@@ -227,6 +243,7 @@ const suggestionTemplates = [
     tag: 'Study',
     difficulty: 'Easy',
     category: 'Side Quest',
+    dueDate: null,
   },
   {
     title: 'Collect the Expense Receipts',
@@ -235,6 +252,7 @@ const suggestionTemplates = [
     tag: 'Finance',
     difficulty: 'Medium',
     category: 'Side Quest',
+    dueDate: null,
   },
   {
     title: 'Deliver the Guild Check-In',
@@ -242,6 +260,7 @@ const suggestionTemplates = [
     tag: 'Work',
     difficulty: 'Medium',
     category: 'Main Quest',
+    dueDate: null,
   },
   {
     title: 'Lift the Iron Sigils',
@@ -249,6 +268,7 @@ const suggestionTemplates = [
     tag: 'Fitness',
     difficulty: 'Hard',
     category: 'Side Quest',
+    dueDate: null,
   },
   {
     title: 'Prepare the Market Run',
@@ -256,6 +276,7 @@ const suggestionTemplates = [
     tag: 'Errands',
     difficulty: 'Medium',
     category: 'Side Quest',
+    dueDate: null,
   },
   {
     title: 'Shape a Creative Relic',
@@ -263,6 +284,25 @@ const suggestionTemplates = [
     tag: 'Creative',
     difficulty: 'Hard',
     category: 'Main Quest',
+    dueDate: null,
+  },
+  {
+    title: 'Sprint Through the Study Trial',
+    description:
+      'Give yourself one intense study burst and close the loop before the window slips away.',
+    tag: 'Study',
+    difficulty: 'Medium',
+    category: 'Side Quest',
+    dueDate: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    title: 'Ship the Guild Update',
+    description:
+      'Finish the work update while the context is still hot and send it before the timer runs out.',
+    tag: 'Work',
+    difficulty: 'Hard',
+    category: 'Main Quest',
+    dueDate: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
   },
 ];
 
@@ -315,17 +355,66 @@ function normalizeDueDate(dueDate) {
 
   const trimmedDueDate = dueDate.trim();
 
-  return parseDateKey(trimmedDueDate) ? trimmedDueDate : null;
+  if (parseDateKey(trimmedDueDate)) {
+    return trimmedDueDate;
+  }
+
+  const parsedDueMoment = new Date(trimmedDueDate);
+
+  return Number.isNaN(parsedDueMoment.getTime())
+    ? null
+    : parsedDueMoment.toISOString();
 }
 
 function normalizeResolvedDate(resolvedDate) {
   return normalizeDueDate(resolvedDate);
 }
 
-function getQuestDueStateLabel(quest, todayKey = getDateKey()) {
-  const dueDate = normalizeDueDate(quest?.dueDate);
+function parseDueMoment(dueDate) {
+  const normalizedDueDate = normalizeDueDate(dueDate);
 
-  if (!dueDate) {
+  if (!normalizedDueDate) {
+    return null;
+  }
+
+  if (parseDateKey(normalizedDueDate)) {
+    return {
+      isDateOnly: true,
+      date: parseDateKey(normalizedDueDate),
+      value: normalizedDueDate,
+    };
+  }
+
+  return {
+    isDateOnly: false,
+    date: new Date(normalizedDueDate),
+    value: normalizedDueDate,
+  };
+}
+
+function formatDueDateLabel(dueDate) {
+  const dueMoment = parseDueMoment(dueDate);
+
+  if (!dueMoment) {
+    return 'No due date';
+  }
+
+  if (dueMoment.isDateOnly) {
+    return dueMoment.value;
+  }
+
+  return dueMoment.date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function getQuestDueStateLabel(quest, todayKey = getDateKey()) {
+  const dueMoment = parseDueMoment(quest?.dueDate);
+
+  if (!dueMoment) {
     return 'Flexible';
   }
 
@@ -337,17 +426,35 @@ function getQuestDueStateLabel(quest, todayKey = getDateKey()) {
     return 'Failed';
   }
 
-  const dateDifference = getDateDifferenceInDays(todayKey, dueDate);
+  if (dueMoment.isDateOnly) {
+    const dateDifference = getDateDifferenceInDays(todayKey, dueMoment.value);
 
-  if (dateDifference === null) {
-    return 'Flexible';
+    if (dateDifference === null) {
+      return 'Flexible';
+    }
+
+    if (dateDifference < 0) {
+      return 'Overdue';
+    }
+
+    if (dateDifference === 0) {
+      return 'Due Today';
+    }
+
+    return 'Upcoming';
   }
 
-  if (dateDifference < 0) {
+  const dueTimeDifferenceMs = dueMoment.date.getTime() - Date.now();
+
+  if (dueTimeDifferenceMs < 0) {
     return 'Overdue';
   }
 
-  if (dateDifference === 0) {
+  if (dueTimeDifferenceMs <= 2 * 60 * 60 * 1000) {
+    return 'Due Soon';
+  }
+
+  if (getDateKey(dueMoment.date) === todayKey) {
     return 'Due Today';
   }
 
@@ -510,6 +617,16 @@ function normalizeQuest(quest) {
     failedAt:
       status === 'Failed'
         ? normalizeResolvedDate(quest?.failedAt) ?? getDateKey()
+        : null,
+    dueSoonReminderAt:
+      typeof quest?.dueSoonReminderAt === 'string' &&
+      quest.dueSoonReminderAt.trim().length > 0
+        ? quest.dueSoonReminderAt.trim()
+        : null,
+    overdueReminderAt:
+      typeof quest?.overdueReminderAt === 'string' &&
+      quest.overdueReminderAt.trim().length > 0
+        ? quest.overdueReminderAt.trim()
         : null,
     createdAt: typeof quest?.createdAt === 'number' ? quest.createdAt : Date.now(),
   };
@@ -958,7 +1075,7 @@ function buildQuestDetails(quest) {
           : 'The ritual is ready to begin whenever the guild needs this quest to move.',
     guidanceTitle: hasQuestNotes ? 'Quest Notes' : 'Quest Guidance',
     guidanceText: hasQuestNotes ? quest.description : getQuestGuidanceText(quest),
-    dueDateLabel: dueDate ?? 'No due date',
+    dueDateLabel: formatDueDateLabel(dueDate),
     dueStateLabel: getQuestDueStateLabel(quest),
     primaryActionLabel:
       quest.status === 'Completed'
@@ -1517,6 +1634,14 @@ const server = http.createServer(async (req, res) => {
         dueDate: questDraft.dueDate,
         difficulty: questDraft.difficulty,
         category: questDraft.category,
+        dueSoonReminderAt:
+          normalizeDueDate(questDraft.dueDate) === questToUpdate.dueDate
+            ? questToUpdate.dueSoonReminderAt
+            : null,
+        overdueReminderAt:
+          normalizeDueDate(questDraft.dueDate) === questToUpdate.dueDate
+            ? questToUpdate.overdueReminderAt
+            : null,
       });
       const nextGameState = buildNextGameState(currentGameState, {
         quests: currentGameState.quests.map(quest =>
@@ -1611,6 +1736,8 @@ const server = http.createServer(async (req, res) => {
                 status: 'Completed',
                 completedAt: completionDateKey,
                 failedAt: null,
+                dueSoonReminderAt: null,
+                overdueReminderAt: null,
               }
             : quest,
         ),
@@ -1657,7 +1784,12 @@ const server = http.createServer(async (req, res) => {
       const nextGameState = buildNextGameState(currentGameState, {
         quests: currentGameState.quests.map(quest =>
           quest.id === questRouteMatch.questId
-            ? { ...quest, status: 'In Progress' }
+            ? {
+                ...quest,
+                status: 'In Progress',
+                dueSoonReminderAt: null,
+                overdueReminderAt: null,
+              }
             : quest,
         ),
       });
@@ -1703,6 +1835,8 @@ const server = http.createServer(async (req, res) => {
                 status: 'Failed',
                 completedAt: null,
                 failedAt: failedDateKey,
+                dueSoonReminderAt: null,
+                overdueReminderAt: null,
               }
             : quest,
         ),
