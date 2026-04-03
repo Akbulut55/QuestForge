@@ -48,6 +48,7 @@ jest.mock('../src/api/gameStateApi', () => ({
   fetchRemoteRealmCodex: jest.fn(),
   fetchRemoteThemeSanctum: jest.fn(),
   saveRemoteGameState: jest.fn(),
+  startRemoteQuest: jest.fn(),
   updateRemoteQuest: jest.fn(),
   updateRemoteSortOption: jest.fn(),
   updateRemoteTheme: jest.fn(),
@@ -72,6 +73,7 @@ import {
   fetchRemoteRealmCodex,
   fetchRemoteThemeSanctum,
   saveRemoteGameState,
+  startRemoteQuest,
   updateRemoteQuest,
   updateRemoteSortOption,
   updateRemoteTheme,
@@ -85,6 +87,7 @@ const mockFetchRemoteGameState = fetchRemoteGameState as jest.Mock;
 const mockFetchRemoteQuestDetails = fetchRemoteQuestDetails as jest.Mock;
 const mockSaveRemoteGameState = saveRemoteGameState as jest.Mock;
 const mockCreateRemoteQuest = createRemoteQuest as jest.Mock;
+const mockStartRemoteQuest = startRemoteQuest as jest.Mock;
 const mockUpdateRemoteQuest = updateRemoteQuest as jest.Mock;
 const mockDeleteRemoteQuest = deleteRemoteQuest as jest.Mock;
 const mockCompleteRemoteQuest = completeRemoteQuest as jest.Mock;
@@ -778,7 +781,17 @@ function buildQuestDetailsResponse(questId: string) {
           ? 'As a main quest, it pushes the realm forward and deserves your clearest attention block.'
           : 'As a side quest, it strengthens the guild quietly without needing to dominate the whole day.',
     primaryActionLabel:
-      quest.status === 'Completed' ? 'Ritual Complete' : 'Complete Ritual',
+      quest.status === 'Completed'
+        ? 'Ritual Complete'
+        : quest.status === 'In Progress'
+          ? 'Complete Ritual'
+          : 'Start Quest',
+    primaryActionType:
+      quest.status === 'Completed'
+        ? 'none'
+        : quest.status === 'In Progress'
+          ? 'complete'
+          : 'start',
     secondaryActionLabel: 'Edit Quest',
     canComplete: quest.status !== 'Completed',
   };
@@ -843,6 +856,7 @@ async function renderHydratedApp() {
   mockFetchRemoteAppConfig.mockClear();
   mockSaveRemoteGameState.mockClear();
   mockCreateRemoteQuest.mockClear();
+  mockStartRemoteQuest.mockClear();
   mockUpdateRemoteQuest.mockClear();
   mockDeleteRemoteQuest.mockClear();
   mockCompleteRemoteQuest.mockClear();
@@ -867,6 +881,7 @@ beforeEach(() => {
   mockFetchRemoteQuestDetails.mockReset();
   mockSaveRemoteGameState.mockReset();
   mockCreateRemoteQuest.mockReset();
+  mockStartRemoteQuest.mockReset();
   mockUpdateRemoteQuest.mockReset();
   mockDeleteRemoteQuest.mockReset();
   mockCompleteRemoteQuest.mockReset();
@@ -938,6 +953,26 @@ beforeEach(() => {
       return { gameState: cloneState(mockBackendState) };
     },
   );
+  mockStartRemoteQuest.mockImplementation(async (questId: string) => {
+    const questToStart = mockBackendState.quests.find(quest => quest.id === questId);
+
+    if (!questToStart || questToStart.status !== 'Ready') {
+      return {
+        gameState: cloneState(mockBackendState),
+      };
+    }
+
+    const nextQuests = mockBackendState.quests.map(quest =>
+      quest.id === questId ? { ...quest, status: 'In Progress' } : quest,
+    );
+
+    mockBackendState = normalizeGameState({
+      ...mockBackendState,
+      quests: nextQuests,
+    });
+
+    return { gameState: cloneState(mockBackendState) };
+  });
   mockUpdateRemoteQuest.mockImplementation(
     async (
       questId: string,
@@ -1002,7 +1037,11 @@ beforeEach(() => {
       quest => quest.id === questId,
     );
 
-    if (!questToComplete || questToComplete.status === 'Completed') {
+    if (
+      !questToComplete ||
+      questToComplete.status === 'Completed' ||
+      questToComplete.status === 'Ready'
+    ) {
       return {
         gameState: cloneState(mockBackendState),
         completionFeedback: null,
@@ -1455,7 +1494,7 @@ test('opens the Stitch-generated Quest Details screen with backend quest dossier
   expect(detailsRender).toContain('Main Quest');
 });
 
-test('completing a quest from quest details refreshes the backend dossier', async () => {
+test('starting a ready quest from quest details refreshes the backend dossier', async () => {
   const tree = await renderHydratedApp();
   let root = tree.root;
 
@@ -1474,7 +1513,32 @@ test('completing a quest from quest details refreshes the backend dossier', asyn
   root = tree.root;
   const detailsRender = JSON.stringify(tree.toJSON());
 
-  expect(mockCompleteRemoteQuest).toHaveBeenCalledWith('quest-2');
+  expect(mockStartRemoteQuest).toHaveBeenCalledWith('quest-2');
+  expect(detailsRender).toContain('Ritual In Motion');
+  expect(detailsRender).toContain('In Progress');
+  expect(detailsRender).toContain('Complete Ritual');
+});
+
+test('completing an in-progress quest from quest details refreshes the backend dossier', async () => {
+  const tree = await renderHydratedApp();
+  let root = tree.root;
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'open-quest-details-quest-1' }).props.onPress();
+    await flushMicrotasks();
+  });
+
+  root = tree.root;
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'complete-quest-from-details' }).props.onPress();
+    await flushMicrotasks();
+  });
+
+  root = tree.root;
+  const detailsRender = JSON.stringify(tree.toJSON());
+
+  expect(mockCompleteRemoteQuest).toHaveBeenCalledWith('quest-1');
   expect(detailsRender).toContain('Ritual Complete');
   expect(detailsRender).toContain('Completed');
 });
@@ -1855,6 +1919,13 @@ test('completing multiple quests on the same day only increases the streak once'
     await flushMicrotasks();
   });
 
+  root = tree.root;
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'complete-quest-quest-2' }).props.onPress();
+    await flushMicrotasks();
+  });
+
   expect(getLastSavedGameState().hero.streakCount).toBe(1);
 });
 
@@ -1924,7 +1995,16 @@ test('completing a quest on the next day increases the streak', async () => {
 
   try {
     const tree = await renderHydratedApp();
-    const root = tree.root;
+    let root = tree.root;
+
+    await ReactTestRenderer.act(async () => {
+      root
+        .findByProps({ testID: 'complete-quest-quest-next-day' })
+        .props.onPress();
+      await flushMicrotasks();
+    });
+
+    root = tree.root;
 
     await ReactTestRenderer.act(async () => {
       root

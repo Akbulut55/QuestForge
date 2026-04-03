@@ -712,6 +712,12 @@ function getQuestGuidanceText(quest) {
 function buildQuestDetails(quest) {
   const ritualProgressPercent = getQuestProgressPercent(quest.status);
   const hasQuestNotes = typeof quest.description === 'string' && quest.description.length > 0;
+  const primaryActionType =
+    quest.status === 'Completed'
+      ? 'none'
+      : quest.status === 'In Progress'
+        ? 'complete'
+        : 'start';
 
   return {
     kicker: 'Quest Details',
@@ -741,7 +747,12 @@ function buildQuestDetails(quest) {
     guidanceTitle: hasQuestNotes ? 'Quest Notes' : 'Quest Guidance',
     guidanceText: hasQuestNotes ? quest.description : getQuestGuidanceText(quest),
     primaryActionLabel:
-      quest.status === 'Completed' ? 'Ritual Complete' : 'Complete Ritual',
+      quest.status === 'Completed'
+        ? 'Ritual Complete'
+        : quest.status === 'In Progress'
+          ? 'Complete Ritual'
+          : 'Start Quest',
+    primaryActionType,
     secondaryActionLabel: 'Edit Quest',
     canComplete: quest.status !== 'Completed',
   };
@@ -1017,6 +1028,15 @@ function getQuestRouteMatch(url) {
     return {
       questId: decodeURIComponent(completeMatch[1]),
       action: 'complete',
+    };
+  }
+
+  const startMatch = url.match(/^\/quests\/([^/]+)\/start$/);
+
+  if (startMatch) {
+    return {
+      questId: decodeURIComponent(startMatch[1]),
+      action: 'start',
     };
   }
 
@@ -1330,6 +1350,46 @@ const server = http.createServer(async (req, res) => {
     } catch (error) {
       sendJson(res, 500, {
         error: 'Unable to complete quest.',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+    return;
+  }
+
+  if (questRouteMatch?.action === 'start' && req.method === 'POST') {
+    try {
+      const currentGameState = await readGameState();
+      const questToStart = currentGameState.quests.find(
+        quest => quest.id === questRouteMatch.questId,
+      );
+
+      if (!questToStart) {
+        sendJson(res, 404, {
+          error: 'Quest not found.',
+        });
+        return;
+      }
+
+      if (questToStart.status !== 'Ready') {
+        sendJson(res, 200, {
+          gameState: currentGameState,
+        });
+        return;
+      }
+
+      const nextGameState = buildNextGameState(currentGameState, {
+        quests: currentGameState.quests.map(quest =>
+          quest.id === questRouteMatch.questId
+            ? { ...quest, status: 'In Progress' }
+            : quest,
+        ),
+      });
+
+      await writeGameState(nextGameState);
+      sendJson(res, 200, { gameState: nextGameState });
+    } catch (error) {
+      sendJson(res, 500, {
+        error: 'Unable to start quest.',
         details: error instanceof Error ? error.message : 'Unknown error',
       });
     }

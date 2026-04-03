@@ -122,6 +122,14 @@ export async function completeRemoteQuest<TResponse>(
   );
 }
 
+export async function startRemoteQuest<TResponse>(
+  questId: string,
+): Promise<TResponse> {
+  return requestJson<TResponse>(`/quests/${encodeURIComponent(questId)}/start`, {
+    method: 'POST',
+  });
+}
+
 export async function updateRemoteTheme<TThemeMode, TResponse>(
   themeMode: TThemeMode,
 ): Promise<TResponse> {

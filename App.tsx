@@ -28,6 +28,7 @@ import {
   fetchRemoteRealmCodex,
   fetchRemoteThemeSanctum,
   saveRemoteGameState,
+  startRemoteQuest,
   updateRemoteQuest,
   updateRemoteSortOption,
   updateRemoteTheme,
@@ -226,6 +227,7 @@ type QuestDetailsResponse = {
   progressStatusText: string;
   guidanceTitle: string;
   guidanceText: string;
+  primaryActionType: 'start' | 'complete' | 'none';
   primaryActionLabel: string;
   secondaryActionLabel: string;
   canComplete: boolean;
@@ -1086,6 +1088,18 @@ function getProgressStats(quests: Quest[]): ProgressStats {
   };
 }
 
+function getQuestPrimaryActionLabel(status: Status) {
+  if (status === 'Completed') {
+    return 'Ritual Complete';
+  }
+
+  if (status === 'In Progress') {
+    return 'Mark Completed';
+  }
+
+  return 'Start Quest';
+}
+
 function shouldUnlockAchievement({
   achievementId,
   hero,
@@ -1360,13 +1374,13 @@ function ThemeToggle({
 function QuestCard({
   quest,
   styles,
-  onComplete,
+  onPrimaryAction,
   onEdit,
   onOpenDetails,
 }: {
   quest: Quest;
   styles: ReturnType<typeof createStyles>;
-  onComplete?: (questId: string) => void;
+  onPrimaryAction?: (questId: string) => void;
   onEdit?: (questId: string) => void;
   onOpenDetails?: (questId: string) => void;
 }) {
@@ -1413,12 +1427,14 @@ function QuestCard({
         </Pressable>
       ) : null}
 
-      {!isComplete && onComplete ? (
+      {!isComplete && onPrimaryAction ? (
         <Pressable
-          onPress={() => onComplete(quest.id)}
+          onPress={() => onPrimaryAction(quest.id)}
           style={styles.completeButton}
           testID={`complete-quest-${quest.id}`}>
-          <Text style={styles.completeButtonText}>Mark Completed</Text>
+          <Text style={styles.completeButtonText}>
+            {getQuestPrimaryActionLabel(quest.status)}
+          </Text>
         </Pressable>
       ) : null}
 
@@ -1446,7 +1462,7 @@ function QuestBoardScreen({
   onRefreshAppConfig,
   onToggleTheme,
   onAddSuggestedQuest,
-  onCompleteQuest,
+  onPrimaryQuestAction,
   onEditQuest,
   onOpenQuestDetails,
   onNavigateToAddQuest,
@@ -1468,7 +1484,7 @@ function QuestBoardScreen({
   onRefreshAppConfig: () => void;
   onToggleTheme: () => void;
   onAddSuggestedQuest: (suggestion: SuggestedQuest) => void;
-  onCompleteQuest: (questId: string) => void;
+  onPrimaryQuestAction: (questId: string) => void;
   onEditQuest: (questId: string) => void;
   onOpenQuestDetails: (questId: string) => void;
   onNavigateToAddQuest: () => void;
@@ -1811,8 +1827,10 @@ function QuestBoardScreen({
           {section.quests.map(quest => (
             <QuestCard
               key={quest.id}
-              onComplete={
-                section.key === 'completed' ? undefined : onCompleteQuest
+              onPrimaryAction={
+                section.key === 'completed'
+                  ? undefined
+                  : onPrimaryQuestAction
               }
               onEdit={
                 appConfig.featureFlags.showAddQuestScreen ? onEditQuest : undefined
@@ -2270,7 +2288,7 @@ function ThemeSanctumScreen({
 
 function QuestDetailsScreen({
   onBack,
-  onComplete,
+  onPrimaryAction,
   onEdit,
   onToggleTheme,
   questDetails,
@@ -2278,7 +2296,7 @@ function QuestDetailsScreen({
   themeMode,
 }: {
   onBack: () => void;
-  onComplete: (questId: string) => void;
+  onPrimaryAction: (questId: string) => void;
   onEdit: (questId: string) => void;
   onToggleTheme: () => void;
   questDetails: QuestDetailsResponse;
@@ -2393,9 +2411,9 @@ function QuestDetailsScreen({
           existing backend quest actions underneath.
         </Text>
 
-        {questDetails.canComplete ? (
+        {questDetails.primaryActionType !== 'none' ? (
           <Pressable
-            onPress={() => onComplete(questDetails.questId)}
+            onPress={() => onPrimaryAction(questDetails.questId)}
             style={styles.primaryActionButton}
             testID="complete-quest-from-details">
             <Text style={styles.primaryActionText}>
@@ -2859,7 +2877,18 @@ function App() {
     }
   };
 
-  const handleCompleteQuest = async (questId: string) => {
+  const handleQuestPrimaryAction = async (questId: string) => {
+    const quest = gameState.quests.find(currentQuest => currentQuest.id === questId);
+
+    if (!quest || quest.status === 'Completed') {
+      return;
+    }
+
+    if (quest.status === 'Ready') {
+      await runGameStateRequest(() => startRemoteQuest<GameStateResponse>(questId));
+      return;
+    }
+
     const response = await runGameStateRequest(() =>
       completeRemoteQuest<CompleteQuestResponse>(questId),
     );
@@ -3066,7 +3095,7 @@ function App() {
                   hero={gameState.hero}
                   isRefreshingAppConfig={isRefreshingAppConfig}
                   onAddSuggestedQuest={handleAddSuggestedQuest}
-                  onCompleteQuest={handleCompleteQuest}
+                  onPrimaryQuestAction={handleQuestPrimaryAction}
                   onEditQuest={questId => {
                     setEditingQuestId(questId);
                     setCurrentScreen('add-quest');
@@ -3134,7 +3163,7 @@ function App() {
                 questDetails ? (
                   <QuestDetailsScreen
                     onBack={returnToBoard}
-                    onComplete={handleCompleteQuest}
+                    onPrimaryAction={handleQuestPrimaryAction}
                     onEdit={questId => {
                       setEditingQuestId(questId);
                       setCurrentScreen('add-quest');

@@ -25,8 +25,8 @@ After teacher feedback, the project direction was corrected beginning in Iterati
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 27 |
-| Total Weight (kg) | 280 |
+| Total Iterations | 28 |
+| Total Weight (kg) | 290 |
 | Total Time (min) | Not tracked |
 | Failed Attempts | Not tracked |
 
@@ -1052,6 +1052,32 @@ do 27 28 29
 **Screenshot:** `iteration-27-quest-notes.png`
 
 **Commit:** `[NAIM: Quest Blacksmith] Add quest description notes - 10kg`
+
+---
+
+### Iteration 28
+
+| Field | Value |
+|-------|-------|
+| Feature | `Backend-driven quest status flow` |
+| Weight | `10 kg` |
+| Tool Used | `Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+do 27 28 29
+```
+
+**What happened:**
+- Reworked the quest lifecycle into a simple backend-driven flow: `Ready -> In Progress -> Completed`.
+- Added a backend quest-start action, updated the board and Quest Details screen to show the correct primary action for each status, and kept XP and streak rewards tied only to the final completion step so the flow stays predictable.
+
+**Screenshot:** `iteration-28-quest-status-flow.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add quest status flow - 10kg`
 
 ---
 
