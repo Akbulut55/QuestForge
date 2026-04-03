@@ -4,7 +4,6 @@ const fs = require('fs/promises');
 const path = require('path');
 
 const PORT = 4000;
-const HOST = '0.0.0.0';
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const dataDirectory = path.join(__dirname, 'data');
 const dataFilePath = path.join(dataDirectory, 'game-state.json');
@@ -1806,8 +1805,8 @@ const server = http.createServer(async (req, res) => {
   });
 });
 
-server.listen(PORT, HOST, () => {
-  console.log(`QuestForge backend running at http://${HOST}:${PORT}`);
+server.listen(PORT, () => {
+  console.log(`QuestForge backend running at http://localhost:${PORT}`);
 });
 
 

@@ -42,14 +42,11 @@ function getBackendBaseUrls() {
   const baseUrls: string[] = [];
 
   if (Platform.OS === 'android') {
+    appendBackendUrl(baseUrls, scriptHost);
     appendBackendUrl(baseUrls, '10.0.2.2');
     appendBackendUrl(baseUrls, '10.0.3.2');
-
-    if (scriptHost === 'localhost' || scriptHost === '127.0.0.1') {
-      appendBackendUrl(baseUrls, '10.0.2.2');
-    } else {
-      appendBackendUrl(baseUrls, scriptHost);
-    }
+    appendBackendUrl(baseUrls, 'localhost');
+    appendBackendUrl(baseUrls, '127.0.0.1');
   } else {
     appendBackendUrl(baseUrls, scriptHost);
     appendBackendUrl(baseUrls, 'localhost');
