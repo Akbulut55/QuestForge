@@ -23,6 +23,7 @@ import {
 import {
   completeRemoteQuest,
   createRemoteQuest,
+  createRemoteQuestPoolTemplate,
   deleteRemoteQuest,
   failRemoteQuest,
   fetchRemoteAppConfig,
@@ -33,9 +34,11 @@ import {
   fetchRemoteRealmCodex,
   fetchRemoteThemeSanctum,
   resetRemoteProgress,
+  resetRemoteQuestPool,
   saveRemoteGameState,
   startRemoteQuest,
   updateRemoteQuest,
+  updateRemoteQuestPoolTemplate,
   updateRemoteSortOption,
   updateRemoteTheme,
   updateRemoteThemePack,
@@ -84,6 +87,7 @@ type Quest = {
   description: string;
   tag: QuestTag;
   dueDate: string | null;
+  startedAt: string | null;
   difficulty: Difficulty;
   xpReward: number;
   status: Status;
@@ -105,6 +109,10 @@ type QuestDraft = {
 };
 
 type SuggestedQuest = QuestDraft;
+type QuestPoolTemplate = SuggestedQuest & {
+  id: string;
+};
+type DraftEditorMode = 'quest' | 'quest-pool';
 
 type HeroProgress = {
   xp: number;
@@ -187,7 +195,7 @@ type QuestPoolResponse = {
   subtitle: string;
   searchPlaceholder: string;
   categories: string[];
-  templates: SuggestedQuest[];
+  templates: QuestPoolTemplate[];
 };
 
 type RealmCodexResponse = {
@@ -573,6 +581,7 @@ const initialQuests: Quest[] = [
       'Clear the laundry pile, sort the essentials, and leave the guild hall ready for the next work cycle.',
     tag: 'Chores',
     dueDate: null,
+    startedAt: null,
     difficulty: 'Epic',
     xpReward: 50,
     status: 'In Progress',
@@ -590,6 +599,7 @@ const initialQuests: Quest[] = [
       'Prepare your desk, water, and playlist so the next study session begins with less resistance.',
     tag: 'Study',
     dueDate: null,
+    startedAt: null,
     difficulty: 'Medium',
     xpReward: 20,
     status: 'Ready',
@@ -607,6 +617,7 @@ const initialQuests: Quest[] = [
       'Review one core topic and write down the sharpest insight before you close the session.',
     tag: 'Study',
     dueDate: null,
+    startedAt: null,
     difficulty: 'Easy',
     xpReward: 10,
     status: 'Completed',
@@ -722,7 +733,7 @@ const suggestionTemplates: SuggestedQuest[] = [
   {
     title: 'Lift the Iron Sigils',
     description:
-      'Complete a short workout or movement ritual to keep momentum alive.',
+      'Complete a short workout or movement session to keep momentum alive.',
     tag: 'Fitness',
     difficulty: 'Hard',
     category: 'Side Quest',
@@ -931,6 +942,10 @@ function normalizeResolvedDate(resolvedDate: string | null | undefined) {
   return normalizeDueDate(resolvedDate);
 }
 
+function normalizeStartedAt(startedAt: string | null | undefined) {
+  return normalizeDueDate(startedAt);
+}
+
 function parseDueMoment(dueDate: string | null | undefined) {
   const normalizedDueDate = normalizeDueDate(dueDate);
 
@@ -972,8 +987,45 @@ function formatDueDateLabel(dueDate: string | null | undefined) {
   });
 }
 
+function getQuestReminderLeadTimeMs(
+  quest: Pick<Quest, 'dueDate'> &
+    Partial<Pick<Quest, 'startedAt' | 'createdAt'>>,
+) {
+  const dueMoment = parseDueMoment(quest.dueDate);
+
+  if (!dueMoment || dueMoment.isDateOnly) {
+    return null;
+  }
+
+  const startedAt = normalizeStartedAt(quest.startedAt);
+  const referenceTimeMs = startedAt
+    ? new Date(startedAt).getTime()
+    : typeof quest.createdAt === 'number'
+      ? quest.createdAt
+      : Date.now();
+  const totalDurationMs = Math.max(
+    dueMoment.date.getTime() - referenceTimeMs,
+    0,
+  );
+
+  if (totalDurationMs <= 4 * 60 * 60 * 1000) {
+    return 30 * 60 * 1000;
+  }
+
+  if (totalDurationMs <= 24 * 60 * 60 * 1000) {
+    return 60 * 60 * 1000;
+  }
+
+  if (totalDurationMs <= 3 * DAY_IN_MS) {
+    return 2 * 60 * 60 * 1000;
+  }
+
+  return 4 * 60 * 60 * 1000;
+}
+
 function getQuestDueStateLabel(
-  quest: Pick<Quest, 'status' | 'dueDate'>,
+  quest: Pick<Quest, 'status' | 'dueDate'> &
+    Partial<Pick<Quest, 'startedAt' | 'createdAt'>>,
   todayKey = getDateKey(),
 ) {
   const dueMoment = parseDueMoment(quest.dueDate);
@@ -1014,7 +1066,12 @@ function getQuestDueStateLabel(
     return 'Overdue';
   }
 
-  if (dueTimeDifferenceMs <= 2 * 60 * 60 * 1000) {
+  const reminderLeadTimeMs = getQuestReminderLeadTimeMs(quest);
+
+  if (
+    reminderLeadTimeMs !== null &&
+    dueTimeDifferenceMs <= reminderLeadTimeMs
+  ) {
     return 'Due Soon';
   }
 
@@ -1025,7 +1082,10 @@ function getQuestDueStateLabel(
   return 'Upcoming';
 }
 
-function getQuestDueDetails(quest: Pick<Quest, 'status' | 'dueDate'>) {
+function getQuestDueDetails(
+  quest: Pick<Quest, 'status' | 'dueDate'> &
+    Partial<Pick<Quest, 'startedAt' | 'createdAt'>>,
+) {
   const dueStateLabel = getQuestDueStateLabel(quest);
 
   return {
@@ -1205,6 +1265,13 @@ function normalizeQuest(quest: Omit<Quest, 'id'> & Partial<Pick<Quest, 'id'>>) {
         ? quest.tag.trim()
         : 'General',
     dueDate: normalizeDueDate(quest.dueDate),
+    startedAt:
+      normalizedStatus === 'In Progress'
+        ? normalizeStartedAt(quest.startedAt) ??
+          new Date(
+            typeof quest.createdAt === 'number' ? quest.createdAt : Date.now(),
+          ).toISOString()
+        : normalizeStartedAt(quest.startedAt),
     status: normalizedStatus,
     completedAt,
     failedAt,
@@ -1573,7 +1640,7 @@ function getProgressStats(quests: Quest[]): ProgressStats {
 
 function getQuestPrimaryActionLabel(status: Status) {
   if (status === 'Completed' || status === 'Failed') {
-    return 'Ritual Complete';
+    return 'Quest Complete';
   }
 
   if (status === 'In Progress') {
@@ -2032,6 +2099,7 @@ function QuestCard({
   isExpanded,
   styles,
   onPrimaryAction,
+  onFail,
   onEdit,
   onOpenDetails,
   onToggleExpand,
@@ -2040,6 +2108,7 @@ function QuestCard({
   isExpanded: boolean;
   styles: ReturnType<typeof createStyles>;
   onPrimaryAction?: (questId: string) => void;
+  onFail?: (questId: string) => void;
   onEdit?: (questId: string) => void;
   onOpenDetails?: (questId: string) => void;
   onToggleExpand?: (questId: string) => void;
@@ -2083,7 +2152,7 @@ function QuestCard({
               style={styles.expandChevronButton}
               testID={`toggle-quest-expand-${quest.id}`}>
               <Text style={styles.expandChevronIcon}>
-                {isExpanded ? '▴' : '▾'}
+                {isExpanded ? '^' : 'v'}
               </Text>
             </Pressable>
           ) : null}
@@ -2152,16 +2221,31 @@ function QuestCard({
             </Pressable>
           ) : null}
 
-          {onEdit ? (
-            <Pressable
-              onPress={event => {
-                event.stopPropagation();
-                onEdit(quest.id);
-              }}
-              style={styles.cardSecondaryButton}
-              testID={`edit-quest-${quest.id}`}>
-              <Text style={styles.cardSecondaryButtonText}>Edit Quest</Text>
-            </Pressable>
+          {onEdit || onFail ? (
+            <View style={styles.questCardActionRow}>
+              {onEdit ? (
+                <Pressable
+                  onPress={event => {
+                    event.stopPropagation();
+                    onEdit(quest.id);
+                  }}
+                  style={[styles.cardSecondaryButton, styles.questCardInlineAction]}
+                  testID={`edit-quest-${quest.id}`}>
+                  <Text style={styles.cardSecondaryButtonText}>Edit Quest</Text>
+                </Pressable>
+              ) : null}
+              {onFail ? (
+                <Pressable
+                  onPress={event => {
+                    event.stopPropagation();
+                    onFail(quest.id);
+                  }}
+                  style={[styles.inlineDangerButton, styles.questCardInlineAction]}
+                  testID={`fail-quest-${quest.id}`}>
+                  <Text style={styles.inlineDangerButtonText}>Mark Failed</Text>
+                </Pressable>
+              ) : null}
+            </View>
           ) : null}
         </>
       ) : (
@@ -2184,6 +2268,7 @@ function QuestBoardScreen({
   onToggleTheme,
   onAddSuggestedQuest,
   onPrimaryQuestAction,
+  onFailQuest,
   onEditQuest,
   onOpenQuestDetails,
   onNavigateToAddQuest,
@@ -2209,6 +2294,7 @@ function QuestBoardScreen({
   onToggleTheme: () => void;
   onAddSuggestedQuest: (suggestion: SuggestedQuest) => void;
   onPrimaryQuestAction: (questId: string) => void;
+  onFailQuest: (questId: string) => void;
   onEditQuest: (questId: string) => void;
   onOpenQuestDetails: (questId: string) => void;
   onNavigateToAddQuest: () => void;
@@ -2230,6 +2316,8 @@ function QuestBoardScreen({
   const [selectedStatusFilter, setSelectedStatusFilter] =
     useState<StatusFilter>('All');
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
+  const [isSuggestionsExpanded, setIsSuggestionsExpanded] = useState(false);
+  const [isGuildHubExpanded, setIsGuildHubExpanded] = useState(false);
   const [expandedQuestIds, setExpandedQuestIds] = useState<string[]>([]);
   const feedbackOpacity = useRef(new Animated.Value(0)).current;
   const feedbackTranslateY = useRef(new Animated.Value(-12)).current;
@@ -2454,142 +2542,176 @@ function QuestBoardScreen({
 
       {appConfig.featureFlags.showSuggestionSection ? (
         <View style={styles.boardActionCard}>
-          <Text style={styles.sectionTitle}>{appConfig.suggestionSectionTitle}</Text>
-          <Text style={styles.formIntro}>
-            Fresh quest ideas picked for today&apos;s momentum.
-          </Text>
-          <Text style={styles.formHint}>Forged for {dailySuggestionDateKey}</Text>
-
-          {dailySuggestions.length > 0 ? (
-            dailySuggestions.map((suggestion, index) => (
-              (() => {
-                const suggestionDueDetails = getQuestDueDetails({
-                  status: 'Ready',
-                  dueDate: suggestion.dueDate ?? null,
-                });
-
-                return (
-                  <View
-                    key={`${suggestion.title}-${index}`}
-                    style={styles.suggestionCard}
-                    testID={`daily-suggestion-card-${index}`}>
-                    <Text style={styles.suggestionTitle}>{suggestion.title}</Text>
-                    <Text style={styles.questDescription}>{suggestion.description}</Text>
-                    <View style={styles.metaRow}>
-                      <View style={styles.metaPill}>
-                        <Text style={styles.metaLabel}>Difficulty</Text>
-                        <Text style={styles.metaValue}>{suggestion.difficulty}</Text>
-                      </View>
-                      <View style={styles.metaPill}>
-                        <Text style={styles.metaLabel}>Category</Text>
-                        <Text style={styles.metaValue}>{suggestion.category}</Text>
-                      </View>
-                      <View style={styles.metaPill}>
-                        <Text style={styles.metaLabel}>Tag</Text>
-                        <Text style={styles.metaValue}>{suggestion.tag}</Text>
-                      </View>
-                    </View>
-                    {suggestion.dueDate ? (
-                      <View style={styles.metaRow}>
-                        <View style={styles.metaPill}>
-                          <Text style={styles.metaLabel}>Deadline</Text>
-                          <Text style={styles.metaValue}>
-                            {suggestionDueDetails.dueDateLabel}
-                          </Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.metaPill,
-                            suggestionDueDetails.isUrgent
-                              ? styles.metaPillHighlight
-                              : null,
-                          ]}>
-                          <Text style={styles.metaLabel}>Reminder</Text>
-                          <Text
-                            style={[
-                              styles.metaValue,
-                              suggestionDueDetails.isUrgent
-                                ? styles.metaValueHighlight
-                                : null,
-                            ]}>
-                            {suggestionDueDetails.dueStateLabel}
-                          </Text>
-                        </View>
-                      </View>
-                    ) : null}
-                    <Pressable
-                      onPress={() => onAddSuggestedQuest(suggestion)}
-                      style={styles.cardSecondaryButton}
-                      testID={`add-suggested-quest-${index}`}>
-                      <Text style={styles.cardSecondaryButtonText}>
-                        Add Suggested Quest
-                      </Text>
-                    </Pressable>
-                  </View>
-                );
-              })()
-            ))
-          ) : (
-            <View style={styles.emptyStateCard}>
-              <Text style={styles.emptyStateTitle}>No fresh suggestions today</Text>
-              <Text style={styles.emptyStateText}>
-                Your current quest log already covers the local suggestion pool.
+          <Pressable
+            onPress={() => setIsSuggestionsExpanded(expanded => !expanded)}
+            style={styles.sectionHeaderRow}
+            testID="toggle-suggestions-panel">
+            <View style={styles.sectionHeaderCopy}>
+              <Text style={styles.sectionTitle}>{appConfig.suggestionSectionTitle}</Text>
+              <Text style={styles.formHint}>
+                {dailySuggestions.length} ready for {dailySuggestionDateKey}
               </Text>
             </View>
-          )}
+            <Text style={styles.expandChevronIcon}>
+              {isSuggestionsExpanded ? '^' : 'v'}
+            </Text>
+          </Pressable>
+
+          {isSuggestionsExpanded ? (
+            <>
+              <Text style={styles.formIntro}>
+                Fresh quest ideas picked for today&apos;s momentum.
+              </Text>
+
+              {dailySuggestions.length > 0 ? (
+                dailySuggestions.map((suggestion, index) => (
+                  (() => {
+                    const suggestionDueDetails = getQuestDueDetails({
+                      status: 'Ready',
+                      dueDate: suggestion.dueDate ?? null,
+                    });
+
+                    return (
+                      <View
+                        key={`${suggestion.title}-${index}`}
+                        style={styles.suggestionCard}
+                        testID={`daily-suggestion-card-${index}`}>
+                        <Text style={styles.suggestionTitle}>{suggestion.title}</Text>
+                        <Text style={styles.questDescription}>{suggestion.description}</Text>
+                        <View style={styles.metaRow}>
+                          <View style={styles.metaPill}>
+                            <Text style={styles.metaLabel}>Difficulty</Text>
+                            <Text style={styles.metaValue}>{suggestion.difficulty}</Text>
+                          </View>
+                          <View style={styles.metaPill}>
+                            <Text style={styles.metaLabel}>Category</Text>
+                            <Text style={styles.metaValue}>{suggestion.category}</Text>
+                          </View>
+                          <View style={styles.metaPill}>
+                            <Text style={styles.metaLabel}>Tag</Text>
+                            <Text style={styles.metaValue}>{suggestion.tag}</Text>
+                          </View>
+                        </View>
+                        {suggestion.dueDate ? (
+                          <View style={styles.metaRow}>
+                            <View style={styles.metaPill}>
+                              <Text style={styles.metaLabel}>Deadline</Text>
+                              <Text style={styles.metaValue}>
+                                {suggestionDueDetails.dueDateLabel}
+                              </Text>
+                            </View>
+                            <View
+                              style={[
+                                styles.metaPill,
+                                suggestionDueDetails.isUrgent
+                                  ? styles.metaPillHighlight
+                                  : null,
+                              ]}>
+                              <Text style={styles.metaLabel}>Reminder</Text>
+                              <Text
+                                style={[
+                                  styles.metaValue,
+                                  suggestionDueDetails.isUrgent
+                                    ? styles.metaValueHighlight
+                                    : null,
+                                ]}>
+                                {suggestionDueDetails.dueStateLabel}
+                              </Text>
+                            </View>
+                          </View>
+                        ) : null}
+                        <Pressable
+                          onPress={() => onAddSuggestedQuest(suggestion)}
+                          style={styles.cardSecondaryButton}
+                          testID={`add-suggested-quest-${index}`}>
+                          <Text style={styles.cardSecondaryButtonText}>
+                            Add Suggested Quest
+                          </Text>
+                        </Pressable>
+                      </View>
+                    );
+                  })()
+                ))
+              ) : (
+                <View style={styles.emptyStateCard}>
+                  <Text style={styles.emptyStateTitle}>No fresh suggestions today</Text>
+                  <Text style={styles.emptyStateText}>
+                    Your current quest log already covers the saved quest pool.
+                  </Text>
+                </View>
+              )}
+            </>
+          ) : null}
         </View>
       ) : null}
 
 
         <View style={styles.boardActionCard}>
-          <Text style={styles.sectionTitle}>{appConfig.addQuestSectionTitle}</Text>
-          <Text style={styles.formIntro}>
-            Shape your next quest, check your profile, or review quest history.
-          </Text>
-        {appConfig.featureFlags.showAddQuestScreen ? (
           <Pressable
-            onPress={onNavigateToAddQuest}
-            style={styles.primaryActionButton}
-            testID="navigate-to-add-quest">
-            <Text style={styles.primaryActionText}>Quest Forge</Text>
+            onPress={() => setIsGuildHubExpanded(expanded => !expanded)}
+            style={styles.sectionHeaderRow}
+            testID="toggle-guild-hub-panel">
+            <View style={styles.sectionHeaderCopy}>
+              <Text style={styles.sectionTitle}>{appConfig.addQuestSectionTitle}</Text>
+              <Text style={styles.formHint}>
+                Quest Forge, Profile, Quest Pool, and realm tools.
+              </Text>
+            </View>
+            <Text style={styles.expandChevronIcon}>
+              {isGuildHubExpanded ? '^' : 'v'}
+            </Text>
           </Pressable>
-        ) : null}
-        {appConfig.featureFlags.showProgressScreen ? (
-          <Pressable
-            onPress={onNavigateToProgress}
-            style={styles.secondaryActionButton}
-            testID="navigate-to-progress-screen">
-            <Text style={styles.secondaryActionText}>Profile</Text>
-          </Pressable>
-        ) : null}
-        <Pressable
-          onPress={onNavigateToQuestPool}
-          style={styles.secondaryActionButton}
-          testID="navigate-to-quest-pool-screen">
-          <Text style={styles.secondaryActionText}>Quest Pool</Text>
-        </Pressable>
-        <Pressable
-          onPress={onNavigateToHistory}
-          style={styles.secondaryActionButton}
-          testID="navigate-to-history-screen">
-          <Text style={styles.secondaryActionText}>History</Text>
-        </Pressable>
-        {appConfig.featureFlags.showRealmCodexScreen ? (
-          <Pressable
-            onPress={onNavigateToRealmCodex}
-            style={styles.secondaryActionButton}
-            testID="navigate-to-realm-codex">
-            <Text style={styles.secondaryActionText}>Realm Codex</Text>
-          </Pressable>
-        ) : null}
-        {appConfig.featureFlags.showThemeSanctumScreen ? (
-          <Pressable
-            onPress={onNavigateToThemeSanctum}
-            style={styles.secondaryActionButton}
-            testID="navigate-to-theme-sanctum">
-            <Text style={styles.secondaryActionText}>Theme Sanctum</Text>
-          </Pressable>
-        ) : null}
+          {isGuildHubExpanded ? (
+            <>
+              <Text style={styles.formIntro}>
+                Shape your next quest, check your profile, or review quest history.
+              </Text>
+              {appConfig.featureFlags.showAddQuestScreen ? (
+                <Pressable
+                  onPress={onNavigateToAddQuest}
+                  style={styles.primaryActionButton}
+                  testID="navigate-to-add-quest">
+                  <Text style={styles.primaryActionText}>Quest Forge</Text>
+                </Pressable>
+              ) : null}
+              {appConfig.featureFlags.showProgressScreen ? (
+                <Pressable
+                  onPress={onNavigateToProgress}
+                  style={styles.secondaryActionButton}
+                  testID="navigate-to-progress-screen">
+                  <Text style={styles.secondaryActionText}>Profile</Text>
+                </Pressable>
+              ) : null}
+              <Pressable
+                onPress={onNavigateToQuestPool}
+                style={styles.secondaryActionButton}
+                testID="navigate-to-quest-pool-screen">
+                <Text style={styles.secondaryActionText}>Quest Pool</Text>
+              </Pressable>
+              <Pressable
+                onPress={onNavigateToHistory}
+                style={styles.secondaryActionButton}
+                testID="navigate-to-history-screen">
+                <Text style={styles.secondaryActionText}>History</Text>
+              </Pressable>
+              {appConfig.featureFlags.showRealmCodexScreen ? (
+                <Pressable
+                  onPress={onNavigateToRealmCodex}
+                  style={styles.secondaryActionButton}
+                  testID="navigate-to-realm-codex">
+                  <Text style={styles.secondaryActionText}>Realm Codex</Text>
+                </Pressable>
+              ) : null}
+              {appConfig.featureFlags.showThemeSanctumScreen ? (
+                <Pressable
+                  onPress={onNavigateToThemeSanctum}
+                  style={styles.secondaryActionButton}
+                  testID="navigate-to-theme-sanctum">
+                  <Text style={styles.secondaryActionText}>Theme Sanctum</Text>
+                </Pressable>
+              ) : null}
+            </>
+          ) : null}
       </View>
 
       {appConfig.featureFlags.showFilterSection ? (
@@ -2694,6 +2816,7 @@ function QuestBoardScreen({
             <QuestCard
               key={quest.id}
               isExpanded={expandedQuestIds.includes(quest.id)}
+              onFail={onFailQuest}
               onPrimaryAction={
                 section.key === 'completed'
                   ? undefined
@@ -3688,23 +3811,31 @@ function QuestDetailsScreen({
 }
 
 function AddQuestScreen({
+  editorMode,
   onBack,
   onSave,
+  onSaveToPool,
   onDelete,
+  poolTemplateToEdit,
   questToEdit,
   onToggleTheme,
   styles,
   themeMode,
 }: {
+  editorMode: DraftEditorMode;
   onBack: () => void;
   onSave: (questDraft: QuestDraft) => void;
+  onSaveToPool: (questDraft: QuestDraft) => void;
   onDelete: (questId: string) => void;
+  poolTemplateToEdit: QuestPoolTemplate | null;
   questToEdit: Quest | null;
   onToggleTheme: () => void;
   styles: ReturnType<typeof createStyles>;
   themeMode: ThemeMode;
 }) {
-  const isEditing = questToEdit !== null;
+  const isEditingQuest = questToEdit !== null;
+  const isEditingPoolTemplate = poolTemplateToEdit !== null;
+  const activeDraftSource = questToEdit ?? poolTemplateToEdit;
   const [questTitle, setQuestTitle] = useState('');
   const [questDescription, setQuestDescription] = useState('');
   const [questDueDate, setQuestDueDate] = useState('');
@@ -3715,13 +3846,13 @@ function AddQuestScreen({
     useState<Category>('Side Quest');
 
   useEffect(() => {
-    if (questToEdit) {
-      setQuestTitle(questToEdit.title);
-      setQuestDescription(questToEdit.description);
-      setQuestDueDate(questToEdit.dueDate ?? '');
-      setSelectedTag(questToEdit.tag);
-      setSelectedDifficulty(questToEdit.difficulty);
-      setSelectedCategory(questToEdit.category);
+    if (activeDraftSource) {
+      setQuestTitle(activeDraftSource.title);
+      setQuestDescription(activeDraftSource.description ?? '');
+      setQuestDueDate(activeDraftSource.dueDate ?? '');
+      setSelectedTag(activeDraftSource.tag ?? 'General');
+      setSelectedDifficulty(activeDraftSource.difficulty);
+      setSelectedCategory(activeDraftSource.category);
       return;
     }
 
@@ -3731,7 +3862,7 @@ function AddQuestScreen({
     setSelectedTag('General');
     setSelectedDifficulty('Easy');
     setSelectedCategory('Side Quest');
-  }, [questToEdit]);
+  }, [activeDraftSource]);
 
   const isValidDueDate =
     questDueDate.trim().length === 0 || normalizeDueDate(questDueDate) !== null;
@@ -3745,6 +3876,23 @@ function AddQuestScreen({
     }
 
     onSave({
+      title,
+      description: questDescription.trim(),
+      tag: selectedTag,
+      dueDate: normalizeDueDate(questDueDate),
+      difficulty: selectedDifficulty,
+      category: selectedCategory,
+    });
+  };
+
+  const handleSaveTemplate = () => {
+    const title = questTitle.trim();
+
+    if (!title) {
+      return;
+    }
+
+    onSaveToPool({
       title,
       description: questDescription.trim(),
       tag: selectedTag,
@@ -3773,22 +3921,40 @@ function AddQuestScreen({
         />
       </View>
 
-      <Text style={styles.kicker}>{isEditing ? 'Edit Quest' : 'Quest Forge'}</Text>
+      <Text style={styles.kicker}>
+        {editorMode === 'quest-pool'
+          ? isEditingPoolTemplate
+            ? 'Edit Quest Pool'
+            : 'Quest Pool'
+          : isEditingQuest
+            ? 'Edit Quest'
+            : 'Quest Forge'}
+      </Text>
       <Text style={styles.title}>
-        {isEditing ? 'Refine Quest Details' : 'Shape Your Next Quest'}
+        {editorMode === 'quest-pool'
+          ? isEditingPoolTemplate
+            ? 'Refine Saved Template'
+            : 'Forge A Reusable Template'
+          : isEditingQuest
+            ? 'Refine Quest Details'
+            : 'Shape Your Next Quest'}
       </Text>
       <Text style={styles.subtitle}>
-        {isEditing
-          ? 'Update the quest and send the changes back to the Quest Board instantly.'
-          : 'Create a new mission and send it back to the Quest Board instantly.'}
+        {editorMode === 'quest-pool'
+          ? 'Edit reusable templates that can be added to the board whenever you need them.'
+          : isEditingQuest
+            ? 'Update the quest and send the changes back to the Quest Board instantly.'
+            : 'Create a new mission and send it back to the Quest Board instantly.'}
       </Text>
 
       <View style={styles.formCard}>
         <Text style={styles.sectionTitle}>Quest Details</Text>
         <Text style={styles.formIntro}>
-          {isEditing
-            ? 'Keep this screen focused on updating one existing quest at a time.'
-            : 'Keep this screen focused on creating one new quest at a time.'}
+          {editorMode === 'quest-pool'
+            ? 'Use this screen to keep your reusable quest templates clean, practical, and easy to drop into the board.'
+            : isEditingQuest
+              ? 'Keep this screen focused on updating one existing quest at a time.'
+              : 'Keep this screen focused on creating one new quest at a time.'}
         </Text>
 
         {questToEdit?.status === 'Completed' || questToEdit?.status === 'Failed' ? (
@@ -3872,16 +4038,35 @@ function AddQuestScreen({
 
         <Pressable
           disabled={!canSaveQuest}
-          onPress={handleSaveQuest}
+          onPress={editorMode === 'quest-pool' ? handleSaveTemplate : handleSaveQuest}
           style={[
             styles.saveButton,
             !canSaveQuest && styles.saveButtonDisabled,
           ]}
           testID="save-quest-button">
           <Text style={styles.saveButtonText}>
-            {isEditing ? 'Save Changes' : 'Save Quest'}
+            {editorMode === 'quest-pool'
+              ? isEditingPoolTemplate
+                ? 'Save Template'
+                : 'Add To Quest Pool'
+              : isEditingQuest
+                ? 'Save Changes'
+                : 'Save Quest'}
           </Text>
         </Pressable>
+
+        {editorMode === 'quest' && !isEditingQuest ? (
+          <Pressable
+            disabled={!canSaveQuest}
+            onPress={handleSaveTemplate}
+            style={[
+              styles.secondaryActionButton,
+              !canSaveQuest && styles.saveButtonDisabled,
+            ]}
+            testID="save-to-quest-pool-button">
+            <Text style={styles.secondaryActionText}>Save To Quest Pool</Text>
+          </Pressable>
+        ) : null}
 
         {questToEdit ? (
           <Pressable
@@ -3900,7 +4085,9 @@ function QuestPoolScreen({
   isRefreshingQuestPool,
   onAddTemplate,
   onBack,
+  onEditTemplate,
   onRefresh,
+  onResetDefaults,
   onToggleTheme,
   questPool,
   styles,
@@ -3909,7 +4096,9 @@ function QuestPoolScreen({
   isRefreshingQuestPool: boolean;
   onAddTemplate: (template: SuggestedQuest, category: Category) => void;
   onBack: () => void;
+  onEditTemplate: (templateId: string) => void;
   onRefresh: () => void;
+  onResetDefaults: () => void;
   onToggleTheme: () => void;
   questPool: QuestPoolResponse;
   styles: ReturnType<typeof createStyles>;
@@ -3964,14 +4153,22 @@ function QuestPoolScreen({
               Save time by dropping proven daily tasks straight into your board.
             </Text>
           </View>
-          <Pressable
-            onPress={onRefresh}
-            style={styles.inlineUtilityButton}
-            testID="refresh-quest-pool">
-            <Text style={styles.inlineUtilityButtonText}>
-              {isRefreshingQuestPool ? '...' : 'Refresh'}
-            </Text>
-          </Pressable>
+          <View style={styles.filterHeaderActions}>
+            <Pressable
+              onPress={onResetDefaults}
+              style={styles.inlineUtilityButton}
+              testID="reset-quest-pool-defaults">
+              <Text style={styles.inlineUtilityButtonText}>Reset Defaults</Text>
+            </Pressable>
+            <Pressable
+              onPress={onRefresh}
+              style={styles.inlineUtilityButton}
+              testID="refresh-quest-pool">
+              <Text style={styles.inlineUtilityButtonText}>
+                {isRefreshingQuestPool ? '...' : 'Refresh'}
+              </Text>
+            </Pressable>
+          </View>
         </View>
 
         <View style={styles.formField}>
@@ -4096,6 +4293,12 @@ function QuestPoolScreen({
                   </Text>
                 </Pressable>
               </View>
+              <Pressable
+                onPress={() => onEditTemplate(template.id)}
+                style={styles.cardSecondaryButton}
+                testID={`edit-quest-pool-template-${template.id}`}>
+                <Text style={styles.cardSecondaryButtonText}>Edit Template</Text>
+              </Pressable>
             </View>
           );
         })
@@ -4114,6 +4317,8 @@ function App() {
   const [completionFeedback, setCompletionFeedback] =
     useState<CompletionFeedback | null>(null);
   const [editingQuestId, setEditingQuestId] = useState<string | null>(null);
+  const [editingQuestPoolTemplateId, setEditingQuestPoolTemplateId] =
+    useState<string | null>(null);
   const [isRefreshingAppConfig, setIsRefreshingAppConfig] = useState(false);
   const [realmCodex, setRealmCodex] = useState<RealmCodexResponse | null>(null);
   const [isRefreshingRealmCodex, setIsRefreshingRealmCodex] = useState(false);
@@ -4140,6 +4345,14 @@ function App() {
     editingQuestId === null
       ? null
       : gameState.quests.find(quest => quest.id === editingQuestId) ?? null;
+  const questPoolTemplateToEdit =
+    editingQuestPoolTemplateId === null
+      ? null
+      : questPool?.templates.find(
+          template => template.id === editingQuestPoolTemplateId,
+        ) ?? null;
+  const draftEditorMode: DraftEditorMode =
+    editingQuestPoolTemplateId !== null ? 'quest-pool' : 'quest';
 
   const backendUnavailableMessage =
     'Backend connection required. Start `npm run backend` and retry.';
@@ -4465,6 +4678,7 @@ function App() {
 
   const returnToBoard = () => {
     setEditingQuestId(null);
+    setEditingQuestPoolTemplateId(null);
     setSelectedQuestId(null);
     setQuestDetails(null);
     setCurrentScreen('quest-board');
@@ -4485,6 +4699,30 @@ function App() {
     if (response) {
       await refreshRemoteDailySuggestions();
       returnToBoard();
+    }
+  };
+
+  const handleSaveQuestPool = async (questDraft: QuestDraft) => {
+    try {
+      setBackendError(null);
+      const response = editingQuestPoolTemplateId
+        ? await updateRemoteQuestPoolTemplate<QuestDraft, QuestPoolResponse>(
+            editingQuestPoolTemplateId,
+            questDraft,
+          )
+        : await createRemoteQuestPoolTemplate<QuestDraft, QuestPoolResponse>(
+            questDraft,
+          );
+
+      applyRemoteQuestPool(response);
+      setEditingQuestPoolTemplateId(null);
+      if (draftEditorMode === 'quest-pool') {
+        setCurrentScreen('quest-pool');
+      } else {
+        returnToBoard();
+      }
+    } catch {
+      setBackendError(backendUnavailableMessage);
     }
   };
 
@@ -4511,6 +4749,18 @@ function App() {
 
     if (response) {
       await refreshRemoteDailySuggestions();
+    }
+  };
+
+  const handleResetQuestPoolDefaults = async () => {
+    try {
+      setBackendError(null);
+      const response = await resetRemoteQuestPool<QuestPoolResponse>();
+
+      applyRemoteQuestPool(response);
+      await refreshRemoteDailySuggestions();
+    } catch {
+      setBackendError(backendUnavailableMessage);
     }
   };
 
@@ -4625,6 +4875,7 @@ function App() {
     }
 
     setEditingQuestId(null);
+    setEditingQuestPoolTemplateId(null);
     setCurrentScreen('add-quest');
   };
 
@@ -4645,6 +4896,7 @@ function App() {
   };
 
   const handleOpenQuestPool = async () => {
+    setEditingQuestPoolTemplateId(null);
     setCurrentScreen('quest-pool');
     setIsRefreshingQuestPool(true);
 
@@ -4670,6 +4922,12 @@ function App() {
     } finally {
       setIsRefreshingQuestPool(false);
     }
+  };
+
+  const handleEditQuestPoolTemplate = (templateId: string) => {
+    setEditingQuestId(null);
+    setEditingQuestPoolTemplateId(templateId);
+    setCurrentScreen('add-quest');
   };
 
   const handleResetJourney = async () => {
@@ -4849,7 +5107,9 @@ function App() {
                   isRefreshingAppConfig={isRefreshingAppConfig}
                   onAddSuggestedQuest={handleAddSuggestedQuest}
                   onPrimaryQuestAction={handleQuestPrimaryAction}
+                  onFailQuest={handleFailQuest}
                   onEditQuest={questId => {
+                    setEditingQuestPoolTemplateId(null);
                     setEditingQuestId(questId);
                     setCurrentScreen('add-quest');
                   }}
@@ -4904,8 +5164,10 @@ function App() {
                   <QuestPoolScreen
                     isRefreshingQuestPool={isRefreshingQuestPool}
                     onAddTemplate={handleAddQuestPoolTemplate}
-                    onBack={() => setCurrentScreen('quest-board')}
+                  onBack={() => setCurrentScreen('quest-board')}
+                    onEditTemplate={handleEditQuestPoolTemplate}
                     onRefresh={handleRefreshQuestPool}
+                    onResetDefaults={handleResetQuestPoolDefaults}
                     onToggleTheme={handleToggleTheme}
                     questPool={questPool}
                     styles={styles}
@@ -4959,6 +5221,7 @@ function App() {
                     onFail={handleFailQuest}
                     onPrimaryAction={handleQuestPrimaryAction}
                     onEdit={questId => {
+                      setEditingQuestPoolTemplateId(null);
                       setEditingQuestId(questId);
                       setCurrentScreen('add-quest');
                     }}
@@ -4979,10 +5242,21 @@ function App() {
                 )
               ) : (
                 <AddQuestScreen
-                  onBack={returnToBoard}
+                  editorMode={draftEditorMode}
+                  onBack={() => {
+                    if (draftEditorMode === 'quest-pool') {
+                      setEditingQuestPoolTemplateId(null);
+                      setCurrentScreen('quest-pool');
+                      return;
+                    }
+
+                    returnToBoard();
+                  }}
                   onDelete={handleDeleteQuest}
                   onSave={handleSaveQuest}
+                  onSaveToPool={handleSaveQuestPool}
                   onToggleTheme={handleToggleTheme}
+                  poolTemplateToEdit={questPoolTemplateToEdit}
                   questToEdit={questToEdit}
                   styles={styles}
                   themeMode={gameState.themeMode}
@@ -5342,6 +5616,15 @@ function createStyles(theme: ThemePalette) {
       shadowOffset: { width: 0, height: 14 },
       shadowOpacity: 0.12,
       shadowRadius: 24,
+    },
+    sectionHeaderRow: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 14,
+      justifyContent: 'space-between',
+    },
+    sectionHeaderCopy: {
+      flex: 1,
     },
     suggestionCard: {
       backgroundColor: theme.surfaceLow,
@@ -5842,6 +6125,29 @@ function createStyles(theme: ThemePalette) {
     },
     cardSecondaryButtonText: {
       color: theme.textPrimary,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    questCardActionRow: {
+      flexDirection: 'row',
+      gap: 10,
+      marginTop: 12,
+    },
+    questCardInlineAction: {
+      flex: 1,
+      marginTop: 0,
+    },
+    inlineDangerButton: {
+      alignItems: 'center',
+      backgroundColor: theme.doneBadgeBackground,
+      borderColor: theme.success,
+      borderRadius: 16,
+      borderWidth: 1,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+    },
+    inlineDangerButtonText: {
+      color: theme.success,
       fontSize: 14,
       fontWeight: '700',
     },

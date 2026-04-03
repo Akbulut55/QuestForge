@@ -215,6 +215,37 @@ export async function resetRemoteProgress<TResponse>(): Promise<TResponse> {
   });
 }
 
+export async function createRemoteQuestPoolTemplate<TTemplate, TResponse>(
+  template: TTemplate,
+): Promise<TResponse> {
+  return requestJson<TResponse>('/quest-pool', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(template),
+  });
+}
+
+export async function updateRemoteQuestPoolTemplate<TTemplate, TResponse>(
+  templateId: string,
+  template: TTemplate,
+): Promise<TResponse> {
+  return requestJson<TResponse>(`/quest-pool/${encodeURIComponent(templateId)}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(template),
+  });
+}
+
+export async function resetRemoteQuestPool<TResponse>(): Promise<TResponse> {
+  return requestJson<TResponse>('/quest-pool/reset', {
+    method: 'POST',
+  });
+}
+
 export async function updateRemoteTheme<TThemeMode, TResponse>(
   themeMode: TThemeMode,
 ): Promise<TResponse> {

@@ -41,6 +41,7 @@ jest.mock('../src/api/gameStateApi', () => ({
   __esModule: true,
   completeRemoteQuest: jest.fn(),
   createRemoteQuest: jest.fn(),
+  createRemoteQuestPoolTemplate: jest.fn(),
   deleteRemoteQuest: jest.fn(),
   failRemoteQuest: jest.fn(),
   fetchRemoteAppConfig: jest.fn(),
@@ -51,9 +52,11 @@ jest.mock('../src/api/gameStateApi', () => ({
   fetchRemoteRealmCodex: jest.fn(),
   fetchRemoteThemeSanctum: jest.fn(),
   resetRemoteProgress: jest.fn(),
+  resetRemoteQuestPool: jest.fn(),
   saveRemoteGameState: jest.fn(),
   startRemoteQuest: jest.fn(),
   updateRemoteQuest: jest.fn(),
+  updateRemoteQuestPoolTemplate: jest.fn(),
   updateRemoteSortOption: jest.fn(),
   updateRemoteTheme: jest.fn(),
   updateRemoteThemePack: jest.fn(),
@@ -69,6 +72,7 @@ import {
 import {
   completeRemoteQuest,
   createRemoteQuest,
+  createRemoteQuestPoolTemplate,
   deleteRemoteQuest,
   failRemoteQuest,
   fetchRemoteAppConfig,
@@ -79,9 +83,11 @@ import {
   fetchRemoteRealmCodex,
   fetchRemoteThemeSanctum,
   resetRemoteProgress,
+  resetRemoteQuestPool,
   saveRemoteGameState,
   startRemoteQuest,
   updateRemoteQuest,
+  updateRemoteQuestPoolTemplate,
   updateRemoteSortOption,
   updateRemoteTheme,
   updateRemoteThemePack,
@@ -98,12 +104,15 @@ const mockFetchRemoteRealmCodex = fetchRemoteRealmCodex as jest.Mock;
 const mockFetchRemoteThemeSanctum = fetchRemoteThemeSanctum as jest.Mock;
 const mockSaveRemoteGameState = saveRemoteGameState as jest.Mock;
 const mockCreateRemoteQuest = createRemoteQuest as jest.Mock;
+const mockCreateRemoteQuestPoolTemplate = createRemoteQuestPoolTemplate as jest.Mock;
 const mockUpdateRemoteQuest = updateRemoteQuest as jest.Mock;
+const mockUpdateRemoteQuestPoolTemplate = updateRemoteQuestPoolTemplate as jest.Mock;
 const mockDeleteRemoteQuest = deleteRemoteQuest as jest.Mock;
 const mockStartRemoteQuest = startRemoteQuest as jest.Mock;
 const mockCompleteRemoteQuest = completeRemoteQuest as jest.Mock;
 const mockFailRemoteQuest = failRemoteQuest as jest.Mock;
 const mockResetRemoteProgress = resetRemoteProgress as jest.Mock;
+const mockResetRemoteQuestPool = resetRemoteQuestPool as jest.Mock;
 const mockUpdateRemoteTheme = updateRemoteTheme as jest.Mock;
 const mockUpdateRemoteSortOption = updateRemoteSortOption as jest.Mock;
 const mockUpdateRemoteThemePack = updateRemoteThemePack as jest.Mock;
@@ -120,12 +129,15 @@ type TestQuest = {
   description: string;
   tag: string;
   dueDate: string | null;
+  startedAt?: string | null;
   difficulty: Difficulty;
   xpReward: number;
   status: Status;
   category: Category;
   completedAt: string | null;
   failedAt: string | null;
+  dueSoonReminderAt?: string | null;
+  overdueReminderAt?: string | null;
   createdAt: number;
 };
 
@@ -153,6 +165,10 @@ type SuggestedQuest = {
   category: Category;
 };
 
+type QuestPoolTemplate = SuggestedQuest & {
+  id: string;
+};
+
 const completionXpByDifficulty: Record<Difficulty, number> = {
   Easy: 10,
   Medium: 20,
@@ -172,8 +188,9 @@ const rankThresholds = [
   { minimumXp: 0, title: 'Novice' },
 ] as const;
 
-const suggestionPool: SuggestedQuest[] = [
+const defaultSuggestionPool: QuestPoolTemplate[] = [
   {
+    id: 'template-study-runes',
     title: 'Study the Ancient Runes',
     description: 'Review one focused topic and write down the clearest takeaway.',
     tag: 'Study',
@@ -181,6 +198,7 @@ const suggestionPool: SuggestedQuest[] = [
     category: 'Side Quest',
   },
   {
+    id: 'template-clean-forge',
     title: 'Clean the Forge',
     description: 'Reset one room or desk so tomorrow starts with less friction.',
     tag: 'Chores',
@@ -188,6 +206,7 @@ const suggestionPool: SuggestedQuest[] = [
     category: 'Side Quest',
   },
   {
+    id: 'template-send-report',
     title: 'Send the Guild Report',
     description: 'Finish the update a teammate or manager is waiting on.',
     tag: 'Work',
@@ -336,6 +355,7 @@ const defaultRemoteGameState: TestGameState = {
 let mockBackendState = cloneState(defaultRemoteGameState);
 let mockRemoteAppConfig = cloneState(defaultRemoteAppConfig);
 let mockDailySuggestions: SuggestedQuest[] | null = null;
+let mockQuestPool = cloneState(defaultSuggestionPool);
 let alertSpy: jest.SpyInstance;
 
 function normalizeState(gameState: TestGameState): TestGameState {
@@ -389,7 +409,7 @@ function getDailySuggestionsForState(quests: TestQuest[]) {
   const existingQuestTitles = new Set(
     quests.map(quest => quest.title.trim().toLowerCase()),
   );
-  const suggestions = mockDailySuggestions ?? suggestionPool;
+  const suggestions = mockDailySuggestions ?? mockQuestPool;
 
   return suggestions.filter(
     suggestion => !existingQuestTitles.has(suggestion.title.trim().toLowerCase()),
@@ -417,15 +437,15 @@ function buildQuestDetailsResponse(questId: string) {
     tagLabel: quest.tag,
     summaryEyebrow: 'Quest Summary',
     summaryTitle: isCompleted
-      ? 'Ritual Sealed'
+      ? 'Quest Complete'
       : isFailed
-        ? 'Quest Lost'
+        ? 'Quest Failed'
         : isInProgress
-          ? 'Ritual In Motion'
-          : 'Ritual Prepared',
+          ? 'Quest In Progress'
+          : 'Quest Ready',
     difficultyLabel: quest.difficulty,
     xpRewardLabel: `+${quest.xpReward} XP`,
-    ritualProgressLabel: 'Ritual Progress',
+    ritualProgressLabel: 'Quest Progress',
     ritualProgressPercent: isCompleted || isFailed ? 100 : isInProgress ? 68 : 24,
     progressStatusText: isCompleted
       ? 'This quest already lives in your archive.'
@@ -444,7 +464,7 @@ function buildQuestDetailsResponse(questId: string) {
       : isFailed
         ? 'Quest Failed'
         : isInProgress
-          ? 'Complete Ritual'
+          ? 'Complete Quest'
           : 'Start Quest',
     tertiaryActionType: isCompleted || isFailed ? 'none' : 'fail',
     tertiaryActionLabel: 'Mark Failed',
@@ -481,12 +501,15 @@ async function renderHydratedApp() {
   mockFetchRemoteThemeSanctum.mockClear();
   mockSaveRemoteGameState.mockClear();
   mockCreateRemoteQuest.mockClear();
+  mockCreateRemoteQuestPoolTemplate.mockClear();
   mockUpdateRemoteQuest.mockClear();
+  mockUpdateRemoteQuestPoolTemplate.mockClear();
   mockDeleteRemoteQuest.mockClear();
   mockStartRemoteQuest.mockClear();
   mockCompleteRemoteQuest.mockClear();
   mockFailRemoteQuest.mockClear();
   mockResetRemoteProgress.mockClear();
+  mockResetRemoteQuestPool.mockClear();
   mockUpdateRemoteTheme.mockClear();
   mockUpdateRemoteSortOption.mockClear();
   mockUpdateRemoteThemePack.mockClear();
@@ -499,6 +522,7 @@ beforeEach(() => {
   mockBackendState = cloneState(defaultRemoteGameState);
   mockRemoteAppConfig = cloneState(defaultRemoteAppConfig);
   mockDailySuggestions = null;
+  mockQuestPool = cloneState(defaultSuggestionPool);
 
   mockAsyncStorage.getItem.mockReset();
   mockAsyncStorage.setItem.mockReset();
@@ -514,12 +538,15 @@ beforeEach(() => {
   mockFetchRemoteThemeSanctum.mockReset();
   mockSaveRemoteGameState.mockReset();
   mockCreateRemoteQuest.mockReset();
+  mockCreateRemoteQuestPoolTemplate.mockReset();
   mockUpdateRemoteQuest.mockReset();
+  mockUpdateRemoteQuestPoolTemplate.mockReset();
   mockDeleteRemoteQuest.mockReset();
   mockStartRemoteQuest.mockReset();
   mockCompleteRemoteQuest.mockReset();
   mockFailRemoteQuest.mockReset();
   mockResetRemoteProgress.mockReset();
+  mockResetRemoteQuestPool.mockReset();
   mockUpdateRemoteTheme.mockReset();
   mockUpdateRemoteSortOption.mockReset();
   mockUpdateRemoteThemePack.mockReset();
@@ -541,9 +568,9 @@ beforeEach(() => {
     kicker: 'Quest Pool',
     title: 'Quest Pool',
     subtitle: 'Browse reusable quest templates.',
-    searchPlaceholder: 'Search quests, tags, or rituals',
+    searchPlaceholder: 'Search quests, tags, or notes',
     categories: ['All', 'Chores', 'Study', 'Work'],
-    templates: cloneState(suggestionPool),
+    templates: cloneState(mockQuestPool),
   }));
   mockFetchRemoteRealmCodex.mockResolvedValue({
     kicker: 'Realm Codex',
@@ -611,6 +638,26 @@ beforeEach(() => {
       gameState: cloneState(mockBackendState),
     };
   });
+  mockCreateRemoteQuestPoolTemplate.mockImplementation(
+    async (templateDraft: SuggestedQuest) => {
+      mockQuestPool = [
+        {
+          id: `template-${Date.now()}-test`,
+          ...templateDraft,
+        },
+        ...mockQuestPool,
+      ];
+
+      return {
+        kicker: 'Quest Pool',
+        title: 'Quest Pool',
+        subtitle: 'Browse reusable quest templates.',
+        searchPlaceholder: 'Search quests, tags, or notes',
+        categories: ['All', 'Chores', 'Study', 'Work'],
+        templates: cloneState(mockQuestPool),
+      };
+    },
+  );
   mockUpdateRemoteQuest.mockImplementation(
     async (questId: string, questDraft: SuggestedQuest) => {
       mockBackendState = normalizeState({
@@ -633,6 +680,29 @@ beforeEach(() => {
 
       return {
         gameState: cloneState(mockBackendState),
+      };
+    },
+  );
+  mockUpdateRemoteQuestPoolTemplate.mockImplementation(
+    async (templateId: string, templateDraft: SuggestedQuest) => {
+      const templateIndex = mockQuestPool.findIndex(
+        template => template.id === templateId,
+      );
+
+      if (templateIndex >= 0) {
+        mockQuestPool[templateIndex] = {
+          id: templateId,
+          ...templateDraft,
+        };
+      }
+
+      return {
+        kicker: 'Quest Pool',
+        title: 'Quest Pool',
+        subtitle: 'Browse reusable quest templates.',
+        searchPlaceholder: 'Search quests, tags, or notes',
+        categories: ['All', 'Chores', 'Study', 'Work'],
+        templates: cloneState(mockQuestPool),
       };
     },
   );
@@ -745,6 +815,18 @@ beforeEach(() => {
 
     return {
       gameState: cloneState(mockBackendState),
+    };
+  });
+  mockResetRemoteQuestPool.mockImplementation(async () => {
+    mockQuestPool = cloneState(defaultSuggestionPool);
+
+    return {
+      kicker: 'Quest Pool',
+      title: 'Quest Pool',
+      subtitle: 'Browse reusable quest templates.',
+      searchPlaceholder: 'Search quests, tags, or notes',
+      categories: ['All', 'Chores', 'Study', 'Work'],
+      templates: cloneState(mockQuestPool),
     };
   });
   mockUpdateRemoteTheme.mockImplementation(async (themeMode: ThemeMode) => {
@@ -888,6 +970,10 @@ test('shows richer daily suggestions with descriptions and tags and can add one 
 
   const tree = await renderHydratedApp();
 
+  await ReactTestRenderer.act(async () => {
+    tree.root.findByProps({ testID: 'toggle-suggestions-panel' }).props.onPress();
+  });
+
   expect(getRenderText(tree)).toContain('Forge a Study Sprint');
   expect(getRenderText(tree)).toContain(
     'Plan one short study block with a clear start and finish line.',
@@ -952,7 +1038,13 @@ test('opens quest details by tapping the quest card and archives failed quests i
   });
 
   await ReactTestRenderer.act(async () => {
-    tree.root.findByProps({ testID: 'navigate-to-history-screen' }).props.onPress();
+    tree.root.findByProps({ testID: 'toggle-guild-hub-panel' }).props.onPress();
+  });
+
+  await ReactTestRenderer.act(async () => {
+    tree.root
+      .findByProps({ testID: 'navigate-to-history-screen' })
+      .props.onPress();
   });
 
   await ReactTestRenderer.act(async () => {
@@ -994,6 +1086,10 @@ test('opens the quest pool and adds templates as main or side quests', async () 
   const tree = await renderHydratedApp();
 
   await ReactTestRenderer.act(async () => {
+    tree.root.findByProps({ testID: 'toggle-guild-hub-panel' }).props.onPress();
+  });
+
+  await ReactTestRenderer.act(async () => {
     tree.root.findByProps({ testID: 'navigate-to-quest-pool-screen' }).props.onPress();
     await flushMicrotasks();
   });
@@ -1016,6 +1112,10 @@ test('opens the quest pool and adds templates as main or side quests', async () 
 
 test('can reset the journey and clear quest progress, history, and achievements', async () => {
   const tree = await renderHydratedApp();
+
+  await ReactTestRenderer.act(async () => {
+    tree.root.findByProps({ testID: 'toggle-guild-hub-panel' }).props.onPress();
+  });
 
   await ReactTestRenderer.act(async () => {
     tree.root.findByProps({ testID: 'navigate-to-progress-screen' }).props.onPress();
@@ -1047,7 +1147,13 @@ test('can reset the journey and clear quest progress, history, and achievements'
   expect(getRenderText(tree)).toContain('No quests match your filters');
 
   await ReactTestRenderer.act(async () => {
-    tree.root.findByProps({ testID: 'navigate-to-history-screen' }).props.onPress();
+    tree.root.findByProps({ testID: 'toggle-guild-hub-panel' }).props.onPress();
+  });
+
+  await ReactTestRenderer.act(async () => {
+    tree.root
+      .findByProps({ testID: 'navigate-to-history-screen' })
+      .props.onPress();
   });
 
   expect(getRenderText(tree)).toContain('No quests in this archive view');

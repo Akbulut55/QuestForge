@@ -8,6 +8,7 @@ const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const dataDirectory = path.join(__dirname, 'data');
 const dataFilePath = path.join(dataDirectory, 'game-state.json');
 const appConfigFilePath = path.join(dataDirectory, 'app-config.json');
+const questPoolFilePath = path.join(dataDirectory, 'quest-pool.json');
 
 const difficultyOptions = ['Easy', 'Medium', 'Hard', 'Epic'];
 const categoryOptions = ['Main Quest', 'Side Quest'];
@@ -78,6 +79,7 @@ const defaultGameState = {
         'Clear the laundry pile, sort the essentials, and leave the guild hall ready for the next work cycle.',
       tag: 'Chores',
       dueDate: null,
+      startedAt: new Date().toISOString(),
       difficulty: 'Epic',
       xpReward: 50,
       status: 'In Progress',
@@ -95,6 +97,7 @@ const defaultGameState = {
         'Prepare your desk, water, and playlist so the next study session begins with less resistance.',
       tag: 'Study',
       dueDate: null,
+      startedAt: null,
       difficulty: 'Medium',
       xpReward: 20,
       status: 'Ready',
@@ -112,6 +115,7 @@ const defaultGameState = {
         'Review one core topic and write down the sharpest insight before you close the session.',
       tag: 'Study',
       dueDate: null,
+      startedAt: null,
       difficulty: 'Easy',
       xpReward: 10,
       status: 'Completed',
@@ -164,8 +168,9 @@ const defaultAppConfig = {
   },
 };
 
-const suggestionTemplates = [
+const defaultQuestPoolTemplates = [
   {
+    id: 'template-refill-mana-flask',
     title: 'Refill the Mana Flask',
     description:
       'Refill your water bottle and reset your desk before the next focus session begins.',
@@ -175,6 +180,7 @@ const suggestionTemplates = [
     dueDate: null,
   },
   {
+    id: 'template-map-day-ahead',
     title: 'Map the Day Ahead',
     description:
       'Sketch the top priorities for today so the main quest line stays clear.',
@@ -184,6 +190,7 @@ const suggestionTemplates = [
     dueDate: null,
   },
   {
+    id: 'template-train-focus-familiar',
     title: 'Train the Focus Familiar',
     description:
       'Silence distractions and prepare one clean work block with a single outcome.',
@@ -193,6 +200,7 @@ const suggestionTemplates = [
     dueDate: null,
   },
   {
+    id: 'template-polish-guild-resume',
     title: 'Polish the Guild Resume',
     description:
       'Improve one practical part of your portfolio, CV, or professional profile.',
@@ -202,6 +210,7 @@ const suggestionTemplates = [
     dueDate: null,
   },
   {
+    id: 'template-clear-inbox-cavern',
     title: 'Clear the Inbox Cavern',
     description:
       'Answer or archive the messages that keep pulling your attention away.',
@@ -211,6 +220,7 @@ const suggestionTemplates = [
     dueDate: null,
   },
   {
+    id: 'template-raid-laundry-keep',
     title: 'Raid the Laundry Keep',
     description:
       'Wash, dry, and fold one full load before the pile grows stronger.',
@@ -220,6 +230,7 @@ const suggestionTemplates = [
     dueDate: null,
   },
   {
+    id: 'template-weekly-master-plan',
     title: 'Forge a Weekly Master Plan',
     description:
       'Lay out your week with deadlines, recovery time, and one stretch goal.',
@@ -229,6 +240,7 @@ const suggestionTemplates = [
     dueDate: null,
   },
   {
+    id: 'template-evening-wind-down',
     title: 'Protect the Evening Wind-Down',
     description:
       'Create a calm finish to the day so tomorrow begins with more energy.',
@@ -238,6 +250,7 @@ const suggestionTemplates = [
     dueDate: null,
   },
   {
+    id: 'template-restore-study-desk',
     title: 'Restore the Study Desk',
     description: 'Reset your workspace so the next session starts clean and focused.',
     tag: 'Study',
@@ -246,6 +259,7 @@ const suggestionTemplates = [
     dueDate: null,
   },
   {
+    id: 'template-collect-expense-receipts',
     title: 'Collect the Expense Receipts',
     description:
       'Gather the finance trail before admin tasks become a bigger boss fight.',
@@ -255,6 +269,7 @@ const suggestionTemplates = [
     dueDate: null,
   },
   {
+    id: 'template-deliver-guild-checkin',
     title: 'Deliver the Guild Check-In',
     description: 'Send the update your teammate, client, or manager is waiting on.',
     tag: 'Work',
@@ -263,14 +278,16 @@ const suggestionTemplates = [
     dueDate: null,
   },
   {
+    id: 'template-lift-iron-sigils',
     title: 'Lift the Iron Sigils',
-    description: 'Complete a short workout or movement ritual to keep momentum alive.',
+    description: 'Complete a short workout or movement session to keep momentum alive.',
     tag: 'Fitness',
     difficulty: 'Hard',
     category: 'Side Quest',
     dueDate: null,
   },
   {
+    id: 'template-prepare-market-run',
     title: 'Prepare the Market Run',
     description: 'Handle the errands that unblock the rest of the week.',
     tag: 'Errands',
@@ -279,6 +296,7 @@ const suggestionTemplates = [
     dueDate: null,
   },
   {
+    id: 'template-shape-creative-relic',
     title: 'Shape a Creative Relic',
     description: 'Make visible progress on a design, sketch, draft, or passion project.',
     tag: 'Creative',
@@ -287,6 +305,7 @@ const suggestionTemplates = [
     dueDate: null,
   },
   {
+    id: 'template-study-trial',
     title: 'Sprint Through the Study Trial',
     description:
       'Give yourself one intense study burst and close the loop before the window slips away.',
@@ -296,6 +315,7 @@ const suggestionTemplates = [
     dueDate: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
   },
   {
+    id: 'template-ship-guild-update',
     title: 'Ship the Guild Update',
     description:
       'Finish the work update while the context is still hot and send it before the timer runs out.',
@@ -308,6 +328,10 @@ const suggestionTemplates = [
 
 function createQuestId() {
   return `quest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function createQuestPoolTemplateId() {
+  return `template-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function getDateKey(date = new Date()) {
@@ -370,6 +394,10 @@ function normalizeResolvedDate(resolvedDate) {
   return normalizeDueDate(resolvedDate);
 }
 
+function normalizeStartedAt(startedAt) {
+  return normalizeDueDate(startedAt);
+}
+
 function parseDueMoment(dueDate) {
   const normalizedDueDate = normalizeDueDate(dueDate);
 
@@ -411,6 +439,39 @@ function formatDueDateLabel(dueDate) {
   });
 }
 
+function getQuestReminderLeadTimeMs(quest) {
+  const dueMoment = parseDueMoment(quest?.dueDate);
+
+  if (!dueMoment || dueMoment.isDateOnly) {
+    return null;
+  }
+
+  const startedAt = normalizeStartedAt(quest?.startedAt);
+  const referenceTimeMs = startedAt
+    ? new Date(startedAt).getTime()
+    : typeof quest?.createdAt === 'number'
+      ? quest.createdAt
+      : Date.now();
+  const totalDurationMs = Math.max(
+    dueMoment.date.getTime() - referenceTimeMs,
+    0,
+  );
+
+  if (totalDurationMs <= 4 * 60 * 60 * 1000) {
+    return 30 * 60 * 1000;
+  }
+
+  if (totalDurationMs <= 24 * 60 * 60 * 1000) {
+    return 60 * 60 * 1000;
+  }
+
+  if (totalDurationMs <= 3 * DAY_IN_MS) {
+    return 2 * 60 * 60 * 1000;
+  }
+
+  return 4 * 60 * 60 * 1000;
+}
+
 function getQuestDueStateLabel(quest, todayKey = getDateKey()) {
   const dueMoment = parseDueMoment(quest?.dueDate);
 
@@ -450,7 +511,9 @@ function getQuestDueStateLabel(quest, todayKey = getDateKey()) {
     return 'Overdue';
   }
 
-  if (dueTimeDifferenceMs <= 2 * 60 * 60 * 1000) {
+  const reminderLeadTimeMs = getQuestReminderLeadTimeMs(quest);
+
+  if (reminderLeadTimeMs !== null && dueTimeDifferenceMs <= reminderLeadTimeMs) {
     return 'Due Soon';
   }
 
@@ -606,6 +669,13 @@ function normalizeQuest(quest) {
         ? quest.tag.trim()
         : 'General',
     dueDate: normalizeDueDate(quest?.dueDate),
+    startedAt:
+      status === 'In Progress'
+        ? normalizeStartedAt(quest?.startedAt) ??
+          (typeof quest?.createdAt === 'number'
+            ? new Date(quest.createdAt).toISOString()
+            : new Date().toISOString())
+        : normalizeStartedAt(quest?.startedAt),
     difficulty,
     xpReward: completionXpByDifficulty[difficulty],
     status,
@@ -630,6 +700,43 @@ function normalizeQuest(quest) {
         : null,
     createdAt: typeof quest?.createdAt === 'number' ? quest.createdAt : Date.now(),
   };
+}
+
+function normalizeQuestPoolTemplate(template) {
+  const difficulty = difficultyOptions.includes(template?.difficulty)
+    ? template.difficulty
+    : 'Easy';
+  const category = categoryOptions.includes(template?.category)
+    ? template.category
+    : 'Side Quest';
+
+  return {
+    id:
+      typeof template?.id === 'string' && template.id.trim().length > 0
+        ? template.id.trim()
+        : createQuestPoolTemplateId(),
+    title:
+      typeof template?.title === 'string' && template.title.trim().length > 0
+        ? template.title.trim()
+        : 'Untitled Quest',
+    description:
+      typeof template?.description === 'string' ? template.description.trim() : '',
+    tag:
+      typeof template?.tag === 'string' && template.tag.trim().length > 0
+        ? template.tag.trim()
+        : 'General',
+    dueDate: normalizeDueDate(template?.dueDate),
+    difficulty,
+    category,
+  };
+}
+
+function normalizeQuestPool(questPoolTemplates) {
+  if (!Array.isArray(questPoolTemplates)) {
+    return defaultQuestPoolTemplates.map(normalizeQuestPoolTemplate);
+  }
+
+  return questPoolTemplates.map(normalizeQuestPoolTemplate);
 }
 
 function getProgressStats(quests) {
@@ -752,17 +859,21 @@ function normalizeQuestSectionOrder(questSectionOrder) {
     : defaultQuestSectionOrder;
 }
 
-function getDailySuggestions(dateKey, quests) {
+function getDailySuggestions(dateKey, quests, questPoolTemplates) {
+  if (!Array.isArray(questPoolTemplates) || questPoolTemplates.length === 0) {
+    return [];
+  }
+
   const existingQuestTitles = new Set(
     quests.map(quest => quest.title.trim().toLowerCase()),
   );
   const startingIndex =
-    Number(dateKey.replace(/-/g, '')) % suggestionTemplates.length;
+    Number(dateKey.replace(/-/g, '')) % questPoolTemplates.length;
   const suggestions = [];
 
-  for (let offset = 0; offset < suggestionTemplates.length; offset += 1) {
+  for (let offset = 0; offset < questPoolTemplates.length; offset += 1) {
     const suggestion =
-      suggestionTemplates[(startingIndex + offset) % suggestionTemplates.length];
+      questPoolTemplates[(startingIndex + offset) % questPoolTemplates.length];
     const normalizedTitle = suggestion.title.trim().toLowerCase();
 
     if (existingQuestTitles.has(normalizedTitle)) {
@@ -1010,10 +1121,10 @@ function getQuestProgressPercent(status) {
 function getQuestGuidanceText(quest) {
   const statusGuidance =
     quest.status === 'Completed'
-      ? 'This ritual is already sealed, so any next step is about reflection or refinement.'
+      ? 'This quest is already complete, so any next step is about reflection or refinement.'
       : quest.status === 'Failed'
         ? 'This quest was marked as failed, so the next move is to learn from it or forge a better version.'
-      : quest.status === 'In Progress'
+        : quest.status === 'In Progress'
         ? 'Momentum is already gathering around this quest, so keep the next action small and focused.'
         : 'This quest is prepared and waiting for the first deliberate move.';
   const categoryGuidance =
@@ -1022,7 +1133,7 @@ function getQuestGuidanceText(quest) {
       : 'As a side quest, it strengthens the guild quietly without needing to dominate the whole day.';
   const difficultyGuidance =
     quest.difficulty === 'Epic'
-      ? 'Epic difficulty means it is worth breaking the ritual into meaningful focus sessions.'
+      ? 'Epic difficulty means it is worth breaking the quest into meaningful focus sessions.'
       : quest.difficulty === 'Hard'
         ? 'Hard difficulty suggests protecting time and reducing distractions before you begin.'
         : quest.difficulty === 'Medium'
@@ -1033,7 +1144,7 @@ function getQuestGuidanceText(quest) {
 }
 
 function buildQuestDetails(quest) {
-  const ritualProgressPercent = getQuestProgressPercent(quest.status);
+  const questProgressPercent = getQuestProgressPercent(quest.status);
   const hasQuestNotes = typeof quest.description === 'string' && quest.description.length > 0;
   const primaryActionType =
     quest.status === 'Completed' || quest.status === 'Failed'
@@ -1055,35 +1166,35 @@ function buildQuestDetails(quest) {
     summaryEyebrow: 'Quest Summary',
     summaryTitle:
       quest.status === 'Completed'
-        ? 'Ritual Sealed'
+        ? 'Quest Complete'
         : quest.status === 'Failed'
-          ? 'Ritual Broken'
+          ? 'Quest Failed'
         : quest.status === 'In Progress'
-          ? 'Ritual In Motion'
-          : 'Ritual Prepared',
+          ? 'Quest In Progress'
+          : 'Quest Ready',
     difficultyLabel: quest.difficulty,
     xpRewardLabel: `+${quest.xpReward} XP`,
-    ritualProgressLabel: 'Ritual Progress',
-    ritualProgressPercent,
+    ritualProgressLabel: 'Quest Progress',
+    ritualProgressPercent: questProgressPercent,
     progressStatusText:
       quest.status === 'Completed'
         ? 'This quest already lives in the completed ledger and its reward has been claimed.'
         : quest.status === 'Failed'
           ? 'This quest now lives in the history ledger as a failed attempt.'
         : quest.status === 'In Progress'
-          ? 'The ritual is active now, so completing it will seal the quest and grant the reward.'
-          : 'The ritual is ready to begin whenever the guild needs this quest to move.',
+          ? 'This quest is active now, so completing it will seal the quest and grant the reward.'
+          : 'This quest is ready to begin whenever the guild needs it to move.',
     guidanceTitle: hasQuestNotes ? 'Quest Notes' : 'Quest Guidance',
     guidanceText: hasQuestNotes ? quest.description : getQuestGuidanceText(quest),
     dueDateLabel: formatDueDateLabel(dueDate),
     dueStateLabel: getQuestDueStateLabel(quest),
     primaryActionLabel:
       quest.status === 'Completed'
-        ? 'Ritual Complete'
+        ? 'Quest Complete'
         : quest.status === 'Failed'
           ? 'Quest Failed'
         : quest.status === 'In Progress'
-          ? 'Complete Ritual'
+          ? 'Complete Quest'
           : 'Start Quest',
     primaryActionType,
     tertiaryActionType:
@@ -1094,18 +1205,19 @@ function buildQuestDetails(quest) {
   };
 }
 
-function buildQuestPool() {
+function buildQuestPool(questPoolTemplates) {
   const categories = Array.from(
-    new Set(suggestionTemplates.map(template => template.tag)),
+    new Set(questPoolTemplates.map(template => template.tag)),
   ).sort((left, right) => left.localeCompare(right));
 
   return {
     kicker: 'Quest Pool',
     title: 'Quest Pool',
     subtitle: 'Browse the archives of legendary feats and keep your everyday quests within easy reach.',
-    searchPlaceholder: 'Search quests, tags, or rituals',
+    searchPlaceholder: 'Search quests, tags, or notes',
     categories: ['All', ...categories],
-    templates: suggestionTemplates.map(template => ({
+    templates: questPoolTemplates.map(template => ({
+      id: template.id,
       title: template.title,
       description: template.description,
       tag: template.tag,
@@ -1355,6 +1467,23 @@ async function readAppConfig() {
   return normalizedAppConfig;
 }
 
+async function writeQuestPool(questPoolTemplates) {
+  await writeJsonFile(questPoolFilePath, questPoolTemplates);
+}
+
+async function readQuestPool() {
+  const normalizedQuestPool = normalizeQuestPool(
+    await readJsonFile(
+      questPoolFilePath,
+      normalizeQuestPool(defaultQuestPoolTemplates),
+    ),
+  );
+
+  await writeQuestPool(normalizedQuestPool);
+
+  return normalizedQuestPool;
+}
+
 function sendJson(res, statusCode, body) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json',
@@ -1426,13 +1555,27 @@ function getQuestRouteMatch(url) {
   return null;
 }
 
+function getQuestPoolTemplateRouteMatch(url) {
+  const templateMatch = url.match(/^\/quest-pool\/([^/]+)$/);
+
+  if (!templateMatch) {
+    return null;
+  }
+
+  return {
+    templateId: decodeURIComponent(templateMatch[1]),
+  };
+}
+
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
     sendJson(res, 204, {});
     return;
   }
 
-  const questRouteMatch = getQuestRouteMatch(req.url || '');
+  const requestUrl = req.url || '';
+  const questRouteMatch = getQuestRouteMatch(requestUrl);
+  const questPoolTemplateRouteMatch = getQuestPoolTemplateRouteMatch(requestUrl);
 
   if (req.url === '/health' && req.method === 'GET') {
     sendJson(res, 200, { status: 'ok' });
@@ -1454,11 +1597,18 @@ const server = http.createServer(async (req, res) => {
 
   if (req.url === '/daily-suggestions' && req.method === 'GET') {
     try {
-      const gameState = await readGameState();
+      const [gameState, questPoolTemplates] = await Promise.all([
+        readGameState(),
+        readQuestPool(),
+      ]);
       const suggestionDateKey = getDateKey();
       sendJson(res, 200, {
         suggestionDateKey,
-        suggestions: getDailySuggestions(suggestionDateKey, gameState.quests),
+        suggestions: getDailySuggestions(
+          suggestionDateKey,
+          gameState.quests,
+          questPoolTemplates,
+        ),
       });
     } catch (error) {
       sendJson(res, 500, {
@@ -1471,10 +1621,113 @@ const server = http.createServer(async (req, res) => {
 
   if (req.url === '/quest-pool' && req.method === 'GET') {
     try {
-      sendJson(res, 200, buildQuestPool());
+      const questPoolTemplates = await readQuestPool();
+
+      sendJson(res, 200, buildQuestPool(questPoolTemplates));
     } catch (error) {
       sendJson(res, 500, {
         error: 'Unable to read quest pool.',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+    return;
+  }
+
+  if (req.url === '/quest-pool' && req.method === 'POST') {
+    try {
+      const templateDraft = await readRequestBody(req);
+
+      if (!isValidQuestDraft(templateDraft)) {
+        sendJson(res, 400, {
+          error: 'Invalid quest pool template payload.',
+        });
+        return;
+      }
+
+      const currentQuestPool = await readQuestPool();
+      const nextQuestPool = normalizeQuestPool([
+        {
+          id: createQuestPoolTemplateId(),
+          title: templateDraft.title,
+          description: templateDraft.description,
+          tag: templateDraft.tag,
+          dueDate: templateDraft.dueDate,
+          difficulty: templateDraft.difficulty,
+          category: templateDraft.category,
+        },
+        ...currentQuestPool,
+      ]);
+
+      await writeQuestPool(nextQuestPool);
+      sendJson(res, 200, buildQuestPool(nextQuestPool));
+    } catch (error) {
+      sendJson(res, 500, {
+        error: 'Unable to create quest pool template.',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+    return;
+  }
+
+  if (req.url === '/quest-pool/reset' && req.method === 'POST') {
+    try {
+      const nextQuestPool = normalizeQuestPool(defaultQuestPoolTemplates);
+
+      await writeQuestPool(nextQuestPool);
+      sendJson(res, 200, buildQuestPool(nextQuestPool));
+    } catch (error) {
+      sendJson(res, 500, {
+        error: 'Unable to reset quest pool.',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+    return;
+  }
+
+  if (questPoolTemplateRouteMatch && req.method === 'PUT') {
+    try {
+      const templateDraft = await readRequestBody(req);
+
+      if (!isValidQuestDraft(templateDraft)) {
+        sendJson(res, 400, {
+          error: 'Invalid quest pool template payload.',
+        });
+        return;
+      }
+
+      const currentQuestPool = await readQuestPool();
+      const templateToUpdate = currentQuestPool.find(
+        template => template.id === questPoolTemplateRouteMatch.templateId,
+      );
+
+      if (!templateToUpdate) {
+        sendJson(res, 404, {
+          error: 'Quest pool template not found.',
+        });
+        return;
+      }
+
+      const nextQuestPool = normalizeQuestPool(
+        currentQuestPool.map(template =>
+          template.id === questPoolTemplateRouteMatch.templateId
+            ? {
+                ...template,
+                title: templateDraft.title,
+                description: templateDraft.description,
+                tag: templateDraft.tag,
+                dueDate: templateDraft.dueDate,
+                difficulty: templateDraft.difficulty,
+                category: templateDraft.category,
+              }
+            : template,
+        ),
+      );
+
+      await writeQuestPool(nextQuestPool);
+      sendJson(res, 200, buildQuestPool(nextQuestPool));
+    } catch (error) {
+      sendJson(res, 500, {
+        error: 'Unable to update quest pool template.',
         details: error instanceof Error ? error.message : 'Unknown error',
       });
     }
@@ -1821,6 +2074,7 @@ const server = http.createServer(async (req, res) => {
             ? {
                 ...quest,
                 status: 'In Progress',
+                startedAt: new Date().toISOString(),
                 dueSoonReminderAt: null,
                 overdueReminderAt: null,
               }
