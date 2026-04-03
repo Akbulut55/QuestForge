@@ -105,6 +105,7 @@ type TestGameState = {
   quests: Array<{
     id: string;
     title: string;
+    description?: string;
     difficulty: string;
     xpReward: number;
     status: string;
@@ -163,6 +164,8 @@ const defaultRemoteGameState: TestGameState = {
     {
       id: 'quest-1',
       title: 'Defeat the Laundry Dragon',
+      description:
+        'Clear the laundry pile, sort the essentials, and leave the guild hall ready for the next work cycle.',
       difficulty: 'Epic',
       xpReward: 50,
       status: 'In Progress',
@@ -172,6 +175,8 @@ const defaultRemoteGameState: TestGameState = {
     {
       id: 'quest-2',
       title: 'Brew a Focus Potion',
+      description:
+        'Prepare your desk, water, and playlist so the next study session begins with less resistance.',
       difficulty: 'Medium',
       xpReward: 20,
       status: 'Ready',
@@ -181,6 +186,8 @@ const defaultRemoteGameState: TestGameState = {
     {
       id: 'quest-3',
       title: 'Sharpen the Study Blade',
+      description:
+        'Review one core topic and write down the sharpest insight before you close the session.',
       difficulty: 'Easy',
       xpReward: 10,
       status: 'Completed',
@@ -760,11 +767,16 @@ function buildQuestDetailsResponse(questId: string) {
         : quest.status === 'In Progress'
           ? 'The ritual is active now, so completing it will seal the quest and grant the reward.'
           : 'The ritual is ready to begin whenever the guild needs this quest to move.',
-    guidanceTitle: 'Quest Guidance',
+    guidanceTitle:
+      typeof quest.description === 'string' && quest.description.trim().length > 0
+        ? 'Quest Notes'
+        : 'Quest Guidance',
     guidanceText:
-      quest.category === 'Main Quest'
-        ? 'As a main quest, it pushes the realm forward and deserves your clearest attention block.'
-        : 'As a side quest, it strengthens the guild quietly without needing to dominate the whole day.',
+      typeof quest.description === 'string' && quest.description.trim().length > 0
+        ? quest.description
+        : quest.category === 'Main Quest'
+          ? 'As a main quest, it pushes the realm forward and deserves your clearest attention block.'
+          : 'As a side quest, it strengthens the guild quietly without needing to dominate the whole day.',
     primaryActionLabel:
       quest.status === 'Completed' ? 'Ritual Complete' : 'Complete Ritual',
     secondaryActionLabel: 'Edit Quest',
@@ -893,10 +905,16 @@ beforeEach(() => {
     return cloneState(mockBackendState);
   });
   mockCreateRemoteQuest.mockImplementation(
-    async (questDraft: { title: string; difficulty: string; category: string }) => {
+    async (questDraft: {
+      title: string;
+      description?: string;
+      difficulty: string;
+      category: string;
+    }) => {
       const nextQuest = {
         id: `quest-${Date.now()}-test`,
         title: questDraft.title.trim(),
+        description: typeof questDraft.description === 'string' ? questDraft.description.trim() : '',
         difficulty: questDraft.difficulty,
         xpReward:
           completionXpByDifficulty[
@@ -923,13 +941,22 @@ beforeEach(() => {
   mockUpdateRemoteQuest.mockImplementation(
     async (
       questId: string,
-      questDraft: { title: string; difficulty: string; category: string },
+      questDraft: {
+        title: string;
+        description?: string;
+        difficulty: string;
+        category: string;
+      },
     ) => {
       const nextQuests = mockBackendState.quests.map(quest =>
         quest.id === questId
           ? {
               ...quest,
               title: questDraft.title.trim(),
+              description:
+                typeof questDraft.description === 'string'
+                  ? questDraft.description.trim()
+                  : '',
               difficulty: questDraft.difficulty,
               category: questDraft.category,
               xpReward:
@@ -1423,7 +1450,7 @@ test('opens the Stitch-generated Quest Details screen with backend quest dossier
   expect(
     root.findAll(node => node.props.children === 'Defeat the Laundry Dragon').length,
   ).toBeGreaterThan(0);
-  expect(detailsRender).toContain('Quest Guidance');
+  expect(detailsRender).toContain('Quest Notes');
   expect(detailsRender).toContain('Complete Ritual');
   expect(detailsRender).toContain('Main Quest');
 });
@@ -1450,6 +1477,43 @@ test('completing a quest from quest details refreshes the backend dossier', asyn
   expect(mockCompleteRemoteQuest).toHaveBeenCalledWith('quest-2');
   expect(detailsRender).toContain('Ritual Complete');
   expect(detailsRender).toContain('Completed');
+});
+
+test('saving quest notes shows them on the backend-driven quest details screen', async () => {
+  const tree = await renderHydratedApp();
+  let root = tree.root;
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'edit-quest-quest-2' }).props.onPress();
+  });
+
+  root = tree.root;
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'quest-description-input' }).props.onChangeText(
+      'Prepare the desk, close stray tabs, and begin the next study ritual with one focused outcome.',
+    );
+  });
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'save-quest-button' }).props.onPress();
+    await flushMicrotasks();
+  });
+
+  root = tree.root;
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'open-quest-details-quest-2' }).props.onPress();
+    await flushMicrotasks();
+  });
+
+  root = tree.root;
+  const detailsRender = JSON.stringify(tree.toJSON());
+
+  expect(detailsRender).toContain('Quest Notes');
+  expect(detailsRender).toContain(
+    'Prepare the desk, close stray tabs, and begin the next study ritual with one focused outcome.',
+  );
 });
 
 test('completing a quest awards XP, updates rank, and saves remote game state', async () => {

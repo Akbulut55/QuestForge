@@ -67,6 +67,7 @@ type ThemePackId = 'ethereal-forge' | 'luminous-paladin' | 'void-drifter';
 type Quest = {
   id: string;
   title: string;
+  description: string;
   difficulty: Difficulty;
   xpReward: number;
   status: Status;
@@ -76,6 +77,7 @@ type Quest = {
 
 type QuestDraft = {
   title: string;
+  description?: string;
   difficulty: Difficulty;
   category: Category;
 };
@@ -501,6 +503,8 @@ const initialQuests: Quest[] = [
   {
     id: 'quest-1',
     title: 'Defeat the Laundry Dragon',
+    description:
+      'Clear the laundry pile, sort the essentials, and leave the guild hall ready for the next work cycle.',
     difficulty: 'Epic',
     xpReward: 50,
     status: 'In Progress',
@@ -510,6 +514,8 @@ const initialQuests: Quest[] = [
   {
     id: 'quest-2',
     title: 'Brew a Focus Potion',
+    description:
+      'Prepare your desk, water, and playlist so the next study session begins with less resistance.',
     difficulty: 'Medium',
     xpReward: 20,
     status: 'Ready',
@@ -519,6 +525,8 @@ const initialQuests: Quest[] = [
   {
     id: 'quest-3',
     title: 'Sharpen the Study Blade',
+    description:
+      'Review one core topic and write down the sharpest insight before you close the session.',
     difficulty: 'Easy',
     xpReward: 10,
     status: 'Completed',
@@ -747,6 +755,8 @@ function normalizeQuest(quest: Omit<Quest, 'id'> & Partial<Pick<Quest, 'id'>>) {
   return {
     ...quest,
     id: quest.id ?? createQuestId(),
+    description:
+      typeof quest.description === 'string' ? quest.description.trim() : '',
     createdAt: typeof quest.createdAt === 'number' ? quest.createdAt : Date.now(),
     xpReward,
   };
@@ -2435,6 +2445,7 @@ function AddQuestScreen({
 }) {
   const isEditing = questToEdit !== null;
   const [questTitle, setQuestTitle] = useState('');
+  const [questDescription, setQuestDescription] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] =
     useState<Difficulty>('Easy');
   const [selectedCategory, setSelectedCategory] =
@@ -2443,12 +2454,14 @@ function AddQuestScreen({
   useEffect(() => {
     if (questToEdit) {
       setQuestTitle(questToEdit.title);
+      setQuestDescription(questToEdit.description);
       setSelectedDifficulty(questToEdit.difficulty);
       setSelectedCategory(questToEdit.category);
       return;
     }
 
     setQuestTitle('');
+    setQuestDescription('');
     setSelectedDifficulty('Easy');
     setSelectedCategory('Side Quest');
   }, [questToEdit]);
@@ -2464,6 +2477,7 @@ function AddQuestScreen({
 
     onSave({
       title,
+      description: questDescription.trim(),
       difficulty: selectedDifficulty,
       category: selectedCategory,
     });
@@ -2522,6 +2536,21 @@ function AddQuestScreen({
             style={styles.titleInput}
             testID="quest-title-input"
             value={questTitle}
+          />
+        </View>
+
+        <View style={styles.formField}>
+          <Text style={styles.formLabel}>Quest Notes</Text>
+          <TextInput
+            multiline
+            numberOfLines={4}
+            onChangeText={setQuestDescription}
+            placeholder="Write a short quest note or guidance line"
+            placeholderTextColor={styles.themePlaceholder.color}
+            style={styles.notesInput}
+            testID="quest-description-input"
+            textAlignVertical="top"
+            value={questDescription}
           />
         </View>
 
@@ -3609,6 +3638,18 @@ function createStyles(theme: ThemePalette) {
       borderWidth: 1,
       color: theme.textPrimary,
       fontSize: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+    },
+    notesInput: {
+      backgroundColor: theme.surfaceLow,
+      borderColor: theme.ghostBorder,
+      borderRadius: 18,
+      borderWidth: 1,
+      color: theme.textPrimary,
+      fontSize: 15,
+      lineHeight: 21,
+      minHeight: 110,
       paddingHorizontal: 16,
       paddingVertical: 14,
     },

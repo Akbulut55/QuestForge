@@ -51,6 +51,8 @@ const defaultGameState = {
     {
       id: 'quest-1',
       title: 'Defeat the Laundry Dragon',
+      description:
+        'Clear the laundry pile, sort the essentials, and leave the guild hall ready for the next work cycle.',
       difficulty: 'Epic',
       xpReward: 50,
       status: 'In Progress',
@@ -60,6 +62,8 @@ const defaultGameState = {
     {
       id: 'quest-2',
       title: 'Brew a Focus Potion',
+      description:
+        'Prepare your desk, water, and playlist so the next study session begins with less resistance.',
       difficulty: 'Medium',
       xpReward: 20,
       status: 'Ready',
@@ -69,6 +73,8 @@ const defaultGameState = {
     {
       id: 'quest-3',
       title: 'Sharpen the Study Blade',
+      description:
+        'Review one core topic and write down the sharpest insight before you close the session.',
       difficulty: 'Easy',
       xpReward: 10,
       status: 'Completed',
@@ -308,6 +314,8 @@ function normalizeQuest(quest) {
   return {
     id: typeof quest?.id === 'string' && quest.id.length > 0 ? quest.id : createQuestId(),
     title,
+    description:
+      typeof quest?.description === 'string' ? quest.description.trim() : '',
     difficulty,
     xpReward: completionXpByDifficulty[difficulty],
     status,
@@ -703,6 +711,7 @@ function getQuestGuidanceText(quest) {
 
 function buildQuestDetails(quest) {
   const ritualProgressPercent = getQuestProgressPercent(quest.status);
+  const hasQuestNotes = typeof quest.description === 'string' && quest.description.length > 0;
 
   return {
     kicker: 'Quest Details',
@@ -729,8 +738,8 @@ function buildQuestDetails(quest) {
         : quest.status === 'In Progress'
           ? 'The ritual is active now, so completing it will seal the quest and grant the reward.'
           : 'The ritual is ready to begin whenever the guild needs this quest to move.',
-    guidanceTitle: 'Quest Guidance',
-    guidanceText: getQuestGuidanceText(quest),
+    guidanceTitle: hasQuestNotes ? 'Quest Notes' : 'Quest Guidance',
+    guidanceText: hasQuestNotes ? quest.description : getQuestGuidanceText(quest),
     primaryActionLabel:
       quest.status === 'Completed' ? 'Ritual Complete' : 'Complete Ritual',
     secondaryActionLabel: 'Edit Quest',
@@ -901,6 +910,8 @@ function isValidQuestDraft(questDraft) {
     questDraft !== null &&
     typeof questDraft.title === 'string' &&
     questDraft.title.trim().length > 0 &&
+    (typeof questDraft.description === 'undefined' ||
+      typeof questDraft.description === 'string') &&
     difficultyOptions.includes(questDraft.difficulty) &&
     categoryOptions.includes(questDraft.category)
   );
@@ -1170,6 +1181,7 @@ const server = http.createServer(async (req, res) => {
       const currentGameState = await readGameState();
       const nextQuest = normalizeQuest({
         title: questDraft.title,
+        description: questDraft.description,
         difficulty: questDraft.difficulty,
         category: questDraft.category,
         status: 'Ready',
@@ -1215,6 +1227,7 @@ const server = http.createServer(async (req, res) => {
       const updatedQuest = normalizeQuest({
         ...questToUpdate,
         title: questDraft.title,
+        description: questDraft.description,
         difficulty: questDraft.difficulty,
         category: questDraft.category,
       });

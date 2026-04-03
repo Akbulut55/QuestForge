@@ -25,8 +25,8 @@ After teacher feedback, the project direction was corrected beginning in Iterati
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 26 |
-| Total Weight (kg) | 270 |
+| Total Iterations | 27 |
+| Total Weight (kg) | 280 |
 | Total Time (min) | Not tracked |
 | Failed Attempts | Not tracked |
 
@@ -1026,6 +1026,32 @@ do 26
 **Screenshot:** `iteration-26-quest-details.png`
 
 **Commit:** `[NAIM: Quest Blacksmith] Add Stitch quest details screen - 10kg`
+
+---
+
+### Iteration 27
+
+| Field | Value |
+|-------|-------|
+| Feature | `Backend-driven quest description and notes` |
+| Weight | `10 kg` |
+| Tool Used | `Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+do 27 28 29
+```
+
+**What happened:**
+- Extended the quest model with a description field and added a quest notes input to the existing add/edit flow.
+- Persisted quest notes through the backend and surfaced them on the existing Quest Details screen so each quest now carries clearer player-written context instead of relying only on generated guidance text.
+
+**Screenshot:** `iteration-27-quest-notes.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add quest description notes - 10kg`
 
 ---
 
