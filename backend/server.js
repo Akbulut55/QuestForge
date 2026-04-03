@@ -1094,6 +1094,28 @@ function buildQuestDetails(quest) {
   };
 }
 
+function buildQuestPool() {
+  const categories = Array.from(
+    new Set(suggestionTemplates.map(template => template.tag)),
+  ).sort((left, right) => left.localeCompare(right));
+
+  return {
+    kicker: 'Quest Pool',
+    title: 'Quest Pool',
+    subtitle: 'Browse the archives of legendary feats and keep your everyday quests within easy reach.',
+    searchPlaceholder: 'Search quests, tags, or rituals',
+    categories: ['All', ...categories],
+    templates: suggestionTemplates.map(template => ({
+      title: template.title,
+      description: template.description,
+      tag: template.tag,
+      dueDate: normalizeDueDate(template.dueDate),
+      difficulty: template.difficulty,
+      category: template.category,
+    })),
+  };
+}
+
 function normalizeThemePackId(themePackId) {
   return themePackOptions.includes(themePackId)
     ? themePackId
@@ -1441,6 +1463,18 @@ const server = http.createServer(async (req, res) => {
     } catch (error) {
       sendJson(res, 500, {
         error: 'Unable to read daily suggestions.',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+    return;
+  }
+
+  if (req.url === '/quest-pool' && req.method === 'GET') {
+    try {
+      sendJson(res, 200, buildQuestPool());
+    } catch (error) {
+      sendJson(res, 500, {
+        error: 'Unable to read quest pool.',
         details: error instanceof Error ? error.message : 'Unknown error',
       });
     }

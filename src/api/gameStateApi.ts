@@ -42,9 +42,9 @@ function getBackendBaseUrls() {
   const baseUrls: string[] = [];
 
   if (Platform.OS === 'android') {
-    appendBackendUrl(baseUrls, scriptHost);
     appendBackendUrl(baseUrls, '10.0.2.2');
     appendBackendUrl(baseUrls, '10.0.3.2');
+    appendBackendUrl(baseUrls, scriptHost);
     appendBackendUrl(baseUrls, 'localhost');
     appendBackendUrl(baseUrls, '127.0.0.1');
   } else {
@@ -125,6 +125,10 @@ export async function fetchRemoteAppConfig<T>(): Promise<T> {
 
 export async function fetchRemoteDailySuggestions<T>(): Promise<T> {
   return requestJson<T>('/daily-suggestions');
+}
+
+export async function fetchRemoteQuestPool<T>(): Promise<T> {
+  return requestJson<T>('/quest-pool');
 }
 
 export async function fetchRemoteRealmCodex<T>(): Promise<T> {

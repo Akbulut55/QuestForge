@@ -47,6 +47,7 @@ jest.mock('../src/api/gameStateApi', () => ({
   fetchRemoteDailySuggestions: jest.fn(),
   fetchRemoteGameState: jest.fn(),
   fetchRemoteQuestDetails: jest.fn(),
+  fetchRemoteQuestPool: jest.fn(),
   fetchRemoteRealmCodex: jest.fn(),
   fetchRemoteThemeSanctum: jest.fn(),
   resetRemoteProgress: jest.fn(),
@@ -74,6 +75,7 @@ import {
   fetchRemoteDailySuggestions,
   fetchRemoteGameState,
   fetchRemoteQuestDetails,
+  fetchRemoteQuestPool,
   fetchRemoteRealmCodex,
   fetchRemoteThemeSanctum,
   resetRemoteProgress,
@@ -91,6 +93,7 @@ const mockFetchRemoteAppConfig = fetchRemoteAppConfig as jest.Mock;
 const mockFetchRemoteGameState = fetchRemoteGameState as jest.Mock;
 const mockFetchRemoteQuestDetails = fetchRemoteQuestDetails as jest.Mock;
 const mockFetchRemoteDailySuggestions = fetchRemoteDailySuggestions as jest.Mock;
+const mockFetchRemoteQuestPool = fetchRemoteQuestPool as jest.Mock;
 const mockFetchRemoteRealmCodex = fetchRemoteRealmCodex as jest.Mock;
 const mockFetchRemoteThemeSanctum = fetchRemoteThemeSanctum as jest.Mock;
 const mockSaveRemoteGameState = saveRemoteGameState as jest.Mock;
@@ -145,6 +148,7 @@ type SuggestedQuest = {
   title: string;
   description: string;
   tag: string;
+  dueDate?: string | null;
   difficulty: Difficulty;
   category: Category;
 };
@@ -157,12 +161,14 @@ const completionXpByDifficulty: Record<Difficulty, number> = {
 };
 
 const rankThresholds = [
-  { minimumXp: 340, title: 'Mythic' },
-  { minimumXp: 240, title: 'Legend' },
-  { minimumXp: 160, title: 'Warden' },
-  { minimumXp: 100, title: 'Champion' },
-  { minimumXp: 50, title: 'Knight' },
-  { minimumXp: 20, title: 'Adventurer' },
+  { minimumXp: 2100, title: 'Ascendant' },
+  { minimumXp: 1560, title: 'Mythic' },
+  { minimumXp: 1160, title: 'Legend' },
+  { minimumXp: 820, title: 'Warden' },
+  { minimumXp: 540, title: 'Champion' },
+  { minimumXp: 320, title: 'Knight' },
+  { minimumXp: 150, title: 'Adventurer' },
+  { minimumXp: 60, title: 'Apprentice' },
   { minimumXp: 0, title: 'Novice' },
 ] as const;
 
@@ -199,7 +205,7 @@ const defaultRemoteAppConfig = {
   boardHeroInsight: 'Keep the momentum moving.',
   realmSyncMessage: 'Sync your realm.',
   suggestionSectionTitle: 'Daily Suggestions',
-  addQuestSectionTitle: 'Forge New Quest',
+  addQuestSectionTitle: 'Guild Hub',
   filterSectionTitle: 'Search And Filter',
   mainQuestSectionTitle: 'Main Quest',
   sideQuestSectionTitle: 'Side Quests',
@@ -470,6 +476,7 @@ async function renderHydratedApp() {
   mockFetchRemoteGameState.mockClear();
   mockFetchRemoteQuestDetails.mockClear();
   mockFetchRemoteDailySuggestions.mockClear();
+  mockFetchRemoteQuestPool.mockClear();
   mockFetchRemoteRealmCodex.mockClear();
   mockFetchRemoteThemeSanctum.mockClear();
   mockSaveRemoteGameState.mockClear();
@@ -502,6 +509,7 @@ beforeEach(() => {
   mockFetchRemoteGameState.mockReset();
   mockFetchRemoteQuestDetails.mockReset();
   mockFetchRemoteDailySuggestions.mockReset();
+  mockFetchRemoteQuestPool.mockReset();
   mockFetchRemoteRealmCodex.mockReset();
   mockFetchRemoteThemeSanctum.mockReset();
   mockSaveRemoteGameState.mockReset();
@@ -528,6 +536,14 @@ beforeEach(() => {
   mockFetchRemoteDailySuggestions.mockImplementation(async () => ({
     suggestionDateKey: getDateKey(),
     suggestions: cloneState(getDailySuggestionsForState(mockBackendState.quests)),
+  }));
+  mockFetchRemoteQuestPool.mockImplementation(async () => ({
+    kicker: 'Quest Pool',
+    title: 'Quest Pool',
+    subtitle: 'Browse reusable quest templates.',
+    searchPlaceholder: 'Search quests, tags, or rituals',
+    categories: ['All', 'Chores', 'Study', 'Work'],
+    templates: cloneState(suggestionPool),
   }));
   mockFetchRemoteRealmCodex.mockResolvedValue({
     kicker: 'Realm Codex',
@@ -575,7 +591,7 @@ beforeEach(() => {
       title: questDraft.title.trim(),
       description: questDraft.description.trim(),
       tag: questDraft.tag,
-      dueDate: null,
+      dueDate: questDraft.dueDate ?? null,
       difficulty: questDraft.difficulty,
       xpReward: completionXpByDifficulty[questDraft.difficulty],
       status: 'Ready',
@@ -606,6 +622,7 @@ beforeEach(() => {
                 title: questDraft.title.trim(),
                 description: questDraft.description.trim(),
                 tag: questDraft.tag,
+                dueDate: questDraft.dueDate ?? null,
                 difficulty: questDraft.difficulty,
                 category: questDraft.category,
                 xpReward: completionXpByDifficulty[questDraft.difficulty],
@@ -908,6 +925,14 @@ test('keeps search and filter controls collapsible and filters active quests in 
   expect(filteredRender).toContain('Brew a Focus Potion');
   expect(filteredRender).not.toContain('Defeat the Laundry Dragon');
   expect(filteredRender).not.toContain('Completed Quests');
+
+  await ReactTestRenderer.act(async () => {
+    tree.root.findByProps({ testID: 'reset-filter-panel' }).props.onPress();
+    await flushMicrotasks();
+  });
+
+  expect(tree.root.findByProps({ testID: 'quest-search-input' }).props.value).toBe('');
+  expect(getRenderText(tree)).toContain('Defeat the Laundry Dragon');
 });
 
 test('opens quest details by tapping the quest card and archives failed quests in history', async () => {
@@ -945,7 +970,7 @@ test('shows a personalized profile, opens the streak calendar, and preserves str
   const tree = await renderHydratedApp();
 
   await ReactTestRenderer.act(async () => {
-    tree.root.findByProps({ testID: 'navigate-to-progress-screen' }).props.onPress();
+    tree.root.findByProps({ testID: 'hero-overview-button' }).props.onPress();
   });
 
   expect(getRenderText(tree)).toContain('Best streak: ');
@@ -963,6 +988,30 @@ test('shows a personalized profile, opens the streak calendar, and preserves str
   expect(streakRender).toContain('Streak Calendar');
   expect(streakRender).toContain('Streak Insight');
   expect(streakRender).toContain(todayKey);
+});
+
+test('opens the quest pool and adds templates as main or side quests', async () => {
+  const tree = await renderHydratedApp();
+
+  await ReactTestRenderer.act(async () => {
+    tree.root.findByProps({ testID: 'navigate-to-quest-pool-screen' }).props.onPress();
+    await flushMicrotasks();
+  });
+
+  expect(getRenderText(tree)).toContain('Quest Pool');
+  expect(getRenderText(tree)).toContain('Study the Ancient Runes');
+
+  await ReactTestRenderer.act(async () => {
+    tree.root.findByProps({ testID: 'add-quest-pool-main-0' }).props.onPress();
+    await flushMicrotasks();
+  });
+
+  expect(mockCreateRemoteQuest).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      title: 'Study the Ancient Runes',
+      category: 'Main Quest',
+    }),
+  );
 });
 
 test('can reset the journey and clear quest progress, history, and achievements', async () => {
