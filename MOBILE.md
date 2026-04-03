@@ -25,8 +25,8 @@ After teacher feedback, the project direction was corrected beginning in Iterati
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 22 |
-| Total Weight (kg) | 230 |
+| Total Iterations | 23 |
+| Total Weight (kg) | 240 |
 | Total Time (min) | Not tracked |
 | Failed Attempts | Not tracked |
 
@@ -922,6 +922,32 @@ do iteration 22 and 23 dont forget to commit
 **Screenshot:** `iteration-22-backend-navigation-config.png`
 
 **Commit:** `[NAIM: Quest Blacksmith] Add backend navigation config - 10kg`
+
+---
+
+### Iteration 23
+
+| Field | Value |
+|-------|-------|
+| Feature | `Backend-driven Quest Board layout` |
+| Weight | `10 kg` |
+| Tool Used | `Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+do iteration 22 and 23 dont forget to commit
+```
+
+**What happened:**
+- Added backend-controlled Quest Board layout fields so the server can now change the hero-card title copy, hero guidance text, and the order of the main, side, and completed quest sections.
+- After a realm refresh, the board visibly reorders its sections and updates the hero messaging from backend config instead of needing another mobile layout rewrite.
+
+**Screenshot:** `iteration-23-backend-board-layout.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add backend quest board layout config - 10kg`
 
 ---
 

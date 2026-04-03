@@ -112,6 +112,8 @@ type TestAppConfig = {
   boardKicker: string;
   boardSubtitle: string;
   heroEyebrow: string;
+  boardHeroTitlePrefix: string;
+  boardHeroInsight: string;
   realmSyncMessage: string;
   suggestionSectionTitle: string;
   addQuestSectionTitle: string;
@@ -119,6 +121,7 @@ type TestAppConfig = {
   mainQuestSectionTitle: string;
   sideQuestSectionTitle: string;
   completedQuestSectionTitle: string;
+  questSectionOrder: Array<'main' | 'side' | 'completed'>;
   progressKicker: string;
   progressTitle: string;
   progressSubtitle: string;
@@ -184,6 +187,9 @@ const defaultRemoteAppConfig: TestAppConfig = {
   boardKicker: 'Daily Quest Log',
   boardSubtitle: 'Turn your everyday tasks into a progression path worth chasing.',
   heroEyebrow: 'Hero Overview',
+  boardHeroTitlePrefix: 'Rank Title',
+  boardHeroInsight:
+    'The backend can rotate this hero-card guidance without another mobile rebuild.',
   realmSyncMessage:
     'Refresh this screen to pull the latest board copy from the backend.',
   suggestionSectionTitle: 'Daily Suggestions',
@@ -192,6 +198,7 @@ const defaultRemoteAppConfig: TestAppConfig = {
   mainQuestSectionTitle: 'Main Quest',
   sideQuestSectionTitle: 'Side Quests',
   completedQuestSectionTitle: 'Completed Quests',
+  questSectionOrder: ['main', 'side', 'completed'],
   progressKicker: 'Profile',
   progressTitle: 'Hero Summary',
   progressSubtitle:
@@ -983,8 +990,14 @@ test('loads backend-driven board copy and refreshes it inside the app', async ()
     configVersion: 2,
     boardKicker: 'Festival Quest Board',
     heroEyebrow: 'Seasonal Hero Snapshot',
+    boardHeroTitlePrefix: 'Guild Rank',
+    boardHeroInsight:
+      'Tonight the guild puts finished quests first to spotlight player momentum.',
     suggestionSectionTitle: 'Festival Suggestions',
-    mainQuestSectionTitle: 'Guild Trials',
+    mainQuestSectionTitle: 'Epic Campaigns',
+    sideQuestSectionTitle: 'Support Quests',
+    completedQuestSectionTitle: 'Victories Logged',
+    questSectionOrder: ['completed', 'main', 'side'],
     realmSyncMessage:
       'A new backend copy is ready. Refresh the board to apply it.',
   };
@@ -1007,10 +1020,26 @@ test('loads backend-driven board copy and refreshes it inside the app', async ()
     root.findAll(node => node.props.children === 'Festival Suggestions').length,
   ).toBeGreaterThan(0);
   expect(
-    root.findAll(node => node.props.children === 'Guild Trials').length,
+    root.findAll(node => node.props.children === 'Epic Campaigns').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Victories Logged').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Support Quests').length,
   ).toBeGreaterThan(0);
   expect(refreshedRender).toContain(
     'A new backend copy is ready. Refresh the board to apply it.',
+  );
+  expect(refreshedRender).toContain('Guild Rank');
+  expect(refreshedRender).toContain(
+    'Tonight the guild puts finished quests first to spotlight player momentum.',
+  );
+  expect(refreshedRender.indexOf('Victories Logged')).toBeLessThan(
+    refreshedRender.indexOf('Epic Campaigns'),
+  );
+  expect(refreshedRender.indexOf('Epic Campaigns')).toBeLessThan(
+    refreshedRender.indexOf('Support Quests'),
   );
   expect(mockFetchRemoteAppConfig).toHaveBeenCalled();
 });

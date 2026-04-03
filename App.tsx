@@ -36,6 +36,7 @@ type Category = 'Main Quest' | 'Side Quest';
 type Status = 'Ready' | 'In Progress' | 'Completed';
 type ScreenName = 'quest-board' | 'add-quest' | 'progress' | 'realm-codex';
 type RankTitle = 'Novice' | 'Adventurer' | 'Knight' | 'Champion';
+type QuestBoardSectionKey = 'main' | 'side' | 'completed';
 type SortOption =
   | 'Newest first'
   | 'Oldest first'
@@ -101,6 +102,8 @@ type AppConfig = {
   boardKicker: string;
   boardSubtitle: string;
   heroEyebrow: string;
+  boardHeroTitlePrefix: string;
+  boardHeroInsight: string;
   realmSyncMessage: string;
   suggestionSectionTitle: string;
   addQuestSectionTitle: string;
@@ -108,6 +111,7 @@ type AppConfig = {
   mainQuestSectionTitle: string;
   sideQuestSectionTitle: string;
   completedQuestSectionTitle: string;
+  questSectionOrder: QuestBoardSectionKey[];
   progressKicker: string;
   progressTitle: string;
   progressSubtitle: string;
@@ -264,6 +268,11 @@ const categoryFilterOptions: CategoryFilter[] = [
   'Side Quest',
 ];
 const statusFilterOptions: StatusFilter[] = ['All', 'Active', 'Completed'];
+const defaultQuestSectionOrder: QuestBoardSectionKey[] = [
+  'main',
+  'side',
+  'completed',
+];
 const sortOptions: SortOption[] = [
   'Newest first',
   'Oldest first',
@@ -279,6 +288,9 @@ function createDefaultAppConfig(): AppConfig {
     boardSubtitle:
       'Turn your everyday tasks into a progression path worth chasing.',
     heroEyebrow: 'Hero Overview',
+    boardHeroTitlePrefix: 'Rank Title',
+    boardHeroInsight:
+      'The backend can rotate this hero-card guidance without another mobile rebuild.',
     realmSyncMessage:
       'Refresh this screen to pull the latest board copy from the backend.',
     suggestionSectionTitle: 'Daily Suggestions',
@@ -287,6 +299,7 @@ function createDefaultAppConfig(): AppConfig {
     mainQuestSectionTitle: 'Main Quest',
     sideQuestSectionTitle: 'Side Quests',
     completedQuestSectionTitle: 'Completed Quests',
+    questSectionOrder: defaultQuestSectionOrder,
     progressKicker: 'Profile',
     progressTitle: 'Hero Summary',
     progressSubtitle:
@@ -641,6 +654,27 @@ function normalizeAppConfigText(
     : fallbackValue;
 }
 
+function normalizeQuestSectionOrder(
+  questSectionOrder: QuestBoardSectionKey[] | undefined,
+  fallbackOrder: QuestBoardSectionKey[],
+) {
+  if (!Array.isArray(questSectionOrder)) {
+    return fallbackOrder;
+  }
+
+  const normalizedOrder = questSectionOrder.filter(
+    (sectionKey): sectionKey is QuestBoardSectionKey =>
+      sectionKey === 'main' ||
+      sectionKey === 'side' ||
+      sectionKey === 'completed',
+  );
+  const uniqueOrder = normalizedOrder.filter(
+    (sectionKey, index) => normalizedOrder.indexOf(sectionKey) === index,
+  );
+
+  return uniqueOrder.length === fallbackOrder.length ? uniqueOrder : fallbackOrder;
+}
+
 function normalizeRemoteAppConfig(config: AppConfig): AppConfig {
   const fallbackConfig = createDefaultAppConfig();
 
@@ -660,6 +694,14 @@ function normalizeRemoteAppConfig(config: AppConfig): AppConfig {
     heroEyebrow: normalizeAppConfigText(
       config?.heroEyebrow,
       fallbackConfig.heroEyebrow,
+    ),
+    boardHeroTitlePrefix: normalizeAppConfigText(
+      config?.boardHeroTitlePrefix,
+      fallbackConfig.boardHeroTitlePrefix,
+    ),
+    boardHeroInsight: normalizeAppConfigText(
+      config?.boardHeroInsight,
+      fallbackConfig.boardHeroInsight,
     ),
     realmSyncMessage: normalizeAppConfigText(
       config?.realmSyncMessage,
@@ -688,6 +730,10 @@ function normalizeRemoteAppConfig(config: AppConfig): AppConfig {
     completedQuestSectionTitle: normalizeAppConfigText(
       config?.completedQuestSectionTitle,
       fallbackConfig.completedQuestSectionTitle,
+    ),
+    questSectionOrder: normalizeQuestSectionOrder(
+      config?.questSectionOrder,
+      fallbackConfig.questSectionOrder,
     ),
     progressKicker: normalizeAppConfigText(
       config?.progressKicker,
@@ -1286,6 +1332,29 @@ function QuestBoardScreen({
     quest => quest.status === 'Completed',
   );
   const hasVisibleQuests = visibleQuests.length > 0;
+  const questSections = appConfig.questSectionOrder.map(sectionKey => {
+    if (sectionKey === 'main') {
+      return {
+        key: 'main',
+        title: appConfig.mainQuestSectionTitle,
+        quests: mainQuests,
+      };
+    }
+
+    if (sectionKey === 'side') {
+      return {
+        key: 'side',
+        title: appConfig.sideQuestSectionTitle,
+        quests: sideQuests,
+      };
+    }
+
+    return {
+      key: 'completed',
+      title: appConfig.completedQuestSectionTitle,
+      quests: completedQuests,
+    };
+  });
 
   return (
     <ScrollView
@@ -1309,7 +1378,9 @@ function QuestBoardScreen({
         <View style={styles.heroHeader}>
           <View>
             <Text style={styles.heroEyebrow}>{appConfig.heroEyebrow}</Text>
-            <Text style={styles.heroTitle}>Rank Title: {hero.rankTitle}</Text>
+            <Text style={styles.heroTitle}>
+              {appConfig.boardHeroTitlePrefix}: {hero.rankTitle}
+            </Text>
           </View>
           <View style={styles.heroOrb} />
         </View>
@@ -1334,6 +1405,7 @@ function QuestBoardScreen({
             value={`${hero.streakCount}d`}
           />
         </View>
+        <Text style={styles.heroSupportText}>{appConfig.boardHeroInsight}</Text>
       </View>
 
       {completionFeedback ? (
@@ -1522,51 +1594,24 @@ function QuestBoardScreen({
         </View>
       ) : null}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{appConfig.mainQuestSectionTitle}</Text>
-        {mainQuests.map(quest => (
-          <QuestCard
-            key={quest.id}
-            onComplete={onCompleteQuest}
-            onEdit={
-              appConfig.featureFlags.showAddQuestScreen ? onEditQuest : undefined
-            }
-            quest={quest}
-            styles={styles}
-          />
-        ))}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{appConfig.sideQuestSectionTitle}</Text>
-        {sideQuests.map(quest => (
-          <QuestCard
-            key={quest.id}
-            onComplete={onCompleteQuest}
-            onEdit={
-              appConfig.featureFlags.showAddQuestScreen ? onEditQuest : undefined
-            }
-            quest={quest}
-            styles={styles}
-          />
-        ))}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          {appConfig.completedQuestSectionTitle}
-        </Text>
-        {completedQuests.map(quest => (
-          <QuestCard
-            key={quest.id}
-            onEdit={
-              appConfig.featureFlags.showAddQuestScreen ? onEditQuest : undefined
-            }
-            quest={quest}
-            styles={styles}
-          />
-        ))}
-      </View>
+      {questSections.map(section => (
+        <View key={section.key} style={styles.section}>
+          <Text style={styles.sectionTitle}>{section.title}</Text>
+          {section.quests.map(quest => (
+            <QuestCard
+              key={quest.id}
+              onComplete={
+                section.key === 'completed' ? undefined : onCompleteQuest
+              }
+              onEdit={
+                appConfig.featureFlags.showAddQuestScreen ? onEditQuest : undefined
+              }
+              quest={quest}
+              styles={styles}
+            />
+          ))}
+        </View>
+      ))}
     </ScrollView>
   );
 }
@@ -2692,6 +2737,12 @@ function createStyles(theme: ThemePalette) {
       color: theme.textPrimary,
       fontSize: 22,
       fontWeight: '700',
+    },
+    heroSupportText: {
+      color: theme.subtitle,
+      fontSize: 14,
+      lineHeight: 21,
+      marginTop: 18,
     },
     levelAccent: {
       color: theme.amberSoft,

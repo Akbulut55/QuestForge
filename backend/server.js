@@ -31,6 +31,7 @@ const achievementDefinitions = [
   'streak-keeper',
   'quest-master',
 ];
+const defaultQuestSectionOrder = ['main', 'side', 'completed'];
 const rankThresholds = [
   { minimumXp: 100, title: 'Champion' },
   { minimumXp: 50, title: 'Knight' },
@@ -84,6 +85,8 @@ const defaultAppConfig = {
   boardKicker: 'Daily Quest Log',
   boardSubtitle: 'Turn your everyday tasks into a progression path worth chasing.',
   heroEyebrow: 'Hero Overview',
+  boardHeroTitlePrefix: 'Rank Title',
+  boardHeroInsight: 'The backend can rotate this hero-card guidance without another mobile rebuild.',
   realmSyncMessage: 'Refresh this screen to pull the latest board copy from the backend.',
   suggestionSectionTitle: 'Daily Suggestions',
   addQuestSectionTitle: 'Forge New Quest',
@@ -91,6 +94,7 @@ const defaultAppConfig = {
   mainQuestSectionTitle: 'Main Quest',
   sideQuestSectionTitle: 'Side Quests',
   completedQuestSectionTitle: 'Completed Quests',
+  questSectionOrder: defaultQuestSectionOrder,
   progressKicker: 'Profile',
   progressTitle: 'Hero Summary',
   progressSubtitle: 'Track the progress you have forged from quests already living in your current log.',
@@ -402,6 +406,23 @@ function normalizeTextField(value, fallbackValue) {
     : fallbackValue;
 }
 
+function normalizeQuestSectionOrder(questSectionOrder) {
+  if (!Array.isArray(questSectionOrder)) {
+    return defaultQuestSectionOrder;
+  }
+
+  const normalizedOrder = questSectionOrder.filter(sectionKey =>
+    defaultQuestSectionOrder.includes(sectionKey),
+  );
+  const uniqueOrder = normalizedOrder.filter(
+    (sectionKey, index) => normalizedOrder.indexOf(sectionKey) === index,
+  );
+
+  return uniqueOrder.length === defaultQuestSectionOrder.length
+    ? uniqueOrder
+    : defaultQuestSectionOrder;
+}
+
 function getDailySuggestions(dateKey, quests) {
   const existingQuestTitles = new Set(
     quests.map(quest => quest.title.trim().toLowerCase()),
@@ -566,6 +587,14 @@ function normalizeAppConfig(appConfig) {
       appConfig?.heroEyebrow,
       defaultAppConfig.heroEyebrow,
     ),
+    boardHeroTitlePrefix: normalizeTextField(
+      appConfig?.boardHeroTitlePrefix,
+      defaultAppConfig.boardHeroTitlePrefix,
+    ),
+    boardHeroInsight: normalizeTextField(
+      appConfig?.boardHeroInsight,
+      defaultAppConfig.boardHeroInsight,
+    ),
     realmSyncMessage: normalizeTextField(
       appConfig?.realmSyncMessage,
       defaultAppConfig.realmSyncMessage,
@@ -594,6 +623,7 @@ function normalizeAppConfig(appConfig) {
       appConfig?.completedQuestSectionTitle,
       defaultAppConfig.completedQuestSectionTitle,
     ),
+    questSectionOrder: normalizeQuestSectionOrder(appConfig?.questSectionOrder),
     progressKicker: normalizeTextField(
       appConfig?.progressKicker,
       defaultAppConfig.progressKicker,
