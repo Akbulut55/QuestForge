@@ -25,8 +25,8 @@ After teacher feedback, the project direction was corrected beginning in Iterati
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 30 |
-| Total Weight (kg) | 310 |
+| Total Iterations | 31 |
+| Total Weight (kg) | 310 (legacy tracking ended after Iteration 30) |
 | Total Time (min) | Not tracked |
 | Failed Attempts | Not tracked |
 
@@ -1130,6 +1130,31 @@ add more suggested quests and add a short description to them so user would know
 **Screenshot:** `iteration-30-quest-system-overhaul.png`
 
 **Commit:** `[NAIM: Quest Blacksmith] Expand quest system and history flow - 10kg`
+
+---
+
+### Iteration 31
+
+| Field | Value |
+|-------|-------|
+| Feature | `Reset confirmation and backend connection reliability` |
+| Tool Used | `Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+i dont want a reminder about screenshots or kg anymore. add a confirmation message for resetting journey user can misclick and reset everything and i am having a backend problem backend is running but app says quest forge api offline i cant open the app
+```
+
+**What happened:**
+- Added a confirmation dialog before `Reset Journey` so a mistaken tap cannot immediately wipe quests, history, streaks, XP, and achievements.
+- Reworked backend URL resolution in the mobile app so it tries safer local fallbacks, especially on Android, and paired that with a backend listen update so the app can connect more reliably while the local server is already running.
+
+**Screenshot:** `Not tracked`
+
+**Commit:** `Add reset confirmation and backend host fallback`
 
 ---
 

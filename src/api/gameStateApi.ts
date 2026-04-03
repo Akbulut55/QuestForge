@@ -1,6 +1,7 @@
 import { NativeModules, Platform } from 'react-native';
 
 const BACKEND_PORT = 4000;
+let cachedBackendBaseUrl: string | null = null;
 
 function getScriptHost() {
   const scriptURL = NativeModules.SourceCode?.scriptURL;
@@ -18,11 +19,48 @@ function getScriptHost() {
   }
 }
 
-export function getBackendBaseUrl() {
-  const host =
-    getScriptHost() ?? (Platform.OS === 'android' ? '10.0.2.2' : 'localhost');
+function appendBackendUrl(baseUrls: string[], host: string | null) {
+  if (!host) {
+    return;
+  }
 
-  return `http://${host}:${BACKEND_PORT}`;
+  const normalizedHost = host.trim();
+
+  if (!normalizedHost) {
+    return;
+  }
+
+  const nextBaseUrl = `http://${normalizedHost}:${BACKEND_PORT}`;
+
+  if (!baseUrls.includes(nextBaseUrl)) {
+    baseUrls.push(nextBaseUrl);
+  }
+}
+
+function getBackendBaseUrls() {
+  const scriptHost = getScriptHost();
+  const baseUrls: string[] = [];
+
+  if (Platform.OS === 'android') {
+    appendBackendUrl(baseUrls, '10.0.2.2');
+    appendBackendUrl(baseUrls, '10.0.3.2');
+
+    if (scriptHost === 'localhost' || scriptHost === '127.0.0.1') {
+      appendBackendUrl(baseUrls, '10.0.2.2');
+    } else {
+      appendBackendUrl(baseUrls, scriptHost);
+    }
+  } else {
+    appendBackendUrl(baseUrls, scriptHost);
+    appendBackendUrl(baseUrls, 'localhost');
+    appendBackendUrl(baseUrls, '127.0.0.1');
+  }
+
+  return baseUrls;
+}
+
+export function getBackendBaseUrl() {
+  return cachedBackendBaseUrl ?? getBackendBaseUrls()[0];
 }
 
 async function readJsonResponse<T>(response: Response): Promise<T> {
@@ -37,9 +75,41 @@ async function requestJson<T>(
   path: string,
   options?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(`${getBackendBaseUrl()}${path}`, options);
+  const candidateBaseUrls = cachedBackendBaseUrl
+    ? [
+        cachedBackendBaseUrl,
+        ...getBackendBaseUrls().filter(baseUrl => baseUrl !== cachedBackendBaseUrl),
+      ]
+    : getBackendBaseUrls();
+  let lastNetworkError: unknown = null;
 
-  return readJsonResponse<T>(response);
+  for (const baseUrl of candidateBaseUrls) {
+    try {
+      const response = await fetch(`${baseUrl}${path}`, options);
+      const parsedResponse = await readJsonResponse<T>(response);
+
+      cachedBackendBaseUrl = baseUrl;
+
+      return parsedResponse;
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message.startsWith('Backend request failed with status')
+      ) {
+        throw error;
+      }
+
+      lastNetworkError = error;
+    }
+  }
+
+  cachedBackendBaseUrl = null;
+
+  if (lastNetworkError instanceof Error) {
+    throw lastNetworkError;
+  }
+
+  throw new Error('Unable to reach the Quest Forge API.');
 }
 
 export async function fetchRemoteGameState<T>(): Promise<T> {

@@ -4,6 +4,7 @@
 
 import React from 'react';
 import ReactTestRenderer from 'react-test-renderer';
+import { Alert } from 'react-native';
 
 jest.mock('react-native-safe-area-context', () => {
   const mockReact = require('react');
@@ -329,6 +330,7 @@ const defaultRemoteGameState: TestGameState = {
 let mockBackendState = cloneState(defaultRemoteGameState);
 let mockRemoteAppConfig = cloneState(defaultRemoteAppConfig);
 let mockDailySuggestions: SuggestedQuest[] | null = null;
+let alertSpy: jest.SpyInstance;
 
 function normalizeState(gameState: TestGameState): TestGameState {
   const normalizedQuests = gameState.quests.map(quest => {
@@ -486,6 +488,7 @@ async function renderHydratedApp() {
 }
 
 beforeEach(() => {
+  alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   mockBackendState = cloneState(defaultRemoteGameState);
   mockRemoteAppConfig = cloneState(defaultRemoteAppConfig);
   mockDailySuggestions = null;
@@ -759,6 +762,10 @@ beforeEach(() => {
   });
 });
 
+afterEach(() => {
+  alertSpy.mockRestore();
+});
+
 test('loads persisted game state from AsyncStorage', async () => {
   mockAsyncStorage.getItem.mockImplementation(async (key: string) => {
     if (key === GAME_STATE_STORAGE_KEY) {
@@ -967,6 +974,23 @@ test('can reset the journey and clear quest progress, history, and achievements'
 
   await ReactTestRenderer.act(async () => {
     tree.root.findByProps({ testID: 'reset-progress-button' }).props.onPress();
+  });
+
+  expect(alertSpy).toHaveBeenCalledWith(
+    'Reset Journey?',
+    expect.stringContaining('This will clear your quests'),
+    expect.any(Array),
+  );
+
+  const buttons = alertSpy.mock.calls[0]?.[2] as
+    | Array<{ text?: string; onPress?: () => void }>
+    | undefined;
+  const confirmResetButton = buttons?.find(
+    button => button.text === 'Reset Everything',
+  );
+
+  await ReactTestRenderer.act(async () => {
+    confirmResetButton?.onPress?.();
     await flushMicrotasks();
   });
 

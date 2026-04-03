@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   Pressable,
   ScrollView,
@@ -3890,6 +3891,26 @@ function App() {
     }
   };
 
+  const handleConfirmResetJourney = () => {
+    Alert.alert(
+      'Reset Journey?',
+      'This will clear your quests, history, streaks, XP, and achievements. This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Reset Everything',
+          style: 'destructive',
+          onPress: () => {
+            handleResetJourney().catch(() => undefined);
+          },
+        },
+      ],
+    );
+  };
+
   const handleOpenRealmCodex = async () => {
     if (!appConfig.featureFlags.showRealmCodexScreen) {
       return;
@@ -4057,7 +4078,7 @@ function App() {
                   onBack={() => setCurrentScreen('quest-board')}
                   onNavigateToHistory={handleOpenHistory}
                   onNavigateToStreak={handleOpenStreak}
-                  onResetJourney={handleResetJourney}
+                  onResetJourney={handleConfirmResetJourney}
                   onToggleTheme={handleToggleTheme}
                   quests={gameState.quests}
                   styles={styles}
