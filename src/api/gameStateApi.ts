@@ -128,6 +128,18 @@ export async function updateRemoteTheme<TThemeMode, TResponse>(
   });
 }
 
+export async function updateRemoteThemePack<TThemePackId, TResponse>(
+  themePackId: TThemePackId,
+): Promise<TResponse> {
+  return requestJson<TResponse>('/preferences/theme-pack', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ themePackId }),
+  });
+}
+
 export async function updateRemoteSortOption<TSortOption, TResponse>(
   sortOption: TSortOption,
 ): Promise<TResponse> {

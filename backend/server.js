@@ -32,6 +32,7 @@ const achievementDefinitions = [
   'quest-master',
 ];
 const defaultQuestSectionOrder = ['main', 'side', 'completed'];
+const themePackOptions = ['ethereal-forge', 'luminous-paladin', 'void-drifter'];
 const rankThresholds = [
   { minimumXp: 100, title: 'Champion' },
   { minimumXp: 50, title: 'Knight' },
@@ -76,6 +77,7 @@ const defaultGameState = {
     },
   ],
   themeMode: 'dark',
+  themePackId: 'ethereal-forge',
   unlockedAchievementIds: ['first-quest', 'quest-finisher'],
   sortOption: 'Newest first',
 };
@@ -386,6 +388,7 @@ function normalizeGameState(gameState) {
     hero,
     quests: normalizedQuests,
     themeMode: gameState?.themeMode === 'light' ? 'light' : 'dark',
+    themePackId: normalizeThemePackId(gameState?.themePackId),
     sortOption: sortOptions.includes(gameState?.sortOption)
       ? gameState.sortOption
       : 'Newest first',
@@ -582,19 +585,53 @@ function buildRealmCodex(gameState, appConfig) {
 }
 
 function buildThemeSanctum(gameState, appConfig) {
+  const activeThemePackId = normalizeThemePackId(gameState.themePackId);
+  const activeThemePack =
+    activeThemePackId === 'luminous-paladin'
+      ? {
+          name: 'Luminous Paladin',
+          description:
+            'A brighter holy-metal palette that lets the realm feel radiant without changing the screen structure.',
+          accentEnergy:
+            gameState.themeMode === 'dark' ? 'Sunsteel Ember' : 'Sunsteel Glow',
+          surfaceTone:
+            gameState.themeMode === 'dark' ? 'Velvet Plate' : 'Ivory Plate',
+        }
+      : activeThemePackId === 'void-drifter'
+        ? {
+            name: 'Void Drifter',
+            description:
+              'A colder cosmic palette that shifts the realm toward nebula blues and teal energy.',
+            accentEnergy:
+              gameState.themeMode === 'dark' ? 'Nebula Cyan' : 'Aether Teal',
+            surfaceTone:
+              gameState.themeMode === 'dark' ? 'Void Indigo' : 'Mist Glass',
+          }
+        : {
+            name: 'Ethereal Forge',
+            description:
+              'The default amber-and-cyan codex that originally shaped Quest Forge.',
+            accentEnergy:
+              gameState.themeMode === 'dark'
+                ? 'Amber + Cyan Pulse'
+                : 'Sunlit Gold + Sky Glass',
+            surfaceTone:
+              gameState.themeMode === 'dark'
+                ? 'Midnight Slate'
+                : 'Radiant Parchment',
+          };
   return {
     kicker: 'Theme Sanctum',
     title: 'The Color Forge',
     subtitle:
       'A backend-guided reading of the realm palette currently shaping Quest Forge across every screen.',
-    activeThemeLabel: 'Ethereal Forge',
+    activeThemeLabel: activeThemePack.name,
     activeModeLabel:
       gameState.themeMode === 'dark' ? 'Dark Alchemist' : 'Light Alchemist',
-    accentEnergyLabel: gameState.themeMode === 'dark' ? 'Amber + Cyan Pulse' : 'Sunlit Gold + Sky Glass',
-    surfaceToneLabel:
-      gameState.themeMode === 'dark' ? 'Midnight Slate' : 'Radiant Parchment',
+    accentEnergyLabel: activeThemePack.accentEnergy,
+    surfaceToneLabel: activeThemePack.surfaceTone,
     realmNotesLabel:
-      `Config v${appConfig.configVersion}. The backend can now introduce new visual essences without rebuilding every screen structure.`,
+      `Config v${appConfig.configVersion}. ${activeThemePack.description}`,
     availableEssencesTitle: 'Available Essences',
     availableEssencesIntro:
       'These packs are described by the backend first so the app can evolve into a more configurable visual system over time.',
@@ -605,26 +642,33 @@ function buildThemeSanctum(gameState, appConfig) {
         description: 'The current amber-and-cyan codex used across the realm.',
         accentEnergy: 'Amber Gold',
         surfaceTone: 'Forged Slate',
-        statusLabel: 'Current',
+        statusLabel:
+          activeThemePackId === 'ethereal-forge' ? 'Current' : 'Dormant',
       },
       {
         id: 'luminous-paladin',
         name: 'Luminous Paladin',
-        description: 'A brighter holy-metal palette prepared for a future unlock.',
+        description: 'A brighter holy-metal palette tuned for radiant adventures.',
         accentEnergy: 'Sunsteel',
         surfaceTone: 'Ivory Plate',
-        statusLabel: 'Dormant',
+        statusLabel:
+          activeThemePackId === 'luminous-paladin' ? 'Current' : 'Dormant',
       },
       {
         id: 'void-drifter',
         name: 'Void Drifter',
-        description: 'A colder cosmic palette waiting in the backend archives.',
+        description: 'A colder cosmic palette carried in from the backend archives.',
         accentEnergy: 'Nebula Cyan',
         surfaceTone: 'Void Indigo',
-        statusLabel: 'Dormant',
+        statusLabel: activeThemePackId === 'void-drifter' ? 'Current' : 'Dormant',
       },
     ],
   };
+}
+function normalizeThemePackId(themePackId) {
+  return themePackOptions.includes(themePackId)
+    ? themePackId
+    : 'ethereal-forge';
 }
 function normalizeAppConfig(appConfig) {
   return {
@@ -758,6 +802,7 @@ function buildNextGameState(currentGameState, updates) {
     hero: nextHero,
     quests: nextQuests,
     themeMode: updates.themeMode ?? currentGameState.themeMode,
+    themePackId: updates.themePackId ?? currentGameState.themePackId,
     sortOption: updates.sortOption ?? currentGameState.sortOption,
     unlockedAchievementIds: getUnlockedAchievementIds({
       hero: nextHero,
@@ -790,6 +835,10 @@ function isValidQuestDraft(questDraft) {
 
 function isValidThemeMode(themeMode) {
   return themeMode === 'dark' || themeMode === 'light';
+}
+
+function isValidThemePackId(themePackId) {
+  return themePackOptions.includes(themePackId);
 }
 
 function isValidSortOption(sortOption) {
@@ -1195,6 +1244,33 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.url === '/preferences/theme-pack' && req.method === 'PUT') {
+    try {
+      const payload = await readRequestBody(req);
+
+      if (!isValidThemePackId(payload?.themePackId)) {
+        sendJson(res, 400, {
+          error: 'Invalid theme pack payload.',
+        });
+        return;
+      }
+
+      const currentGameState = await readGameState();
+      const nextGameState = buildNextGameState(currentGameState, {
+        themePackId: payload.themePackId,
+      });
+
+      await writeGameState(nextGameState);
+      sendJson(res, 200, { gameState: nextGameState });
+    } catch (error) {
+      sendJson(res, 500, {
+        error: 'Unable to update theme pack.',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+    return;
+  }
+
   if (req.url === '/preferences/sort' && req.method === 'PUT') {
     try {
       const payload = await readRequestBody(req);
@@ -1230,10 +1306,6 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`QuestForge backend running at http://localhost:${PORT}`);
 });
-
-
-
-
 
 
 

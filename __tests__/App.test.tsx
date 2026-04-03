@@ -50,6 +50,7 @@ jest.mock('../src/api/gameStateApi', () => ({
   updateRemoteQuest: jest.fn(),
   updateRemoteSortOption: jest.fn(),
   updateRemoteTheme: jest.fn(),
+  updateRemoteThemePack: jest.fn(),
 }));
 
 import App from '../App';
@@ -72,6 +73,7 @@ import {
   updateRemoteQuest,
   updateRemoteSortOption,
   updateRemoteTheme,
+  updateRemoteThemePack,
 } from '../src/api/gameStateApi';
 
 const mockAsyncStorage =
@@ -88,6 +90,7 @@ const mockFetchRemoteRealmCodex = fetchRemoteRealmCodex as jest.Mock;
 const mockFetchRemoteThemeSanctum = fetchRemoteThemeSanctum as jest.Mock;
 const mockUpdateRemoteTheme = updateRemoteTheme as jest.Mock;
 const mockUpdateRemoteSortOption = updateRemoteSortOption as jest.Mock;
+const mockUpdateRemoteThemePack = updateRemoteThemePack as jest.Mock;
 
 type TestGameState = {
   hero: {
@@ -106,6 +109,7 @@ type TestGameState = {
     createdAt: number;
   }>;
   themeMode: string;
+  themePackId: string;
   unlockedAchievementIds: string[];
   sortOption: string;
 };
@@ -182,6 +186,7 @@ const defaultRemoteGameState: TestGameState = {
     },
   ],
   themeMode: 'dark',
+  themePackId: 'ethereal-forge',
   unlockedAchievementIds: ['first-quest', 'quest-finisher'],
   sortOption: 'Newest first',
 };
@@ -631,22 +636,59 @@ function buildRealmCodexResponse() {
 }
 
 function buildThemeSanctumResponse() {
+  const activeThemePackId =
+    mockBackendState.themePackId === 'luminous-paladin' ||
+    mockBackendState.themePackId === 'void-drifter'
+      ? mockBackendState.themePackId
+      : 'ethereal-forge';
+  const activeThemePack =
+    activeThemePackId === 'luminous-paladin'
+      ? {
+          name: 'Luminous Paladin',
+          description:
+            'A brighter holy-metal palette that lets the realm feel radiant without changing the screen structure.',
+          accentEnergy:
+            mockBackendState.themeMode === 'dark'
+              ? 'Sunsteel Ember'
+              : 'Sunsteel Glow',
+          surfaceTone:
+            mockBackendState.themeMode === 'dark' ? 'Velvet Plate' : 'Ivory Plate',
+        }
+      : activeThemePackId === 'void-drifter'
+        ? {
+            name: 'Void Drifter',
+            description:
+              'A colder cosmic palette that shifts the realm toward nebula blues and teal energy.',
+            accentEnergy:
+              mockBackendState.themeMode === 'dark' ? 'Nebula Cyan' : 'Aether Teal',
+            surfaceTone:
+              mockBackendState.themeMode === 'dark' ? 'Void Indigo' : 'Mist Glass',
+          }
+        : {
+            name: 'Ethereal Forge',
+            description:
+              'The default amber-and-cyan codex that originally shaped Quest Forge.',
+            accentEnergy:
+              mockBackendState.themeMode === 'dark'
+                ? 'Amber + Cyan Pulse'
+                : 'Sunlit Gold + Sky Glass',
+            surfaceTone:
+              mockBackendState.themeMode === 'dark'
+                ? 'Midnight Slate'
+                : 'Radiant Parchment',
+          };
   return {
     kicker: 'Theme Sanctum',
     title: 'The Color Forge',
     subtitle:
       'A backend-guided reading of the realm palette currently shaping Quest Forge across every screen.',
-    activeThemeLabel: 'Ethereal Forge',
+    activeThemeLabel: activeThemePack.name,
     activeModeLabel:
       mockBackendState.themeMode === 'dark' ? 'Dark Alchemist' : 'Light Alchemist',
-    accentEnergyLabel:
-      mockBackendState.themeMode === 'dark'
-        ? 'Amber + Cyan Pulse'
-        : 'Sunlit Gold + Sky Glass',
-    surfaceToneLabel:
-      mockBackendState.themeMode === 'dark' ? 'Midnight Slate' : 'Radiant Parchment',
+    accentEnergyLabel: activeThemePack.accentEnergy,
+    surfaceToneLabel: activeThemePack.surfaceTone,
     realmNotesLabel:
-      `Config v${mockRemoteAppConfig.configVersion}. The backend can now introduce new visual essences without rebuilding every screen structure.`,
+      `Config v${mockRemoteAppConfig.configVersion}. ${activeThemePack.description}`,
     availableEssencesTitle: 'Available Essences',
     availableEssencesIntro:
       'These packs are described by the backend first so the app can evolve into a more configurable visual system over time.',
@@ -657,23 +699,24 @@ function buildThemeSanctumResponse() {
         description: 'The current amber-and-cyan codex used across the realm.',
         accentEnergy: 'Amber Gold',
         surfaceTone: 'Forged Slate',
-        statusLabel: 'Current',
+        statusLabel: activeThemePackId === 'ethereal-forge' ? 'Current' : 'Dormant',
       },
       {
         id: 'luminous-paladin',
         name: 'Luminous Paladin',
-        description: 'A brighter holy-metal palette prepared for a future unlock.',
+        description: 'A brighter holy-metal palette tuned for radiant adventures.',
         accentEnergy: 'Sunsteel',
         surfaceTone: 'Ivory Plate',
-        statusLabel: 'Dormant',
+        statusLabel:
+          activeThemePackId === 'luminous-paladin' ? 'Current' : 'Dormant',
       },
       {
         id: 'void-drifter',
         name: 'Void Drifter',
-        description: 'A colder cosmic palette waiting in the backend archives.',
+        description: 'A colder cosmic palette carried in from the backend archives.',
         accentEnergy: 'Nebula Cyan',
         surfaceTone: 'Void Indigo',
-        statusLabel: 'Dormant',
+        statusLabel: activeThemePackId === 'void-drifter' ? 'Current' : 'Dormant',
       },
     ],
   };
@@ -700,6 +743,11 @@ function normalizeGameState(gameState: typeof defaultRemoteGameState) {
     hero,
     quests,
     themeMode: gameState.themeMode === 'light' ? 'light' : 'dark',
+    themePackId:
+      gameState.themePackId === 'luminous-paladin' ||
+      gameState.themePackId === 'void-drifter'
+        ? gameState.themePackId
+        : 'ethereal-forge',
     sortOption: gameState.sortOption,
     unlockedAchievementIds: getUnlockedAchievementIds({
       hero,
@@ -740,6 +788,7 @@ async function renderHydratedApp() {
   mockFetchRemoteThemeSanctum.mockClear();
   mockUpdateRemoteTheme.mockClear();
   mockUpdateRemoteSortOption.mockClear();
+  mockUpdateRemoteThemePack.mockClear();
 
   return tree!;
 }
@@ -761,6 +810,7 @@ beforeEach(() => {
   mockFetchRemoteThemeSanctum.mockReset();
   mockUpdateRemoteTheme.mockReset();
   mockUpdateRemoteSortOption.mockReset();
+  mockUpdateRemoteThemePack.mockReset();
   mockAsyncStorage.getItem.mockResolvedValue(null);
   mockAsyncStorage.setItem.mockResolvedValue(undefined);
   mockFetchRemoteAppConfig.mockImplementation(async () =>
@@ -925,6 +975,14 @@ beforeEach(() => {
     mockBackendState = normalizeGameState({
       ...mockBackendState,
       sortOption,
+    });
+
+    return { gameState: cloneState(mockBackendState) };
+  });
+  mockUpdateRemoteThemePack.mockImplementation(async (themePackId: string) => {
+    mockBackendState = normalizeGameState({
+      ...mockBackendState,
+      themePackId,
     });
 
     return { gameState: cloneState(mockBackendState) };
@@ -1265,6 +1323,33 @@ test('opens the Stitch-generated Theme Sanctum screen with backend theme summary
   expect(sanctumRender).toContain('Luminous Paladin');
   expect(sanctumRender).toContain('Refresh Theme Sanctum');
 });
+
+test('selecting a backend theme pack updates the active app essence', async () => {
+  const tree = await renderHydratedApp();
+  let root = tree.root;
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'navigate-to-theme-sanctum' }).props.onPress();
+    await flushMicrotasks();
+  });
+
+  root = tree.root;
+
+  await ReactTestRenderer.act(async () => {
+    root
+      .findByProps({ testID: 'select-theme-pack-luminous-paladin' })
+      .props.onPress();
+    await flushMicrotasks();
+  });
+
+  root = tree.root;
+  const sanctumRender = JSON.stringify(tree.toJSON());
+
+  expect(mockUpdateRemoteThemePack).toHaveBeenCalledWith('luminous-paladin');
+  expect(sanctumRender).toContain('Luminous Paladin');
+  expect(sanctumRender).toContain('Sunsteel');
+  expect(getLastSavedGameState().themePackId).toBe('luminous-paladin');
+});
 test('completing a quest awards XP, updates rank, and saves remote game state', async () => {
   const tree = await renderHydratedApp();
 
@@ -1368,6 +1453,7 @@ test('sorting works with the current search and filter flow and persists selecti
       },
     ],
     themeMode: 'dark',
+    themePackId: 'ethereal-forge',
     unlockedAchievementIds: ['first-quest'],
     sortOption: 'Newest first',
   };
@@ -1619,6 +1705,7 @@ test('streak resets on load after a missed day from backend data', async () => {
     },
     quests: [],
     themeMode: 'dark',
+    themePackId: 'ethereal-forge',
     unlockedAchievementIds: [],
     sortOption: 'Newest first',
   };
@@ -1664,6 +1751,7 @@ test('completing a quest on the next day increases the streak', async () => {
       },
     ],
     themeMode: 'dark',
+    themePackId: 'ethereal-forge',
     unlockedAchievementIds: ['first-quest'],
     sortOption: 'Newest first',
   };

@@ -30,6 +30,7 @@ import {
   updateRemoteQuest,
   updateRemoteSortOption,
   updateRemoteTheme,
+  updateRemoteThemePack,
 } from './src/api/gameStateApi';
 
 type Difficulty = 'Easy' | 'Medium' | 'Hard' | 'Epic';
@@ -54,6 +55,7 @@ type DifficultyFilter = 'All' | Difficulty;
 type CategoryFilter = 'All' | Category;
 type StatusFilter = 'All' | 'Active' | 'Completed';
 type ThemeMode = 'dark' | 'light';
+type ThemePackId = 'ethereal-forge' | 'luminous-paladin' | 'void-drifter';
 
 type Quest = {
   id: string;
@@ -84,6 +86,7 @@ type GameState = {
   hero: HeroProgress;
   quests: Quest[];
   themeMode: ThemeMode;
+  themePackId: ThemePackId;
   unlockedAchievementIds: AchievementId[];
   sortOption: SortOption;
 };
@@ -189,7 +192,7 @@ type ThemeSanctumResponse = {
   availableEssencesTitle: string;
   availableEssencesIntro: string;
   availableThemePacks: Array<{
-    id: string;
+    id: ThemePackId;
     name: string;
     description: string;
     accentEnergy: string;
@@ -276,6 +279,118 @@ const themes: Record<ThemeMode, ThemePalette> = {
   },
 };
 
+const luminousPaladinThemes: Record<ThemeMode, ThemePalette> = {
+  dark: {
+    background: '#181116',
+    surfaceLow: '#261820',
+    surface: '#32202b',
+    surfaceHigh: '#432835',
+    surfaceHighest: '#573547',
+    textPrimary: '#fff5ef',
+    textMuted: '#ffcd6d',
+    amber: '#ffc145',
+    amberSoft: '#ffe3a6',
+    blue: '#ff7f6a',
+    blueSoft: '#ffb4a8',
+    success: '#87e0a2',
+    ghostBorder: 'rgba(255, 180, 168, 0.16)',
+    subtitle: '#d7b9c0',
+    placeholder: '#a7868f',
+    buttonText: '#351d00',
+    buttonDisabled: '#9e7f39',
+    activeBadgeBackground: 'rgba(255, 193, 69, 0.18)',
+    doneBadgeBackground: 'rgba(135, 224, 162, 0.16)',
+  },
+  light: {
+    background: '#fff4ef',
+    surfaceLow: '#ffe6da',
+    surface: '#fff8f3',
+    surfaceHigh: '#ffd3bf',
+    surfaceHighest: '#ffc1a6',
+    textPrimary: '#341c14',
+    textMuted: '#b3681e',
+    amber: '#f5ab2f',
+    amberSoft: '#ffd98e',
+    blue: '#ea6b56',
+    blueSoft: '#ffb39d',
+    success: '#2c9f67',
+    ghostBorder: 'rgba(234, 107, 86, 0.14)',
+    subtitle: '#8a6657',
+    placeholder: '#b38773',
+    buttonText: '#341c14',
+    buttonDisabled: '#d8ae75',
+    activeBadgeBackground: 'rgba(245, 171, 47, 0.12)',
+    doneBadgeBackground: 'rgba(44, 159, 103, 0.12)',
+  },
+};
+
+const voidDrifterThemes: Record<ThemeMode, ThemePalette> = {
+  dark: {
+    background: '#08111f',
+    surfaceLow: '#0d1d31',
+    surface: '#122541',
+    surfaceHigh: '#1b3458',
+    surfaceHighest: '#274772',
+    textPrimary: '#eefbff',
+    textMuted: '#7ae7d0',
+    amber: '#3fe0b5',
+    amberSoft: '#9af6de',
+    blue: '#57c7ff',
+    blueSoft: '#aee9ff',
+    success: '#8de07b',
+    ghostBorder: 'rgba(87, 199, 255, 0.16)',
+    subtitle: '#aac8d9',
+    placeholder: '#7893a5',
+    buttonText: '#03251b',
+    buttonDisabled: '#4c9d84',
+    activeBadgeBackground: 'rgba(63, 224, 181, 0.18)',
+    doneBadgeBackground: 'rgba(141, 224, 123, 0.16)',
+  },
+  light: {
+    background: '#ecfbff',
+    surfaceLow: '#d9f5fb',
+    surface: '#f5fdff',
+    surfaceHigh: '#bfeff8',
+    surfaceHighest: '#9de3f0',
+    textPrimary: '#102433',
+    textMuted: '#0c8c79',
+    amber: '#22c6a0',
+    amberSoft: '#7ce9d2',
+    blue: '#2da9e2',
+    blueSoft: '#87dcff',
+    success: '#4cae5f',
+    ghostBorder: 'rgba(45, 169, 226, 0.14)',
+    subtitle: '#517181',
+    placeholder: '#7d9aa8',
+    buttonText: '#102433',
+    buttonDisabled: '#7dc1b0',
+    activeBadgeBackground: 'rgba(34, 198, 160, 0.12)',
+    doneBadgeBackground: 'rgba(76, 174, 95, 0.12)',
+  },
+};
+
+function normalizeThemePackId(themePackId: string | undefined): ThemePackId {
+  if (themePackId === 'luminous-paladin' || themePackId === 'void-drifter') {
+    return themePackId;
+  }
+
+  return 'ethereal-forge';
+}
+
+function getThemePalette(
+  themeMode: ThemeMode,
+  themePackId: ThemePackId,
+): ThemePalette {
+  if (themePackId === 'luminous-paladin') {
+    return luminousPaladinThemes[themeMode];
+  }
+
+  if (themePackId === 'void-drifter') {
+    return voidDrifterThemes[themeMode];
+  }
+
+  return themes[themeMode];
+}
 const difficultyOptions: Difficulty[] = ['Easy', 'Medium', 'Hard', 'Epic'];
 const categoryOptions: Category[] = ['Main Quest', 'Side Quest'];
 const difficultyFilterOptions: DifficultyFilter[] = [
@@ -617,6 +732,7 @@ function createInitialGameState(): GameState {
     hero,
     quests: normalizedQuests,
     themeMode: 'dark',
+    themePackId: 'ethereal-forge',
     sortOption: 'Newest first',
     unlockedAchievementIds: getUnlockedAchievementIds({
       hero,
@@ -633,6 +749,7 @@ function migrateLegacyQuests(quests: Quest[]): GameState {
     hero,
     quests: normalizedQuests,
     themeMode: 'dark',
+    themePackId: 'ethereal-forge',
     sortOption: 'Newest first',
     unlockedAchievementIds: getUnlockedAchievementIds({
       hero,
@@ -658,6 +775,7 @@ function normalizeStoredGameState(state: GameState): GameState {
     hero,
     quests: normalizedQuests,
     themeMode: state.themeMode === 'light' ? 'light' : 'dark',
+    themePackId: normalizeThemePackId((state as GameState & { themePackId?: string }).themePackId),
     sortOption: sortOptions.includes(state.sortOption)
       ? state.sortOption
       : 'Newest first',
@@ -1966,6 +2084,7 @@ function ThemeSanctumScreen({
   isRefreshingThemeSanctum,
   onBack,
   onRefresh,
+  onSelectThemePack,
   onToggleTheme,
   styles,
   themeMode,
@@ -1974,6 +2093,7 @@ function ThemeSanctumScreen({
   isRefreshingThemeSanctum: boolean;
   onBack: () => void;
   onRefresh: () => void;
+  onSelectThemePack: (themePackId: ThemePackId) => void;
   onToggleTheme: () => void;
   styles: ReturnType<typeof createStyles>;
   themeMode: ThemeMode;
@@ -2080,6 +2200,14 @@ function ThemeSanctumScreen({
                   <Text style={styles.metaValue}>{themePack.surfaceTone}</Text>
                 </View>
               </View>
+              {isCurrent ? null : (
+                <Pressable
+                  onPress={() => onSelectThemePack(themePack.id)}
+                  style={styles.cardSecondaryButton}
+                  testID={`select-theme-pack-${themePack.id}`}>
+                  <Text style={styles.cardSecondaryButtonText}>Channel Essence</Text>
+                </Pressable>
+              )}
             </View>
           );
         })}
@@ -2262,7 +2390,7 @@ function App() {
     getDateKey(),
   );
 
-  const currentTheme = themes[gameState.themeMode];
+  const currentTheme = getThemePalette(gameState.themeMode, gameState.themePackId);
   const styles = createStyles(currentTheme);
   const questToEdit =
     editingQuestId === null
@@ -2501,6 +2629,12 @@ function App() {
     );
   };
 
+  const handleSelectThemePack = async (themePackId: ThemePackId) => {
+    await runGameStateRequest(() =>
+      updateRemoteThemePack<ThemePackId, GameStateResponse>(themePackId),
+    );
+  };
+
   const handleOpenAddQuest = () => {
     if (!appConfig.featureFlags.showAddQuestScreen) {
       return;
@@ -2656,14 +2790,14 @@ function App() {
                   isRefreshingAppConfig={isRefreshingAppConfig}
                   onAddSuggestedQuest={handleAddSuggestedQuest}
                   onCompleteQuest={handleCompleteQuest}
-                onEditQuest={questId => {
-                  setEditingQuestId(questId);
-                  setCurrentScreen('add-quest');
-                }}
-                onNavigateToAddQuest={handleOpenAddQuest}
-                onNavigateToProgress={handleOpenProgress}
-                onNavigateToRealmCodex={handleOpenRealmCodex}
-                onNavigateToThemeSanctum={handleOpenThemeSanctum}
+                  onEditQuest={questId => {
+                    setEditingQuestId(questId);
+                    setCurrentScreen('add-quest');
+                  }}
+                  onNavigateToAddQuest={handleOpenAddQuest}
+                  onNavigateToProgress={handleOpenProgress}
+                  onNavigateToRealmCodex={handleOpenRealmCodex}
+                  onNavigateToThemeSanctum={handleOpenThemeSanctum}
                   onRefreshAppConfig={handleRefreshAppConfig}
                   onSelectSortOption={handleSelectSortOption}
                   onToggleTheme={handleToggleTheme}
@@ -2706,6 +2840,7 @@ function App() {
                     isRefreshingThemeSanctum={isRefreshingThemeSanctum}
                     onBack={() => setCurrentScreen('quest-board')}
                     onRefresh={handleRefreshThemeSanctum}
+                    onSelectThemePack={handleSelectThemePack}
                     onToggleTheme={handleToggleTheme}
                     styles={styles}
                     themeMode={gameState.themeMode}
@@ -3448,10 +3583,6 @@ function createStyles(theme: ThemePalette) {
 }
 
 export default App;
-
-
-
-
 
 
 

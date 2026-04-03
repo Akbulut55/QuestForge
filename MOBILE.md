@@ -25,8 +25,8 @@ After teacher feedback, the project direction was corrected beginning in Iterati
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 24 |
-| Total Weight (kg) | 250 |
+| Total Iterations | 25 |
+| Total Weight (kg) | 260 |
 | Total Time (min) | Not tracked |
 | Failed Attempts | Not tracked |
 
@@ -974,6 +974,32 @@ do 24 and 25
 **Screenshot:** `iteration-24-theme-sanctum.png`
 
 **Commit:** `[NAIM: Quest Blacksmith] Add Stitch theme sanctum screen - 10kg`
+
+---
+
+### Iteration 25
+
+| Field | Value |
+|-------|-------|
+| Feature | `Backend-driven theme packs` |
+| Weight | `10 kg` |
+| Tool Used | `Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+do 24 and 25
+```
+
+**What happened:**
+- Turned the new Theme Sanctum screen from a read-only summary into a backend-driven theme-pack selector.
+- Added a backend theme-pack preference endpoint, let the user switch theme essences from inside the app, and applied the selected pack across the shared palette system so the visual identity now changes from backend state instead of another hardcoded client theme rewrite.
+
+**Screenshot:** `iteration-25-backend-theme-packs.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add backend theme packs - 10kg`
 
 ---
 
