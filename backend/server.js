@@ -111,6 +111,7 @@ const defaultAppConfig = {
     showAddQuestScreen: true,
     showProgressScreen: true,
     showRealmCodexScreen: true,
+    showThemeSanctumScreen: true,
   },
 };
 
@@ -495,6 +496,11 @@ function buildRealmCodex(gameState, appConfig) {
       label: 'Realm Codex Screen',
       status: appConfig.featureFlags.showRealmCodexScreen ? 'Enabled' : 'Hidden',
     },
+    {
+      id: 'theme-sanctum-screen',
+      label: 'Theme Sanctum Screen',
+      status: appConfig.featureFlags.showThemeSanctumScreen ? 'Enabled' : 'Hidden',
+    },
   ];
   const modules = [
     {
@@ -534,6 +540,12 @@ function buildRealmCodex(gameState, appConfig) {
       status: appConfig.featureFlags.showRealmCodexScreen ? 'Live' : 'Dormant',
     },
     {
+      id: 'theme-sanctum',
+      name: 'Theme Sanctum',
+      description: 'Backend-guided overview of the app\'s active visual essence.',
+      status: appConfig.featureFlags.showThemeSanctumScreen ? 'Live' : 'Dormant',
+    },
+    {
       id: 'realm-sync',
       name: 'Realm Sync',
       description: 'Pulls the latest backend copy into the running app.',
@@ -569,6 +581,51 @@ function buildRealmCodex(gameState, appConfig) {
   };
 }
 
+function buildThemeSanctum(gameState, appConfig) {
+  return {
+    kicker: 'Theme Sanctum',
+    title: 'The Color Forge',
+    subtitle:
+      'A backend-guided reading of the realm palette currently shaping Quest Forge across every screen.',
+    activeThemeLabel: 'Ethereal Forge',
+    activeModeLabel:
+      gameState.themeMode === 'dark' ? 'Dark Alchemist' : 'Light Alchemist',
+    accentEnergyLabel: gameState.themeMode === 'dark' ? 'Amber + Cyan Pulse' : 'Sunlit Gold + Sky Glass',
+    surfaceToneLabel:
+      gameState.themeMode === 'dark' ? 'Midnight Slate' : 'Radiant Parchment',
+    realmNotesLabel:
+      `Config v${appConfig.configVersion}. The backend can now introduce new visual essences without rebuilding every screen structure.`,
+    availableEssencesTitle: 'Available Essences',
+    availableEssencesIntro:
+      'These packs are described by the backend first so the app can evolve into a more configurable visual system over time.',
+    availableThemePacks: [
+      {
+        id: 'ethereal-forge',
+        name: 'Ethereal Forge',
+        description: 'The current amber-and-cyan codex used across the realm.',
+        accentEnergy: 'Amber Gold',
+        surfaceTone: 'Forged Slate',
+        statusLabel: 'Current',
+      },
+      {
+        id: 'luminous-paladin',
+        name: 'Luminous Paladin',
+        description: 'A brighter holy-metal palette prepared for a future unlock.',
+        accentEnergy: 'Sunsteel',
+        surfaceTone: 'Ivory Plate',
+        statusLabel: 'Dormant',
+      },
+      {
+        id: 'void-drifter',
+        name: 'Void Drifter',
+        description: 'A colder cosmic palette waiting in the backend archives.',
+        accentEnergy: 'Nebula Cyan',
+        surfaceTone: 'Void Indigo',
+        statusLabel: 'Dormant',
+      },
+    ],
+  };
+}
 function normalizeAppConfig(appConfig) {
   return {
     configVersion:
@@ -685,6 +742,10 @@ function normalizeAppConfig(appConfig) {
         typeof appConfig?.featureFlags?.showRealmCodexScreen === 'boolean'
           ? appConfig.featureFlags.showRealmCodexScreen
           : defaultAppConfig.featureFlags.showRealmCodexScreen,
+      showThemeSanctumScreen:
+        typeof appConfig?.featureFlags?.showThemeSanctumScreen === 'boolean'
+          ? appConfig.featureFlags.showThemeSanctumScreen
+          : defaultAppConfig.featureFlags.showThemeSanctumScreen,
     },
   };
 }
@@ -880,6 +941,22 @@ const server = http.createServer(async (req, res) => {
     } catch (error) {
       sendJson(res, 500, {
         error: 'Unable to read realm codex.',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+    return;
+  }
+
+  if (req.url === '/theme-sanctum' && req.method === 'GET') {
+    try {
+      const [gameState, appConfig] = await Promise.all([
+        readGameState(),
+        readAppConfig(),
+      ]);
+      sendJson(res, 200, buildThemeSanctum(gameState, appConfig));
+    } catch (error) {
+      sendJson(res, 500, {
+        error: 'Unable to read theme sanctum.',
         details: error instanceof Error ? error.message : 'Unknown error',
       });
     }
@@ -1153,6 +1230,9 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`QuestForge backend running at http://localhost:${PORT}`);
 });
+
+
+
 
 
 

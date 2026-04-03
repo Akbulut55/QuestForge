@@ -25,6 +25,7 @@ import {
   fetchRemoteDailySuggestions,
   fetchRemoteGameState,
   fetchRemoteRealmCodex,
+  fetchRemoteThemeSanctum,
   saveRemoteGameState,
   updateRemoteQuest,
   updateRemoteSortOption,
@@ -34,7 +35,7 @@ import {
 type Difficulty = 'Easy' | 'Medium' | 'Hard' | 'Epic';
 type Category = 'Main Quest' | 'Side Quest';
 type Status = 'Ready' | 'In Progress' | 'Completed';
-type ScreenName = 'quest-board' | 'add-quest' | 'progress' | 'realm-codex';
+type ScreenName = 'quest-board' | 'add-quest' | 'progress' | 'realm-codex' | 'theme-sanctum';
 type RankTitle = 'Novice' | 'Adventurer' | 'Knight' | 'Champion';
 type QuestBoardSectionKey = 'main' | 'side' | 'completed';
 type SortOption =
@@ -95,6 +96,7 @@ type AppFeatureFlags = {
   showAddQuestScreen: boolean;
   showProgressScreen: boolean;
   showRealmCodexScreen: boolean;
+  showThemeSanctumScreen: boolean;
 };
 
 type AppConfig = {
@@ -172,6 +174,27 @@ type RealmCodexResponse = {
     name: string;
     description: string;
     status: string;
+  }>;
+};
+
+type ThemeSanctumResponse = {
+  kicker: string;
+  title: string;
+  subtitle: string;
+  activeThemeLabel: string;
+  activeModeLabel: string;
+  accentEnergyLabel: string;
+  surfaceToneLabel: string;
+  realmNotesLabel: string;
+  availableEssencesTitle: string;
+  availableEssencesIntro: string;
+  availableThemePacks: Array<{
+    id: string;
+    name: string;
+    description: string;
+    accentEnergy: string;
+    surfaceTone: string;
+    statusLabel: string;
   }>;
 };
 
@@ -319,6 +342,7 @@ function createDefaultAppConfig(): AppConfig {
       showAddQuestScreen: true,
       showProgressScreen: true,
       showRealmCodexScreen: true,
+      showThemeSanctumScreen: true,
     },
   };
 }
@@ -796,6 +820,10 @@ function normalizeRemoteAppConfig(config: AppConfig): AppConfig {
         typeof config?.featureFlags?.showRealmCodexScreen === 'boolean'
           ? config.featureFlags.showRealmCodexScreen
           : fallbackConfig.featureFlags.showRealmCodexScreen,
+      showThemeSanctumScreen:
+        typeof config?.featureFlags?.showThemeSanctumScreen === 'boolean'
+          ? config.featureFlags.showThemeSanctumScreen
+          : fallbackConfig.featureFlags.showThemeSanctumScreen,
     },
   };
 }
@@ -814,6 +842,10 @@ function isScreenAllowed(
 
   if (screenName === 'realm-codex') {
     return appConfig.featureFlags.showRealmCodexScreen;
+  }
+
+  if (screenName === 'theme-sanctum') {
+    return appConfig.featureFlags.showThemeSanctumScreen;
   }
 
   return true;
@@ -1252,6 +1284,7 @@ function QuestBoardScreen({
   onNavigateToAddQuest,
   onNavigateToProgress,
   onNavigateToRealmCodex,
+  onNavigateToThemeSanctum,
   onSelectSortOption,
   completionFeedback,
   isRefreshingAppConfig,
@@ -1272,6 +1305,7 @@ function QuestBoardScreen({
   onNavigateToAddQuest: () => void;
   onNavigateToProgress: () => void;
   onNavigateToRealmCodex: () => void;
+  onNavigateToThemeSanctum: () => void;
   onSelectSortOption: (sortOption: SortOption) => void;
   completionFeedback: CompletionFeedback | null;
   isRefreshingAppConfig: boolean;
@@ -1521,6 +1555,14 @@ function QuestBoardScreen({
             style={styles.secondaryActionButton}
             testID="navigate-to-realm-codex">
             <Text style={styles.secondaryActionText}>Open Realm Codex</Text>
+          </Pressable>
+        ) : null}
+        {appConfig.featureFlags.showThemeSanctumScreen ? (
+          <Pressable
+            onPress={onNavigateToThemeSanctum}
+            style={styles.secondaryActionButton}
+            testID="navigate-to-theme-sanctum">
+            <Text style={styles.secondaryActionText}>Open Theme Sanctum</Text>
           </Pressable>
         ) : null}
       </View>
@@ -1920,6 +1962,131 @@ function RealmCodexScreen({
   );
 }
 
+function ThemeSanctumScreen({
+  isRefreshingThemeSanctum,
+  onBack,
+  onRefresh,
+  onToggleTheme,
+  styles,
+  themeMode,
+  themeSanctum,
+}: {
+  isRefreshingThemeSanctum: boolean;
+  onBack: () => void;
+  onRefresh: () => void;
+  onToggleTheme: () => void;
+  styles: ReturnType<typeof createStyles>;
+  themeMode: ThemeMode;
+  themeSanctum: ThemeSanctumResponse;
+}) {
+  return (
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}>
+      <View style={styles.screenHeader}>
+        <Pressable
+          onPress={onBack}
+          style={styles.backButton}
+          testID="back-from-theme-sanctum">
+          <Text style={styles.backButtonText}>Back</Text>
+        </Pressable>
+        <Text style={styles.screenLabel}>Quest Board</Text>
+        <ThemeToggle
+          onToggleTheme={onToggleTheme}
+          styles={styles}
+          themeMode={themeMode}
+        />
+      </View>
+
+      <Text style={styles.kicker}>{themeSanctum.kicker}</Text>
+      <Text style={styles.title}>{themeSanctum.title}</Text>
+      <Text style={styles.subtitle}>{themeSanctum.subtitle}</Text>
+
+      <View style={styles.heroCard}>
+        <View style={styles.heroHeader}>
+          <View>
+            <Text style={styles.heroEyebrow}>Active Essence</Text>
+            <Text style={styles.heroTitle}>{themeSanctum.activeThemeLabel}</Text>
+          </View>
+          <View style={styles.heroOrb} />
+        </View>
+
+        <View style={styles.heroStatsRow}>
+          <HeroStat
+            accentStyle={styles.levelAccent}
+            label="Mode"
+            styles={styles}
+            value={themeSanctum.activeModeLabel}
+          />
+          <HeroStat
+            accentStyle={styles.xpAccent}
+            label="Accent"
+            styles={styles}
+            value={themeSanctum.accentEnergyLabel}
+          />
+          <HeroStat
+            accentStyle={styles.streakAccent}
+            label="Surface"
+            styles={styles}
+            value={themeSanctum.surfaceToneLabel}
+          />
+        </View>
+
+        <Text style={styles.heroSupportText}>{themeSanctum.realmNotesLabel}</Text>
+
+        <Pressable
+          onPress={onRefresh}
+          style={styles.secondaryActionButton}
+          testID="refresh-theme-sanctum">
+          <Text style={styles.secondaryActionText}>
+            {isRefreshingThemeSanctum ? 'Refreshing Sanctum...' : 'Refresh Theme Sanctum'}
+          </Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.formCard}>
+        <Text style={styles.sectionTitle}>{themeSanctum.availableEssencesTitle}</Text>
+        <Text style={styles.formIntro}>{themeSanctum.availableEssencesIntro}</Text>
+
+        {themeSanctum.availableThemePacks.map(themePack => {
+          const isCurrent = themePack.statusLabel === 'Current';
+
+          return (
+            <View key={themePack.id} style={styles.suggestionCard}>
+              <View style={styles.questHeaderRow}>
+                <Text style={styles.suggestionTitle}>{themePack.name}</Text>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    isCurrent ? styles.statusBadgeDone : styles.statusBadgeActive,
+                  ]}>
+                  <Text
+                    style={[
+                      styles.statusBadgeText,
+                      isCurrent ? styles.statusBadgeTextDone : null,
+                    ]}>
+                    {themePack.statusLabel}
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.formHint}>{themePack.description}</Text>
+              <View style={styles.metaRow}>
+                <View style={styles.metaPill}>
+                  <Text style={styles.metaLabel}>Accent Energy</Text>
+                  <Text style={styles.metaValue}>{themePack.accentEnergy}</Text>
+                </View>
+                <View style={styles.metaPill}>
+                  <Text style={styles.metaLabel}>Surface Tone</Text>
+                  <Text style={styles.metaValue}>{themePack.surfaceTone}</Text>
+                </View>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    </ScrollView>
+  );
+}
 function AddQuestScreen({
   onBack,
   onSave,
@@ -2086,6 +2253,8 @@ function App() {
   const [isRefreshingAppConfig, setIsRefreshingAppConfig] = useState(false);
   const [realmCodex, setRealmCodex] = useState<RealmCodexResponse | null>(null);
   const [isRefreshingRealmCodex, setIsRefreshingRealmCodex] = useState(false);
+  const [themeSanctum, setThemeSanctum] = useState<ThemeSanctumResponse | null>(null);
+  const [isRefreshingThemeSanctum, setIsRefreshingThemeSanctum] = useState(false);
   const [dailySuggestions, setDailySuggestions] = useState<SuggestedQuest[]>(
     () => getDailySuggestions(getDateKey(), initialQuests.map(normalizeQuest)),
   );
@@ -2134,6 +2303,12 @@ function App() {
     return nextRealmCodex;
   };
 
+  const applyRemoteThemeSanctum = (nextThemeSanctum: ThemeSanctumResponse) => {
+    setThemeSanctum(nextThemeSanctum);
+
+    return nextThemeSanctum;
+  };
+
   const refreshRemoteDailySuggestions = async () => {
     const nextDailySuggestions =
       await fetchRemoteDailySuggestions<DailySuggestionsResponse>();
@@ -2151,6 +2326,15 @@ function App() {
     return nextRealmCodex;
   };
 
+  const refreshRemoteThemeSanctum = async () => {
+    const nextThemeSanctum =
+      await fetchRemoteThemeSanctum<ThemeSanctumResponse>();
+
+    applyRemoteThemeSanctum(nextThemeSanctum);
+
+    return nextThemeSanctum;
+  };
+
   const runGameStateRequest = async <T extends GameStateResponse>(
     request: () => Promise<T>,
   ) => {
@@ -2161,6 +2345,9 @@ function App() {
       applyRemoteGameState(response.gameState);
       if (currentScreen === 'realm-codex') {
         await refreshRemoteRealmCodex();
+      }
+      if (currentScreen === 'theme-sanctum') {
+        await refreshRemoteThemeSanctum();
       }
 
       return response;
@@ -2363,6 +2550,37 @@ function App() {
     }
   };
 
+  const handleOpenThemeSanctum = async () => {
+    if (!appConfig.featureFlags.showThemeSanctumScreen) {
+      return;
+    }
+
+    setCurrentScreen('theme-sanctum');
+    setIsRefreshingThemeSanctum(true);
+
+    try {
+      setBackendError(null);
+      await refreshRemoteThemeSanctum();
+    } catch {
+      setBackendError(backendUnavailableMessage);
+      setCurrentScreen('quest-board');
+    } finally {
+      setIsRefreshingThemeSanctum(false);
+    }
+  };
+
+  const handleRefreshThemeSanctum = async () => {
+    setIsRefreshingThemeSanctum(true);
+
+    try {
+      setBackendError(null);
+      await refreshRemoteThemeSanctum();
+    } catch {
+      setBackendError(backendUnavailableMessage);
+    } finally {
+      setIsRefreshingThemeSanctum(false);
+    }
+  };
   const handleRefreshAppConfig = async () => {
     setIsRefreshingAppConfig(true);
 
@@ -2379,6 +2597,9 @@ function App() {
       applyRemoteDailySuggestions(nextDailySuggestions);
       if (currentScreen === 'realm-codex') {
         await refreshRemoteRealmCodex();
+      }
+      if (currentScreen === 'theme-sanctum') {
+        await refreshRemoteThemeSanctum();
       }
     } catch {
       setBackendError(backendUnavailableMessage);
@@ -2442,6 +2663,7 @@ function App() {
                 onNavigateToAddQuest={handleOpenAddQuest}
                 onNavigateToProgress={handleOpenProgress}
                 onNavigateToRealmCodex={handleOpenRealmCodex}
+                onNavigateToThemeSanctum={handleOpenThemeSanctum}
                   onRefreshAppConfig={handleRefreshAppConfig}
                   onSelectSortOption={handleSelectSortOption}
                   onToggleTheme={handleToggleTheme}
@@ -2475,6 +2697,23 @@ function App() {
                 ) : (
                   <View style={styles.loadingState}>
                     <Text style={styles.loadingKicker}>Opening Realm Codex</Text>
+                    <Text style={styles.loadingTitle}>Quest Forge</Text>
+                  </View>
+                )
+              ) : currentScreen === 'theme-sanctum' ? (
+                themeSanctum ? (
+                  <ThemeSanctumScreen
+                    isRefreshingThemeSanctum={isRefreshingThemeSanctum}
+                    onBack={() => setCurrentScreen('quest-board')}
+                    onRefresh={handleRefreshThemeSanctum}
+                    onToggleTheme={handleToggleTheme}
+                    styles={styles}
+                    themeMode={gameState.themeMode}
+                    themeSanctum={themeSanctum}
+                  />
+                ) : (
+                  <View style={styles.loadingState}>
+                    <Text style={styles.loadingKicker}>Opening Theme Sanctum</Text>
                     <Text style={styles.loadingTitle}>Quest Forge</Text>
                   </View>
                 )
@@ -3209,6 +3448,22 @@ function createStyles(theme: ThemePalette) {
 }
 
 export default App;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -25,8 +25,8 @@ After teacher feedback, the project direction was corrected beginning in Iterati
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 23 |
-| Total Weight (kg) | 240 |
+| Total Iterations | 24 |
+| Total Weight (kg) | 250 |
 | Total Time (min) | Not tracked |
 | Failed Attempts | Not tracked |
 
@@ -948,6 +948,32 @@ do iteration 22 and 23 dont forget to commit
 **Screenshot:** `iteration-23-backend-board-layout.png`
 
 **Commit:** `[NAIM: Quest Blacksmith] Add backend quest board layout config - 10kg`
+
+---
+
+### Iteration 24
+
+| Field | Value |
+|-------|-------|
+| Feature | `Stitch-generated Theme Sanctum screen` |
+| Weight | `10 kg` |
+| Tool Used | `Stitch + Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+do 24 and 25
+```
+
+**What happened:**
+- Generated a new mobile `Theme Sanctum` screen in Stitch and wired it into QuestForge as a backend-driven visual summary screen.
+- Added a dedicated backend endpoint for the sanctum data, added navigation from the Quest Board, and displayed the active theme state plus available theme essences inside the app without creating another local-only screen.
+
+**Screenshot:** `iteration-24-theme-sanctum.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add Stitch theme sanctum screen - 10kg`
 
 ---
 

@@ -45,6 +45,7 @@ jest.mock('../src/api/gameStateApi', () => ({
   fetchRemoteDailySuggestions: jest.fn(),
   fetchRemoteGameState: jest.fn(),
   fetchRemoteRealmCodex: jest.fn(),
+  fetchRemoteThemeSanctum: jest.fn(),
   saveRemoteGameState: jest.fn(),
   updateRemoteQuest: jest.fn(),
   updateRemoteSortOption: jest.fn(),
@@ -66,6 +67,7 @@ import {
   fetchRemoteDailySuggestions,
   fetchRemoteGameState,
   fetchRemoteRealmCodex,
+  fetchRemoteThemeSanctum,
   saveRemoteGameState,
   updateRemoteQuest,
   updateRemoteSortOption,
@@ -83,6 +85,7 @@ const mockDeleteRemoteQuest = deleteRemoteQuest as jest.Mock;
 const mockCompleteRemoteQuest = completeRemoteQuest as jest.Mock;
 const mockFetchRemoteDailySuggestions = fetchRemoteDailySuggestions as jest.Mock;
 const mockFetchRemoteRealmCodex = fetchRemoteRealmCodex as jest.Mock;
+const mockFetchRemoteThemeSanctum = fetchRemoteThemeSanctum as jest.Mock;
 const mockUpdateRemoteTheme = updateRemoteTheme as jest.Mock;
 const mockUpdateRemoteSortOption = updateRemoteSortOption as jest.Mock;
 
@@ -138,6 +141,7 @@ type TestAppConfig = {
     showAddQuestScreen: boolean;
     showProgressScreen: boolean;
     showRealmCodexScreen: boolean;
+    showThemeSanctumScreen: boolean;
   };
 };
 
@@ -218,6 +222,7 @@ const defaultRemoteAppConfig: TestAppConfig = {
     showAddQuestScreen: true,
     showProgressScreen: true,
     showRealmCodexScreen: true,
+    showThemeSanctumScreen: true,
   },
 };
 
@@ -625,6 +630,54 @@ function buildRealmCodexResponse() {
   };
 }
 
+function buildThemeSanctumResponse() {
+  return {
+    kicker: 'Theme Sanctum',
+    title: 'The Color Forge',
+    subtitle:
+      'A backend-guided reading of the realm palette currently shaping Quest Forge across every screen.',
+    activeThemeLabel: 'Ethereal Forge',
+    activeModeLabel:
+      mockBackendState.themeMode === 'dark' ? 'Dark Alchemist' : 'Light Alchemist',
+    accentEnergyLabel:
+      mockBackendState.themeMode === 'dark'
+        ? 'Amber + Cyan Pulse'
+        : 'Sunlit Gold + Sky Glass',
+    surfaceToneLabel:
+      mockBackendState.themeMode === 'dark' ? 'Midnight Slate' : 'Radiant Parchment',
+    realmNotesLabel:
+      `Config v${mockRemoteAppConfig.configVersion}. The backend can now introduce new visual essences without rebuilding every screen structure.`,
+    availableEssencesTitle: 'Available Essences',
+    availableEssencesIntro:
+      'These packs are described by the backend first so the app can evolve into a more configurable visual system over time.',
+    availableThemePacks: [
+      {
+        id: 'ethereal-forge',
+        name: 'Ethereal Forge',
+        description: 'The current amber-and-cyan codex used across the realm.',
+        accentEnergy: 'Amber Gold',
+        surfaceTone: 'Forged Slate',
+        statusLabel: 'Current',
+      },
+      {
+        id: 'luminous-paladin',
+        name: 'Luminous Paladin',
+        description: 'A brighter holy-metal palette prepared for a future unlock.',
+        accentEnergy: 'Sunsteel',
+        surfaceTone: 'Ivory Plate',
+        statusLabel: 'Dormant',
+      },
+      {
+        id: 'void-drifter',
+        name: 'Void Drifter',
+        description: 'A colder cosmic palette waiting in the backend archives.',
+        accentEnergy: 'Nebula Cyan',
+        surfaceTone: 'Void Indigo',
+        statusLabel: 'Dormant',
+      },
+    ],
+  };
+}
 function normalizeGameState(gameState: typeof defaultRemoteGameState) {
   const quests = gameState.quests.map(quest => ({
     ...quest,
@@ -684,6 +737,7 @@ async function renderHydratedApp() {
   mockCompleteRemoteQuest.mockClear();
   mockFetchRemoteDailySuggestions.mockClear();
   mockFetchRemoteRealmCodex.mockClear();
+  mockFetchRemoteThemeSanctum.mockClear();
   mockUpdateRemoteTheme.mockClear();
   mockUpdateRemoteSortOption.mockClear();
 
@@ -704,6 +758,7 @@ beforeEach(() => {
   mockCompleteRemoteQuest.mockReset();
   mockFetchRemoteDailySuggestions.mockReset();
   mockFetchRemoteRealmCodex.mockReset();
+  mockFetchRemoteThemeSanctum.mockReset();
   mockUpdateRemoteTheme.mockReset();
   mockUpdateRemoteSortOption.mockReset();
   mockAsyncStorage.getItem.mockResolvedValue(null);
@@ -717,6 +772,9 @@ beforeEach(() => {
   }));
   mockFetchRemoteRealmCodex.mockImplementation(async () =>
     buildRealmCodexResponse(),
+  );
+  mockFetchRemoteThemeSanctum.mockImplementation(async () =>
+    buildThemeSanctumResponse(),
   );
   mockFetchRemoteGameState.mockImplementation(async () => {
     mockBackendState = normalizeGameState(mockBackendState);
@@ -1115,6 +1173,7 @@ test('backend feature flags can hide configured sections after a realm refresh',
       showAddQuestScreen: false,
       showProgressScreen: false,
       showRealmCodexScreen: false,
+      showThemeSanctumScreen: false,
     },
   };
 
@@ -1142,6 +1201,9 @@ test('backend feature flags can hide configured sections after a realm refresh',
   ).toBe(0);
   expect(
     root.findAllByProps({ testID: 'navigate-to-realm-codex' }).length,
+  ).toBe(0);
+  expect(
+    root.findAllByProps({ testID: 'navigate-to-theme-sanctum' }).length,
   ).toBe(0);
   expect(root.findAll(node => node.props.children === 'Achievements').length).toBe(
     0,
@@ -1178,6 +1240,31 @@ test('opens the Stitch-generated Realm Codex screen with backend summary data', 
   expect(codexRender).toContain('"Refresh Codex"');
 });
 
+test('opens the Stitch-generated Theme Sanctum screen with backend theme summary data', async () => {
+  const tree = await renderHydratedApp();
+  let root = tree.root;
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'navigate-to-theme-sanctum' }).props.onPress();
+    await flushMicrotasks();
+  });
+
+  root = tree.root;
+  const sanctumRender = JSON.stringify(tree.toJSON());
+
+  expect(mockFetchRemoteThemeSanctum).toHaveBeenCalled();
+  expect(
+    root.findAll(node => node.props.children === 'The Color Forge').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Available Essences').length,
+  ).toBeGreaterThan(0);
+  expect(
+    root.findAll(node => node.props.children === 'Ethereal Forge').length,
+  ).toBeGreaterThan(0);
+  expect(sanctumRender).toContain('Luminous Paladin');
+  expect(sanctumRender).toContain('Refresh Theme Sanctum');
+});
 test('completing a quest awards XP, updates rank, and saves remote game state', async () => {
   const tree = await renderHydratedApp();
 
@@ -1600,6 +1687,11 @@ test('completing a quest on the next day increases the streak', async () => {
     jest.useRealTimers();
   }
 });
+
+
+
+
+
 
 
 
