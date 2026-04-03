@@ -46,6 +46,12 @@ export async function fetchRemoteGameState<T>(): Promise<T> {
   return requestJson<T>('/game-state');
 }
 
+export async function fetchRemoteQuestDetails<T>(
+  questId: string,
+): Promise<T> {
+  return requestJson<T>(`/quests/${encodeURIComponent(questId)}/details`);
+}
+
 export async function fetchRemoteAppConfig<T>(): Promise<T> {
   return requestJson<T>('/app-config');
 }

@@ -25,8 +25,8 @@ After teacher feedback, the project direction was corrected beginning in Iterati
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 25 |
-| Total Weight (kg) | 260 |
+| Total Iterations | 26 |
+| Total Weight (kg) | 270 |
 | Total Time (min) | Not tracked |
 | Failed Attempts | Not tracked |
 
@@ -1000,6 +1000,32 @@ do 24 and 25
 **Screenshot:** `iteration-25-backend-theme-packs.png`
 
 **Commit:** `[NAIM: Quest Blacksmith] Add backend theme packs - 10kg`
+
+---
+
+### Iteration 26
+
+| Field | Value |
+|-------|-------|
+| Feature | `Stitch-generated Quest Details screen` |
+| Weight | `10 kg` |
+| Tool Used | `Stitch + Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+do 26
+```
+
+**What happened:**
+- Generated a new mobile `Quest Details` screen in Stitch and implemented it as a backend-driven quest dossier inside the app.
+- Added a quest-details backend endpoint, let users open a dedicated details view from quest cards, and reused the existing complete and edit actions there so the quest system got deeper without introducing a parallel flow.
+
+**Screenshot:** `iteration-26-quest-details.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add Stitch quest details screen - 10kg`
 
 ---
 

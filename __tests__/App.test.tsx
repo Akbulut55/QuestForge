@@ -44,6 +44,7 @@ jest.mock('../src/api/gameStateApi', () => ({
   fetchRemoteAppConfig: jest.fn(),
   fetchRemoteDailySuggestions: jest.fn(),
   fetchRemoteGameState: jest.fn(),
+  fetchRemoteQuestDetails: jest.fn(),
   fetchRemoteRealmCodex: jest.fn(),
   fetchRemoteThemeSanctum: jest.fn(),
   saveRemoteGameState: jest.fn(),
@@ -67,6 +68,7 @@ import {
   fetchRemoteAppConfig,
   fetchRemoteDailySuggestions,
   fetchRemoteGameState,
+  fetchRemoteQuestDetails,
   fetchRemoteRealmCodex,
   fetchRemoteThemeSanctum,
   saveRemoteGameState,
@@ -80,6 +82,7 @@ const mockAsyncStorage =
   require('@react-native-async-storage/async-storage').default;
 const mockFetchRemoteAppConfig = fetchRemoteAppConfig as jest.Mock;
 const mockFetchRemoteGameState = fetchRemoteGameState as jest.Mock;
+const mockFetchRemoteQuestDetails = fetchRemoteQuestDetails as jest.Mock;
 const mockSaveRemoteGameState = saveRemoteGameState as jest.Mock;
 const mockCreateRemoteQuest = createRemoteQuest as jest.Mock;
 const mockUpdateRemoteQuest = updateRemoteQuest as jest.Mock;
@@ -721,6 +724,54 @@ function buildThemeSanctumResponse() {
     ],
   };
 }
+
+function buildQuestDetailsResponse(questId: string) {
+  const quest = mockBackendState.quests.find(currentQuest => currentQuest.id === questId);
+
+  if (!quest) {
+    throw new Error('Quest not found');
+  }
+
+  const ritualProgressPercent =
+    quest.status === 'Completed' ? 100 : quest.status === 'In Progress' ? 68 : 24;
+
+  return {
+    kicker: 'Quest Details',
+    title: quest.title,
+    subtitle:
+      'A backend-forged quest dossier that lets the app open one mission in focus without inventing a separate quest flow.',
+    questId: quest.id,
+    statusLabel: quest.status,
+    categoryLabel: quest.category,
+    summaryEyebrow: 'Quest Summary',
+    summaryTitle:
+      quest.status === 'Completed'
+        ? 'Ritual Sealed'
+        : quest.status === 'In Progress'
+          ? 'Ritual In Motion'
+          : 'Ritual Prepared',
+    difficultyLabel: quest.difficulty,
+    xpRewardLabel: `+${quest.xpReward} XP`,
+    ritualProgressLabel: 'Ritual Progress',
+    ritualProgressPercent,
+    progressStatusText:
+      quest.status === 'Completed'
+        ? 'This quest already lives in the completed ledger and its reward has been claimed.'
+        : quest.status === 'In Progress'
+          ? 'The ritual is active now, so completing it will seal the quest and grant the reward.'
+          : 'The ritual is ready to begin whenever the guild needs this quest to move.',
+    guidanceTitle: 'Quest Guidance',
+    guidanceText:
+      quest.category === 'Main Quest'
+        ? 'As a main quest, it pushes the realm forward and deserves your clearest attention block.'
+        : 'As a side quest, it strengthens the guild quietly without needing to dominate the whole day.',
+    primaryActionLabel:
+      quest.status === 'Completed' ? 'Ritual Complete' : 'Complete Ritual',
+    secondaryActionLabel: 'Edit Quest',
+    canComplete: quest.status !== 'Completed',
+  };
+}
+
 function normalizeGameState(gameState: typeof defaultRemoteGameState) {
   const quests = gameState.quests.map(quest => ({
     ...quest,
@@ -784,6 +835,7 @@ async function renderHydratedApp() {
   mockDeleteRemoteQuest.mockClear();
   mockCompleteRemoteQuest.mockClear();
   mockFetchRemoteDailySuggestions.mockClear();
+  mockFetchRemoteQuestDetails.mockClear();
   mockFetchRemoteRealmCodex.mockClear();
   mockFetchRemoteThemeSanctum.mockClear();
   mockUpdateRemoteTheme.mockClear();
@@ -800,6 +852,7 @@ beforeEach(() => {
   mockAsyncStorage.setItem.mockReset();
   mockFetchRemoteAppConfig.mockReset();
   mockFetchRemoteGameState.mockReset();
+  mockFetchRemoteQuestDetails.mockReset();
   mockSaveRemoteGameState.mockReset();
   mockCreateRemoteQuest.mockReset();
   mockUpdateRemoteQuest.mockReset();
@@ -820,6 +873,9 @@ beforeEach(() => {
     suggestionDateKey: getDateKey(),
     suggestions: getDailySuggestionsForState(mockBackendState.quests, getDateKey()),
   }));
+  mockFetchRemoteQuestDetails.mockImplementation(async (questId: string) =>
+    buildQuestDetailsResponse(questId),
+  );
   mockFetchRemoteRealmCodex.mockImplementation(async () =>
     buildRealmCodexResponse(),
   );
@@ -1350,6 +1406,52 @@ test('selecting a backend theme pack updates the active app essence', async () =
   expect(sanctumRender).toContain('Sunsteel');
   expect(getLastSavedGameState().themePackId).toBe('luminous-paladin');
 });
+
+test('opens the Stitch-generated Quest Details screen with backend quest dossier data', async () => {
+  const tree = await renderHydratedApp();
+  let root = tree.root;
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'open-quest-details-quest-1' }).props.onPress();
+    await flushMicrotasks();
+  });
+
+  root = tree.root;
+  const detailsRender = JSON.stringify(tree.toJSON());
+
+  expect(mockFetchRemoteQuestDetails).toHaveBeenCalledWith('quest-1');
+  expect(
+    root.findAll(node => node.props.children === 'Defeat the Laundry Dragon').length,
+  ).toBeGreaterThan(0);
+  expect(detailsRender).toContain('Quest Guidance');
+  expect(detailsRender).toContain('Complete Ritual');
+  expect(detailsRender).toContain('Main Quest');
+});
+
+test('completing a quest from quest details refreshes the backend dossier', async () => {
+  const tree = await renderHydratedApp();
+  let root = tree.root;
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'open-quest-details-quest-2' }).props.onPress();
+    await flushMicrotasks();
+  });
+
+  root = tree.root;
+
+  await ReactTestRenderer.act(async () => {
+    root.findByProps({ testID: 'complete-quest-from-details' }).props.onPress();
+    await flushMicrotasks();
+  });
+
+  root = tree.root;
+  const detailsRender = JSON.stringify(tree.toJSON());
+
+  expect(mockCompleteRemoteQuest).toHaveBeenCalledWith('quest-2');
+  expect(detailsRender).toContain('Ritual Complete');
+  expect(detailsRender).toContain('Completed');
+});
+
 test('completing a quest awards XP, updates rank, and saves remote game state', async () => {
   const tree = await renderHydratedApp();
 

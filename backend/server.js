@@ -665,6 +665,79 @@ function buildThemeSanctum(gameState, appConfig) {
     ],
   };
 }
+
+function getQuestProgressPercent(status) {
+  if (status === 'Completed') {
+    return 100;
+  }
+
+  if (status === 'In Progress') {
+    return 68;
+  }
+
+  return 24;
+}
+
+function getQuestGuidanceText(quest) {
+  const statusGuidance =
+    quest.status === 'Completed'
+      ? 'This ritual is already sealed, so any next step is about reflection or refinement.'
+      : quest.status === 'In Progress'
+        ? 'Momentum is already gathering around this quest, so keep the next action small and focused.'
+        : 'This quest is prepared and waiting for the first deliberate move.';
+  const categoryGuidance =
+    quest.category === 'Main Quest'
+      ? 'As a main quest, it pushes the realm forward and deserves your clearest attention block.'
+      : 'As a side quest, it strengthens the guild quietly without needing to dominate the whole day.';
+  const difficultyGuidance =
+    quest.difficulty === 'Epic'
+      ? 'Epic difficulty means it is worth breaking the ritual into meaningful focus sessions.'
+      : quest.difficulty === 'Hard'
+        ? 'Hard difficulty suggests protecting time and reducing distractions before you begin.'
+        : quest.difficulty === 'Medium'
+          ? 'Medium difficulty fits well into a steady work sprint with one clear outcome.'
+          : 'Easy difficulty makes this a strong quick win when you need momentum.';
+
+  return `${statusGuidance} ${categoryGuidance} ${difficultyGuidance}`;
+}
+
+function buildQuestDetails(quest) {
+  const ritualProgressPercent = getQuestProgressPercent(quest.status);
+
+  return {
+    kicker: 'Quest Details',
+    title: quest.title,
+    subtitle:
+      'A backend-forged quest dossier that lets the app open one mission in focus without inventing a separate quest flow.',
+    questId: quest.id,
+    statusLabel: quest.status,
+    categoryLabel: quest.category,
+    summaryEyebrow: 'Quest Summary',
+    summaryTitle:
+      quest.status === 'Completed'
+        ? 'Ritual Sealed'
+        : quest.status === 'In Progress'
+          ? 'Ritual In Motion'
+          : 'Ritual Prepared',
+    difficultyLabel: quest.difficulty,
+    xpRewardLabel: `+${quest.xpReward} XP`,
+    ritualProgressLabel: 'Ritual Progress',
+    ritualProgressPercent,
+    progressStatusText:
+      quest.status === 'Completed'
+        ? 'This quest already lives in the completed ledger and its reward has been claimed.'
+        : quest.status === 'In Progress'
+          ? 'The ritual is active now, so completing it will seal the quest and grant the reward.'
+          : 'The ritual is ready to begin whenever the guild needs this quest to move.',
+    guidanceTitle: 'Quest Guidance',
+    guidanceText: getQuestGuidanceText(quest),
+    primaryActionLabel:
+      quest.status === 'Completed' ? 'Ritual Complete' : 'Complete Ritual',
+    secondaryActionLabel: 'Edit Quest',
+    canComplete: quest.status !== 'Completed',
+  };
+}
+
 function normalizeThemePackId(themePackId) {
   return themePackOptions.includes(themePackId)
     ? themePackId
@@ -918,6 +991,15 @@ async function readRequestBody(req) {
 }
 
 function getQuestRouteMatch(url) {
+  const detailsMatch = url.match(/^\/quests\/([^/]+)\/details$/);
+
+  if (detailsMatch) {
+    return {
+      questId: decodeURIComponent(detailsMatch[1]),
+      action: 'details',
+    };
+  }
+
   const completeMatch = url.match(/^\/quests\/([^/]+)\/complete$/);
 
   if (completeMatch) {
@@ -944,6 +1026,8 @@ const server = http.createServer(async (req, res) => {
     sendJson(res, 204, {});
     return;
   }
+
+  const questRouteMatch = getQuestRouteMatch(req.url || '');
 
   if (req.url === '/health' && req.method === 'GET') {
     sendJson(res, 200, { status: 'ok' });
@@ -1006,6 +1090,30 @@ const server = http.createServer(async (req, res) => {
     } catch (error) {
       sendJson(res, 500, {
         error: 'Unable to read theme sanctum.',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+    return;
+  }
+
+  if (questRouteMatch?.action === 'details' && req.method === 'GET') {
+    try {
+      const currentGameState = await readGameState();
+      const quest = currentGameState.quests.find(
+        currentQuest => currentQuest.id === questRouteMatch.questId,
+      );
+
+      if (!quest) {
+        sendJson(res, 404, {
+          error: 'Quest not found.',
+        });
+        return;
+      }
+
+      sendJson(res, 200, buildQuestDetails(quest));
+    } catch (error) {
+      sendJson(res, 500, {
+        error: 'Unable to read quest details.',
         details: error instanceof Error ? error.message : 'Unknown error',
       });
     }
@@ -1080,8 +1188,6 @@ const server = http.createServer(async (req, res) => {
     }
     return;
   }
-
-  const questRouteMatch = getQuestRouteMatch(req.url || '');
 
   if (questRouteMatch?.action === 'quest' && req.method === 'PUT') {
     try {

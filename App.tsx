@@ -24,6 +24,7 @@ import {
   fetchRemoteAppConfig,
   fetchRemoteDailySuggestions,
   fetchRemoteGameState,
+  fetchRemoteQuestDetails,
   fetchRemoteRealmCodex,
   fetchRemoteThemeSanctum,
   saveRemoteGameState,
@@ -36,7 +37,13 @@ import {
 type Difficulty = 'Easy' | 'Medium' | 'Hard' | 'Epic';
 type Category = 'Main Quest' | 'Side Quest';
 type Status = 'Ready' | 'In Progress' | 'Completed';
-type ScreenName = 'quest-board' | 'add-quest' | 'progress' | 'realm-codex' | 'theme-sanctum';
+type ScreenName =
+  | 'quest-board'
+  | 'add-quest'
+  | 'progress'
+  | 'realm-codex'
+  | 'theme-sanctum'
+  | 'quest-details';
 type RankTitle = 'Novice' | 'Adventurer' | 'Knight' | 'Champion';
 type QuestBoardSectionKey = 'main' | 'side' | 'completed';
 type SortOption =
@@ -199,6 +206,27 @@ type ThemeSanctumResponse = {
     surfaceTone: string;
     statusLabel: string;
   }>;
+};
+
+type QuestDetailsResponse = {
+  kicker: string;
+  title: string;
+  subtitle: string;
+  questId: string;
+  statusLabel: Status;
+  categoryLabel: Category;
+  summaryEyebrow: string;
+  summaryTitle: string;
+  difficultyLabel: Difficulty;
+  xpRewardLabel: string;
+  ritualProgressLabel: string;
+  ritualProgressPercent: number;
+  progressStatusText: string;
+  guidanceTitle: string;
+  guidanceText: string;
+  primaryActionLabel: string;
+  secondaryActionLabel: string;
+  canComplete: boolean;
 };
 
 type CompletionFeedback = {
@@ -1324,11 +1352,13 @@ function QuestCard({
   styles,
   onComplete,
   onEdit,
+  onOpenDetails,
 }: {
   quest: Quest;
   styles: ReturnType<typeof createStyles>;
   onComplete?: (questId: string) => void;
   onEdit?: (questId: string) => void;
+  onOpenDetails?: (questId: string) => void;
 }) {
   const isComplete = quest.status === 'Completed';
 
@@ -1363,6 +1393,15 @@ function QuestCard({
           </Text>
         </View>
       </View>
+
+      {onOpenDetails ? (
+        <Pressable
+          onPress={() => onOpenDetails(quest.id)}
+          style={styles.cardSecondaryButton}
+          testID={`open-quest-details-${quest.id}`}>
+          <Text style={styles.cardSecondaryButtonText}>Quest Details</Text>
+        </Pressable>
+      ) : null}
 
       {!isComplete && onComplete ? (
         <Pressable
@@ -1399,6 +1438,7 @@ function QuestBoardScreen({
   onAddSuggestedQuest,
   onCompleteQuest,
   onEditQuest,
+  onOpenQuestDetails,
   onNavigateToAddQuest,
   onNavigateToProgress,
   onNavigateToRealmCodex,
@@ -1420,6 +1460,7 @@ function QuestBoardScreen({
   onAddSuggestedQuest: (suggestion: SuggestedQuest) => void;
   onCompleteQuest: (questId: string) => void;
   onEditQuest: (questId: string) => void;
+  onOpenQuestDetails: (questId: string) => void;
   onNavigateToAddQuest: () => void;
   onNavigateToProgress: () => void;
   onNavigateToRealmCodex: () => void;
@@ -1766,6 +1807,7 @@ function QuestBoardScreen({
               onEdit={
                 appConfig.featureFlags.showAddQuestScreen ? onEditQuest : undefined
               }
+              onOpenDetails={onOpenQuestDetails}
               quest={quest}
               styles={styles}
             />
@@ -2215,6 +2257,165 @@ function ThemeSanctumScreen({
     </ScrollView>
   );
 }
+
+function QuestDetailsScreen({
+  onBack,
+  onComplete,
+  onEdit,
+  onToggleTheme,
+  questDetails,
+  styles,
+  themeMode,
+}: {
+  onBack: () => void;
+  onComplete: (questId: string) => void;
+  onEdit: (questId: string) => void;
+  onToggleTheme: () => void;
+  questDetails: QuestDetailsResponse;
+  styles: ReturnType<typeof createStyles>;
+  themeMode: ThemeMode;
+}) {
+  return (
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}>
+      <View style={styles.screenHeader}>
+        <Pressable
+          onPress={onBack}
+          style={styles.backButton}
+          testID="back-from-quest-details">
+          <Text style={styles.backButtonText}>Back</Text>
+        </Pressable>
+        <Text style={styles.screenLabel}>Quest Board</Text>
+        <ThemeToggle
+          onToggleTheme={onToggleTheme}
+          styles={styles}
+          themeMode={themeMode}
+        />
+      </View>
+
+      <Text style={styles.kicker}>{questDetails.kicker}</Text>
+      <Text style={styles.title}>{questDetails.title}</Text>
+      <Text style={styles.subtitle}>{questDetails.subtitle}</Text>
+
+      <View style={styles.detailsBadgeRow}>
+        <View
+          style={[
+            styles.statusBadge,
+            questDetails.canComplete
+              ? styles.statusBadgeActive
+              : styles.statusBadgeDone,
+          ]}>
+          <Text
+            style={[
+              styles.statusBadgeText,
+              questDetails.canComplete ? null : styles.statusBadgeTextDone,
+            ]}>
+            {questDetails.statusLabel}
+          </Text>
+        </View>
+        <View style={styles.detailsCategoryBadge}>
+          <Text style={styles.detailsCategoryBadgeText}>
+            {questDetails.categoryLabel}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.heroCard}>
+        <View style={styles.heroHeader}>
+          <View>
+            <Text style={styles.heroEyebrow}>{questDetails.summaryEyebrow}</Text>
+            <Text style={styles.heroTitle}>{questDetails.summaryTitle}</Text>
+          </View>
+          <View style={styles.heroOrb} />
+        </View>
+
+        <View style={styles.heroStatsRow}>
+          <HeroStat
+            accentStyle={styles.levelAccent}
+            label="Difficulty"
+            styles={styles}
+            value={questDetails.difficultyLabel}
+          />
+          <HeroStat
+            accentStyle={styles.xpAccent}
+            label="Reward"
+            styles={styles}
+            value={questDetails.xpRewardLabel}
+          />
+          <HeroStat
+            accentStyle={styles.streakAccent}
+            label="Status"
+            styles={styles}
+            value={questDetails.statusLabel}
+          />
+        </View>
+
+        <View style={styles.detailsProgressSection}>
+          <View style={styles.detailsProgressHeader}>
+            <Text style={styles.formLabel}>{questDetails.ritualProgressLabel}</Text>
+            <Text style={styles.detailsProgressValue}>
+              {questDetails.ritualProgressPercent}%
+            </Text>
+          </View>
+          <View style={styles.detailsProgressTrack}>
+            <View
+              style={[
+                styles.detailsProgressFill,
+                { width: `${questDetails.ritualProgressPercent}%` },
+              ]}
+            />
+          </View>
+        </View>
+
+        <Text style={styles.heroSupportText}>{questDetails.progressStatusText}</Text>
+      </View>
+
+      <View style={styles.formCard}>
+        <Text style={styles.sectionTitle}>{questDetails.guidanceTitle}</Text>
+        <Text style={styles.formIntro}>{questDetails.guidanceText}</Text>
+      </View>
+
+      <View style={styles.boardActionCard}>
+        <Text style={styles.sectionTitle}>Quest Actions</Text>
+        <Text style={styles.formIntro}>
+          This Stitch-based dossier keeps the quest readable while reusing the
+          existing backend quest actions underneath.
+        </Text>
+
+        {questDetails.canComplete ? (
+          <Pressable
+            onPress={() => onComplete(questDetails.questId)}
+            style={styles.primaryActionButton}
+            testID="complete-quest-from-details">
+            <Text style={styles.primaryActionText}>
+              {questDetails.primaryActionLabel}
+            </Text>
+          </Pressable>
+        ) : (
+          <View style={styles.emptyStateCard}>
+            <Text style={styles.emptyStateTitle}>
+              {questDetails.primaryActionLabel}
+            </Text>
+            <Text style={styles.emptyStateText}>
+              This quest is already sealed inside the completed ledger.
+            </Text>
+          </View>
+        )}
+
+        <Pressable
+          onPress={() => onEdit(questDetails.questId)}
+          style={styles.secondaryActionButton}
+          testID="edit-quest-from-details">
+          <Text style={styles.secondaryActionText}>
+            {questDetails.secondaryActionLabel}
+          </Text>
+        </Pressable>
+      </View>
+    </ScrollView>
+  );
+}
+
 function AddQuestScreen({
   onBack,
   onSave,
@@ -2383,6 +2584,9 @@ function App() {
   const [isRefreshingRealmCodex, setIsRefreshingRealmCodex] = useState(false);
   const [themeSanctum, setThemeSanctum] = useState<ThemeSanctumResponse | null>(null);
   const [isRefreshingThemeSanctum, setIsRefreshingThemeSanctum] = useState(false);
+  const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null);
+  const [questDetails, setQuestDetails] = useState<QuestDetailsResponse | null>(null);
+  const [isRefreshingQuestDetails, setIsRefreshingQuestDetails] = useState(false);
   const [dailySuggestions, setDailySuggestions] = useState<SuggestedQuest[]>(
     () => getDailySuggestions(getDateKey(), initialQuests.map(normalizeQuest)),
   );
@@ -2437,6 +2641,12 @@ function App() {
     return nextThemeSanctum;
   };
 
+  const applyRemoteQuestDetails = (nextQuestDetails: QuestDetailsResponse) => {
+    setQuestDetails(nextQuestDetails);
+
+    return nextQuestDetails;
+  };
+
   const refreshRemoteDailySuggestions = async () => {
     const nextDailySuggestions =
       await fetchRemoteDailySuggestions<DailySuggestionsResponse>();
@@ -2463,6 +2673,17 @@ function App() {
     return nextThemeSanctum;
   };
 
+  const refreshRemoteQuestDetails = async (
+    questId: string,
+  ) => {
+    const nextQuestDetails =
+      await fetchRemoteQuestDetails<QuestDetailsResponse>(questId);
+
+    applyRemoteQuestDetails(nextQuestDetails);
+
+    return nextQuestDetails;
+  };
+
   const runGameStateRequest = async <T extends GameStateResponse>(
     request: () => Promise<T>,
   ) => {
@@ -2476,6 +2697,9 @@ function App() {
       }
       if (currentScreen === 'theme-sanctum') {
         await refreshRemoteThemeSanctum();
+      }
+      if (currentScreen === 'quest-details' && selectedQuestId) {
+        await refreshRemoteQuestDetails(selectedQuestId);
       }
 
       return response;
@@ -2562,6 +2786,8 @@ function App() {
 
   const returnToBoard = () => {
     setEditingQuestId(null);
+    setSelectedQuestId(null);
+    setQuestDetails(null);
     setCurrentScreen('quest-board');
   };
 
@@ -2633,6 +2859,25 @@ function App() {
     await runGameStateRequest(() =>
       updateRemoteThemePack<ThemePackId, GameStateResponse>(themePackId),
     );
+  };
+
+  const handleOpenQuestDetails = async (questId: string) => {
+    setSelectedQuestId(questId);
+    setQuestDetails(null);
+    setCurrentScreen('quest-details');
+    setIsRefreshingQuestDetails(true);
+
+    try {
+      setBackendError(null);
+      await refreshRemoteQuestDetails(questId);
+    } catch {
+      setBackendError(backendUnavailableMessage);
+      setSelectedQuestId(null);
+      setQuestDetails(null);
+      setCurrentScreen('quest-board');
+    } finally {
+      setIsRefreshingQuestDetails(false);
+    }
   };
 
   const handleOpenAddQuest = () => {
@@ -2735,6 +2980,9 @@ function App() {
       if (currentScreen === 'theme-sanctum') {
         await refreshRemoteThemeSanctum();
       }
+      if (currentScreen === 'quest-details' && selectedQuestId) {
+        await refreshRemoteQuestDetails(selectedQuestId);
+      }
     } catch {
       setBackendError(backendUnavailableMessage);
     } finally {
@@ -2794,6 +3042,7 @@ function App() {
                     setEditingQuestId(questId);
                     setCurrentScreen('add-quest');
                   }}
+                  onOpenQuestDetails={handleOpenQuestDetails}
                   onNavigateToAddQuest={handleOpenAddQuest}
                   onNavigateToProgress={handleOpenProgress}
                   onNavigateToRealmCodex={handleOpenRealmCodex}
@@ -2849,6 +3098,30 @@ function App() {
                 ) : (
                   <View style={styles.loadingState}>
                     <Text style={styles.loadingKicker}>Opening Theme Sanctum</Text>
+                    <Text style={styles.loadingTitle}>Quest Forge</Text>
+                  </View>
+                )
+              ) : currentScreen === 'quest-details' ? (
+                questDetails ? (
+                  <QuestDetailsScreen
+                    onBack={returnToBoard}
+                    onComplete={handleCompleteQuest}
+                    onEdit={questId => {
+                      setEditingQuestId(questId);
+                      setCurrentScreen('add-quest');
+                    }}
+                    onToggleTheme={handleToggleTheme}
+                    questDetails={questDetails}
+                    styles={styles}
+                    themeMode={gameState.themeMode}
+                  />
+                ) : (
+                  <View style={styles.loadingState}>
+                    <Text style={styles.loadingKicker}>
+                      {isRefreshingQuestDetails
+                        ? 'Forging Quest Dossier'
+                        : 'Opening Quest Details'}
+                    </Text>
                     <Text style={styles.loadingTitle}>Quest Forge</Text>
                   </View>
                 )
@@ -3018,6 +3291,26 @@ function createStyles(theme: ThemePalette) {
       paddingVertical: 6,
       textTransform: 'uppercase',
     },
+    detailsBadgeRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+      marginTop: 16,
+    },
+    detailsCategoryBadge: {
+      backgroundColor: `${theme.blue}18`,
+      borderColor: `${theme.blue}42`,
+      borderRadius: 999,
+      borderWidth: 1,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    detailsCategoryBadgeText: {
+      color: theme.blueSoft,
+      fontSize: 11,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+    },
     kicker: {
       alignSelf: 'flex-start',
       backgroundColor: `${theme.amber}18`,
@@ -3117,6 +3410,37 @@ function createStyles(theme: ThemePalette) {
       fontSize: 14,
       lineHeight: 21,
       marginTop: 18,
+    },
+    detailsProgressSection: {
+      marginTop: 18,
+    },
+    detailsProgressHeader: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 10,
+    },
+    detailsProgressValue: {
+      color: theme.blueSoft,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    detailsProgressTrack: {
+      backgroundColor: `${theme.surfaceHigh}f0`,
+      borderColor: theme.ghostBorder,
+      borderRadius: 999,
+      borderWidth: 1,
+      height: 12,
+      overflow: 'hidden',
+    },
+    detailsProgressFill: {
+      backgroundColor: theme.amber,
+      borderRadius: 999,
+      height: '100%',
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.28,
+      shadowRadius: 12,
     },
     levelAccent: {
       color: theme.amberSoft,
