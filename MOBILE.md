@@ -25,8 +25,8 @@ After teacher feedback, the project direction was corrected beginning in Iterati
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 28 |
-| Total Weight (kg) | 290 |
+| Total Iterations | 29 |
+| Total Weight (kg) | 300 |
 | Total Time (min) | Not tracked |
 | Failed Attempts | Not tracked |
 
@@ -1078,6 +1078,32 @@ do 27 28 29
 **Screenshot:** `iteration-28-quest-status-flow.png`
 
 **Commit:** `[NAIM: Quest Blacksmith] Add quest status flow - 10kg`
+
+---
+
+### Iteration 29
+
+| Field | Value |
+|-------|-------|
+| Feature | `Backend-driven quest due dates and timeline state` |
+| Weight | `10 kg` |
+| Tool Used | `Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+do 27 28 29
+```
+
+**What happened:**
+- Added an optional due-date field to the existing add/edit quest flow using a simple `YYYY-MM-DD` format.
+- Persisted due dates through the backend, validated them locally, and surfaced clear timeline labels like `Upcoming`, `Due Today`, and `Overdue` on both the Quest Board and the existing Quest Details screen.
+
+**Screenshot:** `iteration-29-quest-due-dates.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add quest due dates - 10kg`
 
 ---
 

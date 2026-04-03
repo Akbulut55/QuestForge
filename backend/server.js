@@ -53,6 +53,7 @@ const defaultGameState = {
       title: 'Defeat the Laundry Dragon',
       description:
         'Clear the laundry pile, sort the essentials, and leave the guild hall ready for the next work cycle.',
+      dueDate: null,
       difficulty: 'Epic',
       xpReward: 50,
       status: 'In Progress',
@@ -64,6 +65,7 @@ const defaultGameState = {
       title: 'Brew a Focus Potion',
       description:
         'Prepare your desk, water, and playlist so the next study session begins with less resistance.',
+      dueDate: null,
       difficulty: 'Medium',
       xpReward: 20,
       status: 'Ready',
@@ -75,6 +77,7 @@ const defaultGameState = {
       title: 'Sharpen the Study Blade',
       description:
         'Review one core topic and write down the sharpest insight before you close the session.',
+      dueDate: null,
       difficulty: 'Easy',
       xpReward: 10,
       status: 'Completed',
@@ -208,6 +211,44 @@ function getDateDifferenceInDays(fromDateKey, toDateKey) {
   return Math.round((toDate.getTime() - fromDate.getTime()) / DAY_IN_MS);
 }
 
+function normalizeDueDate(dueDate) {
+  if (typeof dueDate !== 'string') {
+    return null;
+  }
+
+  const trimmedDueDate = dueDate.trim();
+
+  return parseDateKey(trimmedDueDate) ? trimmedDueDate : null;
+}
+
+function getQuestDueStateLabel(quest, todayKey = getDateKey()) {
+  const dueDate = normalizeDueDate(quest?.dueDate);
+
+  if (!dueDate) {
+    return 'Flexible';
+  }
+
+  if (quest.status === 'Completed') {
+    return 'Completed';
+  }
+
+  const dateDifference = getDateDifferenceInDays(todayKey, dueDate);
+
+  if (dateDifference === null) {
+    return 'Flexible';
+  }
+
+  if (dateDifference < 0) {
+    return 'Overdue';
+  }
+
+  if (dateDifference === 0) {
+    return 'Due Today';
+  }
+
+  return 'Upcoming';
+}
+
 function normalizeStreakProgress(streakCount, lastCompletedDate) {
   if (!lastCompletedDate) {
     return {
@@ -316,6 +357,7 @@ function normalizeQuest(quest) {
     title,
     description:
       typeof quest?.description === 'string' ? quest.description.trim() : '',
+    dueDate: normalizeDueDate(quest?.dueDate),
     difficulty,
     xpReward: completionXpByDifficulty[difficulty],
     status,
@@ -718,6 +760,7 @@ function buildQuestDetails(quest) {
       : quest.status === 'In Progress'
         ? 'complete'
         : 'start';
+  const dueDate = normalizeDueDate(quest.dueDate);
 
   return {
     kicker: 'Quest Details',
@@ -746,6 +789,8 @@ function buildQuestDetails(quest) {
           : 'The ritual is ready to begin whenever the guild needs this quest to move.',
     guidanceTitle: hasQuestNotes ? 'Quest Notes' : 'Quest Guidance',
     guidanceText: hasQuestNotes ? quest.description : getQuestGuidanceText(quest),
+    dueDateLabel: dueDate ?? 'No due date',
+    dueStateLabel: getQuestDueStateLabel(quest),
     primaryActionLabel:
       quest.status === 'Completed'
         ? 'Ritual Complete'
@@ -923,6 +968,11 @@ function isValidQuestDraft(questDraft) {
     questDraft.title.trim().length > 0 &&
     (typeof questDraft.description === 'undefined' ||
       typeof questDraft.description === 'string') &&
+    (typeof questDraft.dueDate === 'undefined' ||
+      questDraft.dueDate === null ||
+      (typeof questDraft.dueDate === 'string' &&
+        questDraft.dueDate.trim().length === 0) ||
+      normalizeDueDate(questDraft.dueDate) !== null) &&
     difficultyOptions.includes(questDraft.difficulty) &&
     categoryOptions.includes(questDraft.category)
   );
@@ -1202,6 +1252,7 @@ const server = http.createServer(async (req, res) => {
       const nextQuest = normalizeQuest({
         title: questDraft.title,
         description: questDraft.description,
+        dueDate: questDraft.dueDate,
         difficulty: questDraft.difficulty,
         category: questDraft.category,
         status: 'Ready',
@@ -1248,6 +1299,7 @@ const server = http.createServer(async (req, res) => {
         ...questToUpdate,
         title: questDraft.title,
         description: questDraft.description,
+        dueDate: questDraft.dueDate,
         difficulty: questDraft.difficulty,
         category: questDraft.category,
       });

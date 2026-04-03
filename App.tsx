@@ -69,6 +69,7 @@ type Quest = {
   id: string;
   title: string;
   description: string;
+  dueDate: string | null;
   difficulty: Difficulty;
   xpReward: number;
   status: Status;
@@ -79,6 +80,7 @@ type Quest = {
 type QuestDraft = {
   title: string;
   description?: string;
+  dueDate?: string | null;
   difficulty: Difficulty;
   category: Category;
 };
@@ -227,6 +229,8 @@ type QuestDetailsResponse = {
   progressStatusText: string;
   guidanceTitle: string;
   guidanceText: string;
+  dueDateLabel: string;
+  dueStateLabel: string;
   primaryActionType: 'start' | 'complete' | 'none';
   primaryActionLabel: string;
   secondaryActionLabel: string;
@@ -507,6 +511,7 @@ const initialQuests: Quest[] = [
     title: 'Defeat the Laundry Dragon',
     description:
       'Clear the laundry pile, sort the essentials, and leave the guild hall ready for the next work cycle.',
+    dueDate: null,
     difficulty: 'Epic',
     xpReward: 50,
     status: 'In Progress',
@@ -518,6 +523,7 @@ const initialQuests: Quest[] = [
     title: 'Brew a Focus Potion',
     description:
       'Prepare your desk, water, and playlist so the next study session begins with less resistance.',
+    dueDate: null,
     difficulty: 'Medium',
     xpReward: 20,
     status: 'Ready',
@@ -529,6 +535,7 @@ const initialQuests: Quest[] = [
     title: 'Sharpen the Study Blade',
     description:
       'Review one core topic and write down the sharpest insight before you close the session.',
+    dueDate: null,
     difficulty: 'Easy',
     xpReward: 10,
     status: 'Completed',
@@ -688,6 +695,58 @@ function getDateDifferenceInDays(fromDateKey: string, toDateKey: string) {
   return Math.round((toDate.getTime() - fromDate.getTime()) / DAY_IN_MS);
 }
 
+function normalizeDueDate(dueDate: string | null | undefined) {
+  if (typeof dueDate !== 'string') {
+    return null;
+  }
+
+  const trimmedDueDate = dueDate.trim();
+
+  return parseDateKey(trimmedDueDate) ? trimmedDueDate : null;
+}
+
+function getQuestDueStateLabel(
+  quest: Pick<Quest, 'status' | 'dueDate'>,
+  todayKey = getDateKey(),
+) {
+  const dueDate = normalizeDueDate(quest.dueDate);
+
+  if (!dueDate) {
+    return 'Flexible';
+  }
+
+  if (quest.status === 'Completed') {
+    return 'Completed';
+  }
+
+  const dateDifference = getDateDifferenceInDays(todayKey, dueDate);
+
+  if (dateDifference === null) {
+    return 'Flexible';
+  }
+
+  if (dateDifference < 0) {
+    return 'Overdue';
+  }
+
+  if (dateDifference === 0) {
+    return 'Due Today';
+  }
+
+  return 'Upcoming';
+}
+
+function getQuestDueDetails(quest: Pick<Quest, 'status' | 'dueDate'>) {
+  const dueDate = normalizeDueDate(quest.dueDate);
+  const dueStateLabel = getQuestDueStateLabel(quest);
+
+  return {
+    dueDateLabel: dueDate ?? 'No due date',
+    dueStateLabel,
+    isUrgent: dueStateLabel === 'Due Today' || dueStateLabel === 'Overdue',
+  };
+}
+
 function normalizeStreakProgress(
   streakCount: number,
   lastCompletedDate: string | null,
@@ -759,6 +818,7 @@ function normalizeQuest(quest: Omit<Quest, 'id'> & Partial<Pick<Quest, 'id'>>) {
     id: quest.id ?? createQuestId(),
     description:
       typeof quest.description === 'string' ? quest.description.trim() : '',
+    dueDate: normalizeDueDate(quest.dueDate),
     createdAt: typeof quest.createdAt === 'number' ? quest.createdAt : Date.now(),
     xpReward,
   };
@@ -1385,6 +1445,7 @@ function QuestCard({
   onOpenDetails?: (questId: string) => void;
 }) {
   const isComplete = quest.status === 'Completed';
+  const dueDetails = getQuestDueDetails(quest);
 
   return (
     <View style={[styles.questCard, isComplete && styles.questCardCompleted]}>
@@ -1414,6 +1475,27 @@ function QuestCard({
           <Text style={styles.metaLabel}>XP Reward</Text>
           <Text style={[styles.metaValue, styles.metaValueHighlight]}>
             +{quest.xpReward}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.metaRow}>
+        <View style={styles.metaPill}>
+          <Text style={styles.metaLabel}>Due Date</Text>
+          <Text style={styles.metaValue}>{dueDetails.dueDateLabel}</Text>
+        </View>
+        <View
+          style={[
+            styles.metaPill,
+            dueDetails.isUrgent ? styles.metaPillHighlight : null,
+          ]}>
+          <Text style={styles.metaLabel}>Timeline</Text>
+          <Text
+            style={[
+              styles.metaValue,
+              dueDetails.isUrgent ? styles.metaValueHighlight : null,
+            ]}>
+            {dueDetails.dueStateLabel}
           </Text>
         </View>
       </View>
@@ -2379,6 +2461,17 @@ function QuestDetailsScreen({
           />
         </View>
 
+        <View style={styles.metaRow}>
+          <View style={styles.metaPill}>
+            <Text style={styles.metaLabel}>Due Date</Text>
+            <Text style={styles.metaValue}>{questDetails.dueDateLabel}</Text>
+          </View>
+          <View style={styles.metaPill}>
+            <Text style={styles.metaLabel}>Timeline</Text>
+            <Text style={styles.metaValue}>{questDetails.dueStateLabel}</Text>
+          </View>
+        </View>
+
         <View style={styles.detailsProgressSection}>
           <View style={styles.detailsProgressHeader}>
             <Text style={styles.formLabel}>{questDetails.ritualProgressLabel}</Text>
@@ -2464,6 +2557,7 @@ function AddQuestScreen({
   const isEditing = questToEdit !== null;
   const [questTitle, setQuestTitle] = useState('');
   const [questDescription, setQuestDescription] = useState('');
+  const [questDueDate, setQuestDueDate] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] =
     useState<Difficulty>('Easy');
   const [selectedCategory, setSelectedCategory] =
@@ -2473,6 +2567,7 @@ function AddQuestScreen({
     if (questToEdit) {
       setQuestTitle(questToEdit.title);
       setQuestDescription(questToEdit.description);
+      setQuestDueDate(questToEdit.dueDate ?? '');
       setSelectedDifficulty(questToEdit.difficulty);
       setSelectedCategory(questToEdit.category);
       return;
@@ -2480,11 +2575,14 @@ function AddQuestScreen({
 
     setQuestTitle('');
     setQuestDescription('');
+    setQuestDueDate('');
     setSelectedDifficulty('Easy');
     setSelectedCategory('Side Quest');
   }, [questToEdit]);
 
-  const canSaveQuest = questTitle.trim().length > 0;
+  const isValidDueDate =
+    questDueDate.trim().length === 0 || normalizeDueDate(questDueDate) !== null;
+  const canSaveQuest = questTitle.trim().length > 0 && isValidDueDate;
 
   const handleSaveQuest = () => {
     const title = questTitle.trim();
@@ -2496,6 +2594,7 @@ function AddQuestScreen({
     onSave({
       title,
       description: questDescription.trim(),
+      dueDate: normalizeDueDate(questDueDate),
       difficulty: selectedDifficulty,
       category: selectedCategory,
     });
@@ -2570,6 +2669,24 @@ function AddQuestScreen({
             textAlignVertical="top"
             value={questDescription}
           />
+        </View>
+
+        <View style={styles.formField}>
+          <Text style={styles.formLabel}>Due Date</Text>
+          <TextInput
+            autoCapitalize="none"
+            onChangeText={setQuestDueDate}
+            placeholder="YYYY-MM-DD"
+            placeholderTextColor={styles.themePlaceholder.color}
+            style={styles.titleInput}
+            testID="quest-due-date-input"
+            value={questDueDate}
+          />
+          <Text style={styles.formHint}>
+            {isValidDueDate
+              ? 'Use the `YYYY-MM-DD` format or leave it empty for a flexible quest.'
+              : 'Enter a valid `YYYY-MM-DD` date before saving this quest.'}
+          </Text>
         </View>
 
         <SectionPicker

@@ -109,6 +109,7 @@ type TestGameState = {
     id: string;
     title: string;
     description?: string;
+    dueDate?: string | null;
     difficulty: string;
     xpReward: number;
     status: string;
@@ -169,6 +170,7 @@ const defaultRemoteGameState: TestGameState = {
       title: 'Defeat the Laundry Dragon',
       description:
         'Clear the laundry pile, sort the essentials, and leave the guild hall ready for the next work cycle.',
+      dueDate: null,
       difficulty: 'Epic',
       xpReward: 50,
       status: 'In Progress',
@@ -180,6 +182,7 @@ const defaultRemoteGameState: TestGameState = {
       title: 'Brew a Focus Potion',
       description:
         'Prepare your desk, water, and playlist so the next study session begins with less resistance.',
+      dueDate: null,
       difficulty: 'Medium',
       xpReward: 20,
       status: 'Ready',
@@ -191,6 +194,7 @@ const defaultRemoteGameState: TestGameState = {
       title: 'Sharpen the Study Blade',
       description:
         'Review one core topic and write down the sharpest insight before you close the session.',
+      dueDate: null,
       difficulty: 'Easy',
       xpReward: 10,
       status: 'Completed',
@@ -348,6 +352,47 @@ function getDateDifferenceInDays(fromDateKey: string, toDateKey: string) {
   }
 
   return Math.round((toDate.getTime() - fromDate.getTime()) / DAY_IN_MS);
+}
+
+function normalizeDueDate(dueDate: string | null | undefined) {
+  if (typeof dueDate !== 'string') {
+    return null;
+  }
+
+  const trimmedDueDate = dueDate.trim();
+
+  return parseDateKey(trimmedDueDate) ? trimmedDueDate : null;
+}
+
+function getQuestDueStateLabel(
+  quest: { status: string; dueDate?: string | null },
+  todayKey = getDateKey(),
+) {
+  const dueDate = normalizeDueDate(quest.dueDate);
+
+  if (!dueDate) {
+    return 'Flexible';
+  }
+
+  if (quest.status === 'Completed') {
+    return 'Completed';
+  }
+
+  const dateDifference = getDateDifferenceInDays(todayKey, dueDate);
+
+  if (dateDifference === null) {
+    return 'Flexible';
+  }
+
+  if (dateDifference < 0) {
+    return 'Overdue';
+  }
+
+  if (dateDifference === 0) {
+    return 'Due Today';
+  }
+
+  return 'Upcoming';
 }
 
 function normalizeStreakProgress(
@@ -780,6 +825,8 @@ function buildQuestDetailsResponse(questId: string) {
         : quest.category === 'Main Quest'
           ? 'As a main quest, it pushes the realm forward and deserves your clearest attention block.'
           : 'As a side quest, it strengthens the guild quietly without needing to dominate the whole day.',
+    dueDateLabel: normalizeDueDate(quest.dueDate) ?? 'No due date',
+    dueStateLabel: getQuestDueStateLabel(quest),
     primaryActionLabel:
       quest.status === 'Completed'
         ? 'Ritual Complete'
@@ -800,6 +847,7 @@ function buildQuestDetailsResponse(questId: string) {
 function normalizeGameState(gameState: typeof defaultRemoteGameState) {
   const quests = gameState.quests.map(quest => ({
     ...quest,
+    dueDate: normalizeDueDate(quest.dueDate),
     xpReward:
       completionXpByDifficulty[
         quest.difficulty as keyof typeof completionXpByDifficulty
@@ -923,6 +971,7 @@ beforeEach(() => {
     async (questDraft: {
       title: string;
       description?: string;
+      dueDate?: string | null;
       difficulty: string;
       category: string;
     }) => {
@@ -930,6 +979,7 @@ beforeEach(() => {
         id: `quest-${Date.now()}-test`,
         title: questDraft.title.trim(),
         description: typeof questDraft.description === 'string' ? questDraft.description.trim() : '',
+        dueDate: normalizeDueDate(questDraft.dueDate),
         difficulty: questDraft.difficulty,
         xpReward:
           completionXpByDifficulty[
@@ -979,6 +1029,7 @@ beforeEach(() => {
       questDraft: {
         title: string;
         description?: string;
+        dueDate?: string | null;
         difficulty: string;
         category: string;
       },
@@ -992,6 +1043,7 @@ beforeEach(() => {
                 typeof questDraft.description === 'string'
                   ? questDraft.description.trim()
                   : '',
+              dueDate: normalizeDueDate(questDraft.dueDate),
               difficulty: questDraft.difficulty,
               category: questDraft.category,
               xpReward:
@@ -1578,6 +1630,96 @@ test('saving quest notes shows them on the backend-driven quest details screen',
   expect(detailsRender).toContain(
     'Prepare the desk, close stray tabs, and begin the next study ritual with one focused outcome.',
   );
+});
+
+test('saving a due date shows timeline details on the quest board and quest details screen', async () => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date('2026-04-03T09:00:00'));
+
+  try {
+    const tree = await renderHydratedApp();
+    let root = tree.root;
+
+    await ReactTestRenderer.act(async () => {
+      root.findByProps({ testID: 'edit-quest-quest-2' }).props.onPress();
+    });
+
+    root = tree.root;
+
+    await ReactTestRenderer.act(async () => {
+      root.findByProps({ testID: 'quest-due-date-input' }).props.onChangeText(
+        '2026-04-03',
+      );
+    });
+
+    await ReactTestRenderer.act(async () => {
+      root.findByProps({ testID: 'save-quest-button' }).props.onPress();
+      await flushMicrotasks();
+    });
+
+    root = tree.root;
+    const boardRender = JSON.stringify(tree.toJSON());
+
+    expect(boardRender).toContain('2026-04-03');
+    expect(boardRender).toContain('Due Today');
+    expect(
+      getLastSavedGameState().quests.find((quest: { id: string }) => quest.id === 'quest-2')
+        ?.dueDate,
+    ).toBe('2026-04-03');
+
+    await ReactTestRenderer.act(async () => {
+      root.findByProps({ testID: 'open-quest-details-quest-2' }).props.onPress();
+      await flushMicrotasks();
+    });
+
+    const detailsRender = JSON.stringify(tree.toJSON());
+
+    expect(detailsRender).toContain('2026-04-03');
+    expect(detailsRender).toContain('Due Today');
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test('backend-derived due states mark overdue quests clearly on the board', async () => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date('2026-04-03T09:00:00'));
+
+  mockBackendState = {
+    hero: {
+      xp: 0,
+      rankTitle: 'Novice',
+      streakCount: 0,
+      lastCompletedDate: null,
+    },
+    quests: [
+      {
+        id: 'quest-overdue',
+        title: 'Restore the Lantern Ward',
+        description: 'Repair the lantern before the next guild patrol.',
+        dueDate: '2026-04-01',
+        difficulty: 'Hard',
+        xpReward: 35,
+        status: 'Ready',
+        category: 'Main Quest',
+        createdAt: 5,
+      },
+    ],
+    themeMode: 'dark',
+    themePackId: 'ethereal-forge',
+    unlockedAchievementIds: ['first-quest'],
+    sortOption: 'Newest first',
+  };
+
+  try {
+    const tree = await renderHydratedApp();
+    const overdueRender = JSON.stringify(tree.toJSON());
+
+    expect(overdueRender).toContain('2026-04-01');
+    expect(overdueRender).toContain('Overdue');
+  } finally {
+    jest.useRealTimers();
+  }
 });
 
 test('completing a quest awards XP, updates rank, and saves remote game state', async () => {
