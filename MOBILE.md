@@ -25,8 +25,8 @@ After teacher feedback, the project direction was corrected beginning in Iterati
 
 | Metric | Value |
 |--------|-------|
-| Total Iterations | 21 |
-| Total Weight (kg) | 220 |
+| Total Iterations | 22 |
+| Total Weight (kg) | 230 |
 | Total Time (min) | Not tracked |
 | Failed Attempts | Not tracked |
 
@@ -896,6 +896,32 @@ do all 4 iterations and after each iteration commit them and update mobile.md wh
 **Screenshot:** `iteration-21-realm-codex.png`
 
 **Commit:** `[NAIM: Quest Blacksmith] Add Stitch realm codex screen - 10kg`
+
+---
+
+### Iteration 22
+
+| Field | Value |
+|-------|-------|
+| Feature | `Backend-driven navigation config` |
+| Weight | `10 kg` |
+| Tool Used | `Codex` |
+| Time | `Not tracked` |
+| Attempts | `Not tracked` |
+| Status | `Success` |
+
+**Prompt given to AI:**
+```text
+do iteration 22 and 23 dont forget to commit
+```
+
+**What happened:**
+- Expanded the backend app config so it can now turn the Add Quest, Progress, and Realm Codex screens on or off from the server.
+- The Quest Board navigation updates after a realm refresh, and the app automatically returns to the Quest Board if a currently open screen gets disabled by backend config.
+
+**Screenshot:** `iteration-22-backend-navigation-config.png`
+
+**Commit:** `[NAIM: Quest Blacksmith] Add backend navigation config - 10kg`
 
 ---
 

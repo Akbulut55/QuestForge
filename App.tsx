@@ -91,6 +91,9 @@ type AppFeatureFlags = {
   showSuggestionSection: boolean;
   showFilterSection: boolean;
   showAchievementSection: boolean;
+  showAddQuestScreen: boolean;
+  showProgressScreen: boolean;
+  showRealmCodexScreen: boolean;
 };
 
 type AppConfig = {
@@ -203,46 +206,46 @@ type ThemePalette = {
 
 const themes: Record<ThemeMode, ThemePalette> = {
   dark: {
-    background: '#131313',
-    surfaceLow: '#1c1b1b',
-    surface: '#201f1f',
-    surfaceHigh: '#2a2a2a',
-    surfaceHighest: '#353534',
-    textPrimary: '#e5e2e1',
-    textMuted: '#d4c5ab',
-    amber: '#ffbf00',
-    amberSoft: '#ffe2ab',
-    blue: '#00d2fd',
-    blueSoft: '#a2e7ff',
-    success: '#88d498',
-    ghostBorder: 'rgba(156, 143, 120, 0.18)',
-    subtitle: '#b3aba0',
-    placeholder: '#7e766b',
-    buttonText: '#402d00',
-    buttonDisabled: '#6e5b22',
-    activeBadgeBackground: 'rgba(255, 191, 0, 0.16)',
-    doneBadgeBackground: 'rgba(136, 212, 152, 0.16)',
+    background: '#0d111f',
+    surfaceLow: '#141a31',
+    surface: '#1c2544',
+    surfaceHigh: '#25315a',
+    surfaceHighest: '#304071',
+    textPrimary: '#f7f4ef',
+    textMuted: '#f1c56c',
+    amber: '#ffb703',
+    amberSoft: '#ffe08a',
+    blue: '#23c8ff',
+    blueSoft: '#9be8ff',
+    success: '#63e28d',
+    ghostBorder: 'rgba(155, 232, 255, 0.16)',
+    subtitle: '#b3bfd9',
+    placeholder: '#7f8baa',
+    buttonText: '#2e1d00',
+    buttonDisabled: '#8d701f',
+    activeBadgeBackground: 'rgba(255, 183, 3, 0.18)',
+    doneBadgeBackground: 'rgba(99, 226, 141, 0.16)',
   },
   light: {
-    background: '#f5efe4',
-    surfaceLow: '#efe5d6',
-    surface: '#fbf6ed',
-    surfaceHigh: '#e6d9c5',
-    surfaceHighest: '#dccbb2',
-    textPrimary: '#2a2015',
-    textMuted: '#7a6447',
-    amber: '#c68a17',
-    amberSoft: '#f0c879',
-    blue: '#2e8da3',
-    blueSoft: '#69bfd5',
-    success: '#3c8a59',
-    ghostBorder: 'rgba(122, 100, 71, 0.16)',
-    subtitle: '#6f5d45',
-    placeholder: '#917b61',
-    buttonText: '#2a2015',
-    buttonDisabled: '#b79c67',
-    activeBadgeBackground: 'rgba(198, 138, 23, 0.14)',
-    doneBadgeBackground: 'rgba(60, 138, 89, 0.14)',
+    background: '#fff6e8',
+    surfaceLow: '#fff0d9',
+    surface: '#fff8ee',
+    surfaceHigh: '#ffe2b8',
+    surfaceHighest: '#ffd39b',
+    textPrimary: '#2d1a0f',
+    textMuted: '#a96510',
+    amber: '#f4a300',
+    amberSoft: '#ffd977',
+    blue: '#129ed7',
+    blueSoft: '#4dd7ff',
+    success: '#269863',
+    ghostBorder: 'rgba(244, 163, 0, 0.14)',
+    subtitle: '#735d44',
+    placeholder: '#a98860',
+    buttonText: '#2d1a0f',
+    buttonDisabled: '#d2b070',
+    activeBadgeBackground: 'rgba(244, 163, 0, 0.12)',
+    doneBadgeBackground: 'rgba(38, 152, 99, 0.12)',
   },
 };
 
@@ -300,6 +303,9 @@ function createDefaultAppConfig(): AppConfig {
       showSuggestionSection: true,
       showFilterSection: true,
       showAchievementSection: true,
+      showAddQuestScreen: true,
+      showProgressScreen: true,
+      showRealmCodexScreen: true,
     },
   };
 }
@@ -732,8 +738,39 @@ function normalizeRemoteAppConfig(config: AppConfig): AppConfig {
         typeof config?.featureFlags?.showAchievementSection === 'boolean'
           ? config.featureFlags.showAchievementSection
           : fallbackConfig.featureFlags.showAchievementSection,
+      showAddQuestScreen:
+        typeof config?.featureFlags?.showAddQuestScreen === 'boolean'
+          ? config.featureFlags.showAddQuestScreen
+          : fallbackConfig.featureFlags.showAddQuestScreen,
+      showProgressScreen:
+        typeof config?.featureFlags?.showProgressScreen === 'boolean'
+          ? config.featureFlags.showProgressScreen
+          : fallbackConfig.featureFlags.showProgressScreen,
+      showRealmCodexScreen:
+        typeof config?.featureFlags?.showRealmCodexScreen === 'boolean'
+          ? config.featureFlags.showRealmCodexScreen
+          : fallbackConfig.featureFlags.showRealmCodexScreen,
     },
   };
+}
+
+function isScreenAllowed(
+  screenName: ScreenName,
+  appConfig: AppConfig,
+) {
+  if (screenName === 'add-quest') {
+    return appConfig.featureFlags.showAddQuestScreen;
+  }
+
+  if (screenName === 'progress') {
+    return appConfig.featureFlags.showProgressScreen;
+  }
+
+  if (screenName === 'realm-codex') {
+    return appConfig.featureFlags.showRealmCodexScreen;
+  }
+
+  return true;
 }
 
 function areGameStatesEqual(leftState: GameState, rightState: GameState) {
@@ -1072,13 +1109,16 @@ function ThemeToggle({
 }) {
   const nextThemeLabel =
     themeMode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+  const nextThemeIcon = themeMode === 'dark' ? '☀' : '☾';
 
   return (
     <Pressable
+      accessibilityLabel={nextThemeLabel}
+      accessibilityRole="button"
       onPress={onToggleTheme}
       style={styles.themeToggleButton}
       testID="theme-toggle-button">
-      <Text style={styles.themeToggleText}>{nextThemeLabel}</Text>
+      <Text style={styles.themeToggleText}>{nextThemeIcon}</Text>
     </Pressable>
   );
 }
@@ -1387,24 +1427,30 @@ function QuestBoardScreen({
           Open the dedicated Add Quest screen to create a new mission for your
           quest log.
         </Text>
-        <Pressable
-          onPress={onNavigateToAddQuest}
-          style={styles.primaryActionButton}
-          testID="navigate-to-add-quest">
-          <Text style={styles.primaryActionText}>Open Add Quest</Text>
-        </Pressable>
-        <Pressable
-          onPress={onNavigateToProgress}
-          style={styles.secondaryActionButton}
-          testID="navigate-to-progress-screen">
-          <Text style={styles.secondaryActionText}>Open Progress</Text>
-        </Pressable>
-        <Pressable
-          onPress={onNavigateToRealmCodex}
-          style={styles.secondaryActionButton}
-          testID="navigate-to-realm-codex">
-          <Text style={styles.secondaryActionText}>Open Realm Codex</Text>
-        </Pressable>
+        {appConfig.featureFlags.showAddQuestScreen ? (
+          <Pressable
+            onPress={onNavigateToAddQuest}
+            style={styles.primaryActionButton}
+            testID="navigate-to-add-quest">
+            <Text style={styles.primaryActionText}>Open Add Quest</Text>
+          </Pressable>
+        ) : null}
+        {appConfig.featureFlags.showProgressScreen ? (
+          <Pressable
+            onPress={onNavigateToProgress}
+            style={styles.secondaryActionButton}
+            testID="navigate-to-progress-screen">
+            <Text style={styles.secondaryActionText}>Open Progress</Text>
+          </Pressable>
+        ) : null}
+        {appConfig.featureFlags.showRealmCodexScreen ? (
+          <Pressable
+            onPress={onNavigateToRealmCodex}
+            style={styles.secondaryActionButton}
+            testID="navigate-to-realm-codex">
+            <Text style={styles.secondaryActionText}>Open Realm Codex</Text>
+          </Pressable>
+        ) : null}
       </View>
 
       {appConfig.featureFlags.showFilterSection ? (
@@ -1482,7 +1528,9 @@ function QuestBoardScreen({
           <QuestCard
             key={quest.id}
             onComplete={onCompleteQuest}
-            onEdit={onEditQuest}
+            onEdit={
+              appConfig.featureFlags.showAddQuestScreen ? onEditQuest : undefined
+            }
             quest={quest}
             styles={styles}
           />
@@ -1495,7 +1543,9 @@ function QuestBoardScreen({
           <QuestCard
             key={quest.id}
             onComplete={onCompleteQuest}
-            onEdit={onEditQuest}
+            onEdit={
+              appConfig.featureFlags.showAddQuestScreen ? onEditQuest : undefined
+            }
             quest={quest}
             styles={styles}
           />
@@ -1509,7 +1559,9 @@ function QuestBoardScreen({
         {completedQuests.map(quest => (
           <QuestCard
             key={quest.id}
-            onEdit={onEditQuest}
+            onEdit={
+              appConfig.featureFlags.showAddQuestScreen ? onEditQuest : undefined
+            }
             quest={quest}
             styles={styles}
           />
@@ -2139,6 +2191,15 @@ function App() {
     };
   }, [backendRetryCount]);
 
+  useEffect(() => {
+    if (isScreenAllowed(currentScreen, appConfig)) {
+      return;
+    }
+
+    setCurrentScreen('quest-board');
+    setEditingQuestId(null);
+  }, [appConfig, currentScreen]);
+
   const returnToBoard = () => {
     setEditingQuestId(null);
     setCurrentScreen('quest-board');
@@ -2208,7 +2269,28 @@ function App() {
     );
   };
 
+  const handleOpenAddQuest = () => {
+    if (!appConfig.featureFlags.showAddQuestScreen) {
+      return;
+    }
+
+    setEditingQuestId(null);
+    setCurrentScreen('add-quest');
+  };
+
+  const handleOpenProgress = () => {
+    if (!appConfig.featureFlags.showProgressScreen) {
+      return;
+    }
+
+    setCurrentScreen('progress');
+  };
+
   const handleOpenRealmCodex = async () => {
+    if (!appConfig.featureFlags.showRealmCodexScreen) {
+      return;
+    }
+
     setCurrentScreen('realm-codex');
     setIsRefreshingRealmCodex(true);
 
@@ -2263,104 +2345,108 @@ function App() {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar
-          backgroundColor={currentTheme.background}
-          barStyle={
-            gameState.themeMode === 'dark' ? 'light-content' : 'dark-content'
-          }
-        />
-        {!isHydrated ? (
-          <View style={styles.loadingState}>
-            <Text style={styles.loadingKicker}>Restoring Quest Log</Text>
-            <Text style={styles.loadingTitle}>Quest Forge</Text>
-          </View>
-        ) : backendError ? (
-          <View style={styles.loadingState}>
-            <View style={styles.connectionStateCard}>
-              <Text style={styles.loadingKicker}>Backend Required</Text>
-              <Text style={styles.connectionStateTitle}>
-                Quest Forge API Offline
-              </Text>
-              <Text style={styles.connectionStateText}>{backendError}</Text>
-              <Pressable
-                onPress={() => setBackendRetryCount(count => count + 1)}
-                style={styles.primaryActionButton}
-                testID="retry-backend-connection">
-                <Text style={styles.primaryActionText}>Retry Connection</Text>
-              </Pressable>
+        <View pointerEvents="none" style={styles.backgroundDecor}>
+          <View style={styles.backgroundOrbPrimary} />
+          <View style={styles.backgroundOrbSecondary} />
+          <View style={styles.backgroundOrbTertiary} />
+        </View>
+        <View style={styles.contentFrame}>
+          <StatusBar
+            backgroundColor={currentTheme.background}
+            barStyle={
+              gameState.themeMode === 'dark' ? 'light-content' : 'dark-content'
+            }
+          />
+          {!isHydrated ? (
+            <View style={styles.loadingState}>
+              <Text style={styles.loadingKicker}>Restoring Quest Log</Text>
+              <Text style={styles.loadingTitle}>Quest Forge</Text>
             </View>
-          </View>
-        ) : (
-          <>
-            {currentScreen === 'quest-board' ? (
-              <QuestBoardScreen
-                appConfig={appConfig}
-                completionFeedback={completionFeedback}
-                dailySuggestionDateKey={dailySuggestionDateKey}
-                dailySuggestions={dailySuggestions}
-                hero={gameState.hero}
-                isRefreshingAppConfig={isRefreshingAppConfig}
-                onAddSuggestedQuest={handleAddSuggestedQuest}
-                onCompleteQuest={handleCompleteQuest}
+          ) : backendError ? (
+            <View style={styles.loadingState}>
+              <View style={styles.connectionStateCard}>
+                <Text style={styles.loadingKicker}>Backend Required</Text>
+                <Text style={styles.connectionStateTitle}>
+                  Quest Forge API Offline
+                </Text>
+                <Text style={styles.connectionStateText}>{backendError}</Text>
+                <Pressable
+                  onPress={() => setBackendRetryCount(count => count + 1)}
+                  style={styles.primaryActionButton}
+                  testID="retry-backend-connection">
+                  <Text style={styles.primaryActionText}>Retry Connection</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+            <>
+              {currentScreen === 'quest-board' ? (
+                <QuestBoardScreen
+                  appConfig={appConfig}
+                  completionFeedback={completionFeedback}
+                  dailySuggestionDateKey={dailySuggestionDateKey}
+                  dailySuggestions={dailySuggestions}
+                  hero={gameState.hero}
+                  isRefreshingAppConfig={isRefreshingAppConfig}
+                  onAddSuggestedQuest={handleAddSuggestedQuest}
+                  onCompleteQuest={handleCompleteQuest}
                 onEditQuest={questId => {
                   setEditingQuestId(questId);
                   setCurrentScreen('add-quest');
                 }}
-                onNavigateToAddQuest={() => {
-                  setEditingQuestId(null);
-                  setCurrentScreen('add-quest');
-                }}
-                onNavigateToProgress={() => setCurrentScreen('progress')}
+                onNavigateToAddQuest={handleOpenAddQuest}
+                onNavigateToProgress={handleOpenProgress}
                 onNavigateToRealmCodex={handleOpenRealmCodex}
-                onRefreshAppConfig={handleRefreshAppConfig}
-                onSelectSortOption={handleSelectSortOption}
-                onToggleTheme={handleToggleTheme}
-                quests={gameState.quests}
-                selectedSortOption={gameState.sortOption}
-                styles={styles}
-                themeMode={gameState.themeMode}
-              />
-            ) : currentScreen === 'progress' ? (
-              <ProgressScreen
-                appConfig={appConfig}
-                hero={gameState.hero}
-                onBack={() => setCurrentScreen('quest-board')}
-                onToggleTheme={handleToggleTheme}
-                quests={gameState.quests}
-                styles={styles}
-                themeMode={gameState.themeMode}
-                unlockedAchievementIds={gameState.unlockedAchievementIds}
-              />
-            ) : currentScreen === 'realm-codex' ? (
-              realmCodex ? (
-                <RealmCodexScreen
-                  isRefreshingRealmCodex={isRefreshingRealmCodex}
-                  onBack={() => setCurrentScreen('quest-board')}
-                  onRefresh={handleRefreshRealmCodex}
+                  onRefreshAppConfig={handleRefreshAppConfig}
+                  onSelectSortOption={handleSelectSortOption}
                   onToggleTheme={handleToggleTheme}
-                  realmCodex={realmCodex}
+                  quests={gameState.quests}
+                  selectedSortOption={gameState.sortOption}
                   styles={styles}
                   themeMode={gameState.themeMode}
                 />
+              ) : currentScreen === 'progress' ? (
+                <ProgressScreen
+                  appConfig={appConfig}
+                  hero={gameState.hero}
+                  onBack={() => setCurrentScreen('quest-board')}
+                  onToggleTheme={handleToggleTheme}
+                  quests={gameState.quests}
+                  styles={styles}
+                  themeMode={gameState.themeMode}
+                  unlockedAchievementIds={gameState.unlockedAchievementIds}
+                />
+              ) : currentScreen === 'realm-codex' ? (
+                realmCodex ? (
+                  <RealmCodexScreen
+                    isRefreshingRealmCodex={isRefreshingRealmCodex}
+                    onBack={() => setCurrentScreen('quest-board')}
+                    onRefresh={handleRefreshRealmCodex}
+                    onToggleTheme={handleToggleTheme}
+                    realmCodex={realmCodex}
+                    styles={styles}
+                    themeMode={gameState.themeMode}
+                  />
+                ) : (
+                  <View style={styles.loadingState}>
+                    <Text style={styles.loadingKicker}>Opening Realm Codex</Text>
+                    <Text style={styles.loadingTitle}>Quest Forge</Text>
+                  </View>
+                )
               ) : (
-                <View style={styles.loadingState}>
-                  <Text style={styles.loadingKicker}>Opening Realm Codex</Text>
-                  <Text style={styles.loadingTitle}>Quest Forge</Text>
-                </View>
-              )
-            ) : (
-              <AddQuestScreen
-                onBack={returnToBoard}
-                onDelete={handleDeleteQuest}
-                onSave={handleSaveQuest}
-                onToggleTheme={handleToggleTheme}
-                questToEdit={questToEdit}
-                styles={styles}
-                themeMode={gameState.themeMode}
-              />
-            )}
-          </>
-        )}
+                <AddQuestScreen
+                  onBack={returnToBoard}
+                  onDelete={handleDeleteQuest}
+                  onSave={handleSaveQuest}
+                  onToggleTheme={handleToggleTheme}
+                  questToEdit={questToEdit}
+                  styles={styles}
+                  themeMode={gameState.themeMode}
+                />
+              )}
+            </>
+          )}
+        </View>
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -2371,11 +2457,47 @@ function createStyles(theme: ThemePalette) {
     safeArea: {
       flex: 1,
       backgroundColor: theme.background,
+      position: 'relative',
+    },
+    backgroundDecor: {
+      ...StyleSheet.absoluteFillObject,
+      overflow: 'hidden',
+    },
+    backgroundOrbPrimary: {
+      backgroundColor: `${theme.blue}1f`,
+      borderRadius: 220,
+      height: 220,
+      position: 'absolute',
+      right: -56,
+      top: -48,
+      width: 220,
+    },
+    backgroundOrbSecondary: {
+      backgroundColor: `${theme.amber}20`,
+      borderRadius: 180,
+      height: 180,
+      left: -64,
+      position: 'absolute',
+      top: 164,
+      width: 180,
+    },
+    backgroundOrbTertiary: {
+      backgroundColor: `${theme.success}16`,
+      borderRadius: 210,
+      bottom: -84,
+      height: 210,
+      position: 'absolute',
+      right: -72,
+      width: 210,
+    },
+    contentFrame: {
+      flex: 1,
+      zIndex: 1,
     },
     scrollContent: {
       paddingHorizontal: 20,
-      paddingTop: 18,
-      paddingBottom: 36,
+      paddingTop: 20,
+      paddingBottom: 42,
     },
     loadingState: {
       alignItems: 'center',
@@ -2390,6 +2512,10 @@ function createStyles(theme: ThemePalette) {
       borderWidth: 1,
       maxWidth: 360,
       padding: 24,
+      shadowColor: theme.blue,
+      shadowOffset: { width: 0, height: 16 },
+      shadowOpacity: 0.16,
+      shadowRadius: 28,
       width: '100%',
     },
     loadingKicker: {
@@ -2431,20 +2557,26 @@ function createStyles(theme: ThemePalette) {
       marginBottom: 14,
     },
     themeToggleButton: {
-      backgroundColor: theme.surfaceHigh,
-      borderColor: theme.ghostBorder,
+      alignItems: 'center',
+      backgroundColor: `${theme.blue}18`,
+      borderColor: `${theme.blue}52`,
       borderRadius: 999,
       borderWidth: 1,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
+      height: 44,
+      justifyContent: 'center',
+      shadowColor: theme.blue,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.18,
+      shadowRadius: 18,
+      width: 44,
     },
     themeToggleText: {
-      color: theme.textPrimary,
-      fontSize: 13,
-      fontWeight: '700',
+      color: theme.blueSoft,
+      fontSize: 20,
+      fontWeight: '800',
     },
     backButton: {
-      backgroundColor: theme.surfaceHigh,
+      backgroundColor: `${theme.surfaceHigh}ee`,
       borderColor: theme.ghostBorder,
       borderRadius: 999,
       borderWidth: 1,
@@ -2457,42 +2589,54 @@ function createStyles(theme: ThemePalette) {
       fontWeight: '700',
     },
     screenLabel: {
-      color: theme.textMuted,
+      alignSelf: 'flex-start',
+      backgroundColor: `${theme.blue}14`,
+      borderRadius: 999,
+      color: theme.blueSoft,
       fontSize: 12,
       letterSpacing: 1.4,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
       textTransform: 'uppercase',
     },
     kicker: {
+      alignSelf: 'flex-start',
+      backgroundColor: `${theme.amber}18`,
+      borderRadius: 999,
       color: theme.textMuted,
       fontSize: 13,
       letterSpacing: 2,
       marginBottom: 8,
+      overflow: 'hidden',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
       textTransform: 'uppercase',
     },
     title: {
       color: theme.textPrimary,
-      fontSize: 36,
+      fontSize: 38,
       fontWeight: '700',
-      letterSpacing: -0.8,
+      letterSpacing: -1,
     },
     subtitle: {
       color: theme.subtitle,
       fontSize: 15,
       lineHeight: 22,
       marginTop: 10,
-      maxWidth: 320,
+      maxWidth: 340,
     },
     heroCard: {
       backgroundColor: theme.surface,
-      borderColor: theme.ghostBorder,
+      borderColor: `${theme.amber}32`,
       borderRadius: 24,
       borderWidth: 1,
       marginTop: 24,
+      overflow: 'hidden',
       padding: 20,
-      shadowColor: theme.amber,
-      shadowOffset: { width: 0, height: 12 },
-      shadowOpacity: 0.12,
-      shadowRadius: 24,
+      shadowColor: theme.blue,
+      shadowOffset: { width: 0, height: 18 },
+      shadowOpacity: 0.18,
+      shadowRadius: 30,
     },
     heroHeader: {
       alignItems: 'flex-start',
@@ -2513,14 +2657,14 @@ function createStyles(theme: ThemePalette) {
       maxWidth: 220,
     },
     heroOrb: {
-      backgroundColor: theme.amber,
-      borderRadius: 20,
-      height: 20,
-      shadowColor: theme.amber,
+      backgroundColor: theme.blue,
+      borderRadius: 24,
+      height: 24,
+      shadowColor: theme.blue,
       shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.35,
-      shadowRadius: 12,
-      width: 20,
+      shadowOpacity: 0.42,
+      shadowRadius: 16,
+      width: 24,
     },
     heroStatsRow: {
       flexDirection: 'row',
@@ -2529,10 +2673,12 @@ function createStyles(theme: ThemePalette) {
       marginTop: 22,
     },
     heroStat: {
-      backgroundColor: theme.surfaceHigh,
+      backgroundColor: `${theme.surfaceHigh}f2`,
       borderRadius: 18,
       flexGrow: 1,
       flexBasis: '30%',
+      borderWidth: 1,
+      borderColor: theme.ghostBorder,
       paddingHorizontal: 14,
       paddingVertical: 16,
     },
@@ -2565,6 +2711,10 @@ function createStyles(theme: ThemePalette) {
       borderWidth: 1,
       marginTop: 28,
       padding: 20,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 14 },
+      shadowOpacity: 0.12,
+      shadowRadius: 24,
     },
     suggestionCard: {
       backgroundColor: theme.surfaceLow,
@@ -2573,6 +2723,10 @@ function createStyles(theme: ThemePalette) {
       borderWidth: 1,
       marginTop: 12,
       padding: 16,
+      shadowColor: theme.blue,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.08,
+      shadowRadius: 18,
     },
     suggestionTitle: {
       color: theme.textPrimary,
@@ -2581,7 +2735,7 @@ function createStyles(theme: ThemePalette) {
       lineHeight: 24,
     },
     completionBanner: {
-      backgroundColor: theme.surface,
+      backgroundColor: `${theme.success}18`,
       borderColor: theme.success,
       borderRadius: 24,
       borderWidth: 1,
@@ -2619,14 +2773,24 @@ function createStyles(theme: ThemePalette) {
       borderWidth: 1,
       marginTop: 20,
       padding: 20,
+      shadowColor: theme.blue,
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 0.1,
+      shadowRadius: 22,
     },
     primaryActionButton: {
       alignItems: 'center',
       backgroundColor: theme.amber,
+      borderColor: `${theme.amberSoft}80`,
       borderRadius: 18,
+      borderWidth: 1,
       marginTop: 10,
       paddingHorizontal: 18,
       paddingVertical: 16,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 0.24,
+      shadowRadius: 18,
     },
     primaryActionText: {
       color: theme.buttonText,
@@ -2636,16 +2800,20 @@ function createStyles(theme: ThemePalette) {
     },
     secondaryActionButton: {
       alignItems: 'center',
-      backgroundColor: theme.surfaceHigh,
-      borderColor: theme.ghostBorder,
+      backgroundColor: `${theme.blue}18`,
+      borderColor: `${theme.blue}45`,
       borderRadius: 18,
       borderWidth: 1,
       marginTop: 12,
       paddingHorizontal: 18,
       paddingVertical: 16,
+      shadowColor: theme.blue,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.12,
+      shadowRadius: 16,
     },
     secondaryActionText: {
-      color: theme.textPrimary,
+      color: theme.blueSoft,
       fontSize: 16,
       fontWeight: '700',
       letterSpacing: 0.3,
@@ -2657,6 +2825,10 @@ function createStyles(theme: ThemePalette) {
       borderWidth: 1,
       marginTop: 28,
       padding: 20,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 14 },
+      shadowOpacity: 0.1,
+      shadowRadius: 24,
     },
     formIntro: {
       color: theme.subtitle,
@@ -2708,8 +2880,8 @@ function createStyles(theme: ThemePalette) {
       paddingVertical: 10,
     },
     optionChipSelected: {
-      backgroundColor: theme.activeBadgeBackground,
-      borderColor: theme.ghostBorder,
+      backgroundColor: `${theme.blue}1b`,
+      borderColor: `${theme.blue}4d`,
     },
     optionChipText: {
       color: theme.textMuted,
@@ -2717,15 +2889,21 @@ function createStyles(theme: ThemePalette) {
       fontWeight: '600',
     },
     optionChipTextSelected: {
-      color: theme.amberSoft,
+      color: theme.blueSoft,
     },
     saveButton: {
       alignItems: 'center',
       backgroundColor: theme.amber,
+      borderColor: `${theme.amberSoft}80`,
       borderRadius: 18,
+      borderWidth: 1,
       marginTop: 22,
       paddingHorizontal: 18,
       paddingVertical: 16,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 0.24,
+      shadowRadius: 18,
     },
     saveButtonDisabled: {
       backgroundColor: theme.buttonDisabled,
@@ -2747,6 +2925,10 @@ function createStyles(theme: ThemePalette) {
       borderWidth: 1,
       marginTop: 28,
       padding: 18,
+      shadowColor: theme.blue,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.08,
+      shadowRadius: 16,
     },
     emptyStateTitle: {
       color: theme.textPrimary,
@@ -2772,9 +2954,14 @@ function createStyles(theme: ThemePalette) {
       borderWidth: 1,
       marginBottom: 14,
       padding: 18,
+      shadowColor: theme.blue,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.08,
+      shadowRadius: 18,
     },
     questCardCompleted: {
-      backgroundColor: theme.surfaceHighest,
+      backgroundColor: `${theme.success}12`,
+      borderColor: `${theme.success}35`,
     },
     questHeaderRow: {
       alignItems: 'flex-start',
@@ -2795,10 +2982,10 @@ function createStyles(theme: ThemePalette) {
       paddingVertical: 6,
     },
     statusBadgeActive: {
-      backgroundColor: theme.activeBadgeBackground,
+      backgroundColor: `${theme.amber}22`,
     },
     statusBadgeDone: {
-      backgroundColor: theme.doneBadgeBackground,
+      backgroundColor: `${theme.success}20`,
     },
     statusBadgeText: {
       color: theme.amberSoft,
@@ -2815,14 +3002,17 @@ function createStyles(theme: ThemePalette) {
       marginTop: 16,
     },
     metaPill: {
-      backgroundColor: theme.surfaceHigh,
+      backgroundColor: `${theme.surfaceHigh}f2`,
       borderRadius: 16,
+      borderWidth: 1,
+      borderColor: theme.ghostBorder,
       flex: 1,
       paddingHorizontal: 12,
       paddingVertical: 12,
     },
     metaPillHighlight: {
-      backgroundColor: `${theme.blue}20`,
+      backgroundColor: `${theme.blue}1f`,
+      borderColor: `${theme.blue}48`,
     },
     metaLabel: {
       color: theme.textMuted,
@@ -2840,8 +3030,8 @@ function createStyles(theme: ThemePalette) {
     },
     completeButton: {
       alignItems: 'center',
-      backgroundColor: theme.surfaceHigh,
-      borderColor: theme.ghostBorder,
+      backgroundColor: `${theme.blue}18`,
+      borderColor: `${theme.blue}48`,
       borderRadius: 16,
       borderWidth: 1,
       marginTop: 16,
@@ -2849,13 +3039,13 @@ function createStyles(theme: ThemePalette) {
       paddingVertical: 12,
     },
     completeButtonText: {
-      color: theme.textPrimary,
+      color: theme.blueSoft,
       fontSize: 14,
       fontWeight: '700',
     },
     cardSecondaryButton: {
       alignItems: 'center',
-      backgroundColor: theme.surfaceHigh,
+      backgroundColor: `${theme.surfaceHigh}ee`,
       borderColor: theme.ghostBorder,
       borderRadius: 16,
       borderWidth: 1,
@@ -2895,6 +3085,10 @@ function createStyles(theme: ThemePalette) {
       borderWidth: 1,
       paddingHorizontal: 16,
       paddingVertical: 16,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.08,
+      shadowRadius: 16,
     },
     progressMetricLabel: {
       color: theme.textMuted,

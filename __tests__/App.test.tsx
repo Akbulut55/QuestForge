@@ -132,6 +132,9 @@ type TestAppConfig = {
     showSuggestionSection: boolean;
     showFilterSection: boolean;
     showAchievementSection: boolean;
+    showAddQuestScreen: boolean;
+    showProgressScreen: boolean;
+    showRealmCodexScreen: boolean;
   };
 };
 
@@ -205,6 +208,9 @@ const defaultRemoteAppConfig: TestAppConfig = {
     showSuggestionSection: true,
     showFilterSection: true,
     showAchievementSection: true,
+    showAddQuestScreen: true,
+    showProgressScreen: true,
+    showRealmCodexScreen: true,
   },
 };
 
@@ -539,6 +545,27 @@ function buildRealmCodexResponse() {
           ? 'Enabled'
           : 'Hidden',
       },
+      {
+        id: 'add-quest-screen',
+        label: 'Add Quest Screen',
+        status: mockRemoteAppConfig.featureFlags.showAddQuestScreen
+          ? 'Enabled'
+          : 'Hidden',
+      },
+      {
+        id: 'progress-screen',
+        label: 'Progress Screen',
+        status: mockRemoteAppConfig.featureFlags.showProgressScreen
+          ? 'Enabled'
+          : 'Hidden',
+      },
+      {
+        id: 'realm-codex-screen',
+        label: 'Realm Codex Screen',
+        status: mockRemoteAppConfig.featureFlags.showRealmCodexScreen
+          ? 'Enabled'
+          : 'Hidden',
+      },
     ],
     modules: [
       {
@@ -548,16 +575,34 @@ function buildRealmCodexResponse() {
         status: 'Live',
       },
       {
+        id: 'add-quest',
+        name: 'Add Quest',
+        description: 'Dedicated quest creation and editing flow.',
+        status: mockRemoteAppConfig.featureFlags.showAddQuestScreen
+          ? 'Live'
+          : 'Dormant',
+      },
+      {
         id: 'hero-archive',
         name: 'Hero Archive',
         description: 'Progress summary and hero record ledger.',
-        status: 'Live',
+        status: mockRemoteAppConfig.featureFlags.showProgressScreen
+          ? 'Live'
+          : 'Dormant',
       },
       {
         id: 'suggestion-feed',
         name: 'Suggestion Feed',
         description: 'Backend-issued daily quest recommendations.',
         status: mockRemoteAppConfig.featureFlags.showSuggestionSection
+          ? 'Live'
+          : 'Dormant',
+      },
+      {
+        id: 'realm-codex',
+        name: 'Realm Codex',
+        description: 'Backend-driven realm status and module telemetry.',
+        status: mockRemoteAppConfig.featureFlags.showRealmCodexScreen
           ? 'Live'
           : 'Dormant',
       },
@@ -1033,10 +1078,14 @@ test('backend feature flags can hide configured sections after a realm refresh',
     ...mockRemoteAppConfig,
     configVersion: 4,
     featureFlags: {
+      ...mockRemoteAppConfig.featureFlags,
       showRealmSyncCard: false,
       showSuggestionSection: false,
       showFilterSection: false,
       showAchievementSection: false,
+      showAddQuestScreen: false,
+      showProgressScreen: false,
+      showRealmCodexScreen: false,
     },
   };
 
@@ -1056,16 +1105,18 @@ test('backend feature flags can hide configured sections after a realm refresh',
   expect(
     root.findAll(node => node.props.children === 'Search And Filter').length,
   ).toBe(0);
-
-  await ReactTestRenderer.act(async () => {
-    root.findByProps({ testID: 'navigate-to-progress-screen' }).props.onPress();
-  });
-
-  root = tree.root;
-
+  expect(root.findAllByProps({ testID: 'navigate-to-add-quest' }).length).toBe(
+    0,
+  );
   expect(
-    root.findAll(node => node.props.children === 'Achievements').length,
+    root.findAllByProps({ testID: 'navigate-to-progress-screen' }).length,
   ).toBe(0);
+  expect(
+    root.findAllByProps({ testID: 'navigate-to-realm-codex' }).length,
+  ).toBe(0);
+  expect(root.findAll(node => node.props.children === 'Achievements').length).toBe(
+    0,
+  );
 });
 
 test('opens the Stitch-generated Realm Codex screen with backend summary data', async () => {
@@ -1271,8 +1322,11 @@ test('theme toggle switches modes and persists the selected theme remotely', asy
   let root = tree.root;
 
   expect(
-    root.findAll(node => node.props.children === 'Switch to Light Mode').length,
+    root.findAll(node => node.props.children === '☀').length,
   ).toBeGreaterThan(0);
+  expect(root.findByProps({ testID: 'theme-toggle-button' }).props.accessibilityLabel).toBe(
+    'Switch to Light Mode',
+  );
 
   await ReactTestRenderer.act(async () => {
     root.findByProps({ testID: 'theme-toggle-button' }).props.onPress();
@@ -1283,8 +1337,11 @@ test('theme toggle switches modes and persists the selected theme remotely', asy
   const lastSavedGameState = getLastSavedGameState();
 
   expect(
-    root.findAll(node => node.props.children === 'Switch to Dark Mode').length,
+    root.findAll(node => node.props.children === '☾').length,
   ).toBeGreaterThan(0);
+  expect(root.findByProps({ testID: 'theme-toggle-button' }).props.accessibilityLabel).toBe(
+    'Switch to Dark Mode',
+  );
   expect(lastSavedGameState.themeMode).toBe('light');
 });
 

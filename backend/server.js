@@ -104,6 +104,9 @@ const defaultAppConfig = {
     showSuggestionSection: true,
     showFilterSection: true,
     showAchievementSection: true,
+    showAddQuestScreen: true,
+    showProgressScreen: true,
+    showRealmCodexScreen: true,
   },
 };
 
@@ -456,6 +459,21 @@ function buildRealmCodex(gameState, appConfig) {
       label: 'Achievement Ledger',
       status: appConfig.featureFlags.showAchievementSection ? 'Enabled' : 'Hidden',
     },
+    {
+      id: 'add-quest-screen',
+      label: 'Add Quest Screen',
+      status: appConfig.featureFlags.showAddQuestScreen ? 'Enabled' : 'Hidden',
+    },
+    {
+      id: 'progress-screen',
+      label: 'Progress Screen',
+      status: appConfig.featureFlags.showProgressScreen ? 'Enabled' : 'Hidden',
+    },
+    {
+      id: 'realm-codex-screen',
+      label: 'Realm Codex Screen',
+      status: appConfig.featureFlags.showRealmCodexScreen ? 'Enabled' : 'Hidden',
+    },
   ];
   const modules = [
     {
@@ -465,10 +483,16 @@ function buildRealmCodex(gameState, appConfig) {
       status: 'Live',
     },
     {
+      id: 'add-quest',
+      name: 'Add Quest',
+      description: 'Dedicated quest creation and editing flow.',
+      status: appConfig.featureFlags.showAddQuestScreen ? 'Live' : 'Dormant',
+    },
+    {
       id: 'hero-archive',
       name: 'Hero Archive',
       description: 'Progress summary and hero record ledger.',
-      status: 'Live',
+      status: appConfig.featureFlags.showProgressScreen ? 'Live' : 'Dormant',
     },
     {
       id: 'suggestion-feed',
@@ -481,6 +505,12 @@ function buildRealmCodex(gameState, appConfig) {
       name: 'Achievement Ledger',
       description: 'Badge and milestone visibility inside Progress.',
       status: appConfig.featureFlags.showAchievementSection ? 'Live' : 'Dormant',
+    },
+    {
+      id: 'realm-codex',
+      name: 'Realm Codex',
+      description: 'Backend-driven realm status and module telemetry.',
+      status: appConfig.featureFlags.showRealmCodexScreen ? 'Live' : 'Dormant',
     },
     {
       id: 'realm-sync',
@@ -613,6 +643,18 @@ function normalizeAppConfig(appConfig) {
         typeof appConfig?.featureFlags?.showAchievementSection === 'boolean'
           ? appConfig.featureFlags.showAchievementSection
           : defaultAppConfig.featureFlags.showAchievementSection,
+      showAddQuestScreen:
+        typeof appConfig?.featureFlags?.showAddQuestScreen === 'boolean'
+          ? appConfig.featureFlags.showAddQuestScreen
+          : defaultAppConfig.featureFlags.showAddQuestScreen,
+      showProgressScreen:
+        typeof appConfig?.featureFlags?.showProgressScreen === 'boolean'
+          ? appConfig.featureFlags.showProgressScreen
+          : defaultAppConfig.featureFlags.showProgressScreen,
+      showRealmCodexScreen:
+        typeof appConfig?.featureFlags?.showRealmCodexScreen === 'boolean'
+          ? appConfig.featureFlags.showRealmCodexScreen
+          : defaultAppConfig.featureFlags.showRealmCodexScreen,
     },
   };
 }
