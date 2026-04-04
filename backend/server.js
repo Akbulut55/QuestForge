@@ -1046,15 +1046,15 @@ function buildThemeSanctum(gameState, appConfig) {
         : {
             name: 'Ethereal Forge',
             description:
-              'The default amber-and-cyan codex that originally shaped Quest Forge.',
+              'Amber gold and deep slate.',
             accentEnergy:
               gameState.themeMode === 'dark'
-                ? 'Amber + Cyan Pulse'
-                : 'Sunlit Gold + Sky Glass',
+                ? 'Amber #FFBF00'
+                : 'Sun Gold',
             surfaceTone:
               gameState.themeMode === 'dark'
-                ? 'Midnight Slate'
-                : 'Radiant Parchment',
+                ? 'Deep Stone'
+                : 'Ivory Glow',
           };
   return {
     kicker: 'Theme Sanctum',
@@ -1066,8 +1066,7 @@ function buildThemeSanctum(gameState, appConfig) {
       gameState.themeMode === 'dark' ? 'Dark Alchemist' : 'Light Alchemist',
     accentEnergyLabel: activeThemePack.accentEnergy,
     surfaceToneLabel: activeThemePack.surfaceTone,
-    realmNotesLabel:
-      `Config v${appConfig.configVersion}. ${activeThemePack.description}`,
+    realmNotesLabel: `System v${appConfig.configVersion}`,
     availableEssencesTitle: 'Available Essences',
     availableEssencesIntro:
       'These packs are described by the backend first so the app can evolve into a more configurable visual system over time.',
@@ -1075,16 +1074,16 @@ function buildThemeSanctum(gameState, appConfig) {
       {
         id: 'ethereal-forge',
         name: 'Ethereal Forge',
-        description: 'The current amber-and-cyan codex used across the realm.',
+        description: 'Amber gold & deep slate',
         accentEnergy: 'Amber Gold',
-        surfaceTone: 'Forged Slate',
+        surfaceTone: 'Deep Slate',
         statusLabel:
           activeThemePackId === 'ethereal-forge' ? 'Current' : 'Dormant',
       },
       {
         id: 'luminous-paladin',
         name: 'Luminous Paladin',
-        description: 'A brighter holy-metal palette tuned for radiant adventures.',
+        description: 'Radiant gold & marble',
         accentEnergy: 'Sunsteel',
         surfaceTone: 'Ivory Plate',
         statusLabel:
@@ -1093,7 +1092,7 @@ function buildThemeSanctum(gameState, appConfig) {
       {
         id: 'void-drifter',
         name: 'Void Drifter',
-        description: 'A colder cosmic palette carried in from the backend archives.',
+        description: 'Celestial teal & starlight',
         accentEnergy: 'Nebula Cyan',
         surfaceTone: 'Void Indigo',
         statusLabel: activeThemePackId === 'void-drifter' ? 'Current' : 'Dormant',
@@ -1213,8 +1212,8 @@ function buildQuestPool(questPoolTemplates) {
   return {
     kicker: 'Quest Pool',
     title: 'Quest Pool',
-    subtitle: 'Browse the archives of legendary feats and keep your everyday quests within easy reach.',
-    searchPlaceholder: 'Search quests, tags, or notes',
+    subtitle: 'Keep reliable quests ready for the board.',
+    searchPlaceholder: 'Search Quests...',
     categories: ['All', ...categories],
     templates: questPoolTemplates.map(template => ({
       id: template.id,

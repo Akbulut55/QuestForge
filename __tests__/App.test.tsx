@@ -568,7 +568,7 @@ beforeEach(() => {
     kicker: 'Quest Pool',
     title: 'Quest Pool',
     subtitle: 'Browse reusable quest templates.',
-    searchPlaceholder: 'Search quests, tags, or notes',
+    searchPlaceholder: 'Search Quests...',
     categories: ['All', 'Chores', 'Study', 'Work'],
     templates: cloneState(mockQuestPool),
   }));
@@ -600,9 +600,9 @@ beforeEach(() => {
     subtitle: 'Theme summary.',
     activeThemeLabel: 'Ethereal Forge',
     activeModeLabel: 'Dark Alchemist',
-    accentEnergyLabel: 'Amber Gold',
-    surfaceToneLabel: 'Forged Slate',
-    realmNotesLabel: 'Theme notes',
+    accentEnergyLabel: 'Amber #FFBF00',
+    surfaceToneLabel: 'Deep Stone',
+    realmNotesLabel: 'System v31',
     availableEssencesTitle: 'Available Essences',
     availableEssencesIntro: 'Choose a palette.',
     availableThemePacks: [],
@@ -652,7 +652,7 @@ beforeEach(() => {
         kicker: 'Quest Pool',
         title: 'Quest Pool',
         subtitle: 'Browse reusable quest templates.',
-        searchPlaceholder: 'Search quests, tags, or notes',
+        searchPlaceholder: 'Search Quests...',
         categories: ['All', 'Chores', 'Study', 'Work'],
         templates: cloneState(mockQuestPool),
       };
@@ -700,7 +700,7 @@ beforeEach(() => {
         kicker: 'Quest Pool',
         title: 'Quest Pool',
         subtitle: 'Browse reusable quest templates.',
-        searchPlaceholder: 'Search quests, tags, or notes',
+        searchPlaceholder: 'Search Quests...',
         categories: ['All', 'Chores', 'Study', 'Work'],
         templates: cloneState(mockQuestPool),
       };
@@ -824,7 +824,7 @@ beforeEach(() => {
       kicker: 'Quest Pool',
       title: 'Quest Pool',
       subtitle: 'Browse reusable quest templates.',
-      searchPlaceholder: 'Search quests, tags, or notes',
+      searchPlaceholder: 'Search Quests...',
       categories: ['All', 'Chores', 'Study', 'Work'],
       templates: cloneState(mockQuestPool),
     };
@@ -1060,6 +1060,18 @@ test('opens quest details by tapping the quest card and archives failed quests i
 
 test('shows a personalized profile, opens the streak calendar, and preserves streak history', async () => {
   const tree = await renderHydratedApp();
+  const currentMonthLabel = new Date().toLocaleString(undefined, {
+    month: 'long',
+    year: 'numeric',
+  });
+  const nextMonthLabel = new Date(
+    new Date().getFullYear(),
+    new Date().getMonth() + 1,
+    1,
+  ).toLocaleString(undefined, {
+    month: 'long',
+    year: 'numeric',
+  });
 
   await ReactTestRenderer.act(async () => {
     tree.root.findByProps({ testID: 'hero-overview-button' }).props.onPress();
@@ -1078,8 +1090,16 @@ test('shows a personalized profile, opens the streak calendar, and preserves str
   const streakRender = getRenderText(tree);
 
   expect(streakRender).toContain('Streak Calendar');
-  expect(streakRender).toContain('Streak Insight');
-  expect(streakRender).toContain(todayKey);
+  expect(streakRender).toContain('Active Momentum');
+  expect(streakRender).toContain(currentMonthLabel);
+
+  await ReactTestRenderer.act(async () => {
+    tree.root
+      .findByProps({ testID: 'streak-calendar-next-month' })
+      .props.onPress();
+  });
+
+  expect(getRenderText(tree)).toContain(nextMonthLabel);
 });
 
 test('opens the quest pool and adds templates as main or side quests', async () => {

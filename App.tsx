@@ -76,7 +76,7 @@ type AchievementId =
 type DifficultyFilter = 'All' | Difficulty;
 type CategoryFilter = 'All' | Category;
 type StatusFilter = 'All' | 'Ready' | 'In Progress';
-type HistoryPeriodFilter = 'Day' | 'Month' | 'Year';
+type HistoryPeriodFilter = 'All Time' | 'This Month' | 'This Year';
 type HistoryStatusFilter = 'All' | 'Completed' | 'Failed';
 type ThemeMode = 'dark' | 'light';
 type ThemePackId = 'ethereal-forge' | 'luminous-paladin' | 'void-drifter';
@@ -320,46 +320,46 @@ type ThemePalette = {
 
 const themes: Record<ThemeMode, ThemePalette> = {
   dark: {
-    background: '#0d111f',
-    surfaceLow: '#141a31',
-    surface: '#1c2544',
-    surfaceHigh: '#25315a',
-    surfaceHighest: '#304071',
-    textPrimary: '#f7f4ef',
-    textMuted: '#f1c56c',
-    amber: '#ffb703',
-    amberSoft: '#ffe08a',
-    blue: '#23c8ff',
-    blueSoft: '#9be8ff',
+    background: '#131313',
+    surfaceLow: '#0e0e0e',
+    surface: '#1c1b1b',
+    surfaceHigh: '#201f1f',
+    surfaceHighest: '#2a2a2a',
+    textPrimary: '#e5e2e1',
+    textMuted: '#d4c5ab',
+    amber: '#ffbf00',
+    amberSoft: '#ffe2ab',
+    blue: '#00d2fd',
+    blueSoft: '#a2e7ff',
     success: '#63e28d',
-    ghostBorder: 'rgba(155, 232, 255, 0.16)',
-    subtitle: '#b3bfd9',
-    placeholder: '#7f8baa',
-    buttonText: '#2e1d00',
-    buttonDisabled: '#8d701f',
-    activeBadgeBackground: 'rgba(255, 183, 3, 0.18)',
-    doneBadgeBackground: 'rgba(99, 226, 141, 0.16)',
+    ghostBorder: 'rgba(80, 69, 50, 0.24)',
+    subtitle: '#c4b9a6',
+    placeholder: '#8b816f',
+    buttonText: '#261a00',
+    buttonDisabled: '#8f7531',
+    activeBadgeBackground: 'rgba(255, 191, 0, 0.16)',
+    doneBadgeBackground: 'rgba(99, 226, 141, 0.12)',
   },
   light: {
-    background: '#fff6e8',
-    surfaceLow: '#fff0d9',
-    surface: '#fff8ee',
-    surfaceHigh: '#ffe2b8',
-    surfaceHighest: '#ffd39b',
-    textPrimary: '#2d1a0f',
-    textMuted: '#a96510',
-    amber: '#f4a300',
-    amberSoft: '#ffd977',
-    blue: '#129ed7',
-    blueSoft: '#4dd7ff',
-    success: '#269863',
-    ghostBorder: 'rgba(244, 163, 0, 0.14)',
-    subtitle: '#735d44',
-    placeholder: '#a98860',
-    buttonText: '#2d1a0f',
-    buttonDisabled: '#d2b070',
-    activeBadgeBackground: 'rgba(244, 163, 0, 0.12)',
-    doneBadgeBackground: 'rgba(38, 152, 99, 0.12)',
+    background: '#f5efe5',
+    surfaceLow: '#faf4ea',
+    surface: '#fffaf3',
+    surfaceHigh: '#f0e6d6',
+    surfaceHighest: '#e8dbc8',
+    textPrimary: '#2f2419',
+    textMuted: '#8d6c35',
+    amber: '#efb10a',
+    amberSoft: '#f9d88f',
+    blue: '#11b8df',
+    blueSoft: '#52dfff',
+    success: '#2c9464',
+    ghostBorder: 'rgba(95, 73, 40, 0.14)',
+    subtitle: '#75614a',
+    placeholder: '#aa8f70',
+    buttonText: '#2f2419',
+    buttonDisabled: '#ceb68a',
+    activeBadgeBackground: 'rgba(239, 177, 10, 0.12)',
+    doneBadgeBackground: 'rgba(44, 148, 100, 0.1)',
   },
 };
 
@@ -490,9 +490,12 @@ const categoryFilterOptions: CategoryFilter[] = [
   'Side Quest',
 ];
 const statusFilterOptions: StatusFilter[] = ['All', 'Ready', 'In Progress'];
-const historyPeriodOptions: HistoryPeriodFilter[] = ['Day', 'Month', 'Year'];
-const historyStatusOptions: HistoryStatusFilter[] = [
-  'All',
+const historyPeriodOptions: HistoryPeriodFilter[] = [
+  'All Time',
+  'This Month',
+  'This Year',
+];
+const historyStatusOptions: Exclude<HistoryStatusFilter, 'All'>[] = [
   'Completed',
   'Failed',
 ];
@@ -862,6 +865,7 @@ function getRankProgress(xp: number) {
     return {
       currentRankTitle: currentRank.title,
       nextRankTitle: currentRank.title,
+      nextRankMinimumXp: xp,
       progressPercent: 100,
       progressText: 'You have reached the highest known rank.',
     };
@@ -877,6 +881,7 @@ function getRankProgress(xp: number) {
   return {
     currentRankTitle: currentRank.title,
     nextRankTitle: nextRank.title,
+    nextRankMinimumXp: nextRank.minimumXp,
     progressPercent,
     progressText: `${xpRemaining} XP to ${nextRank.title}`,
   };
@@ -984,6 +989,64 @@ function formatDueDateLabel(dueDate: string | null | undefined) {
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+  });
+}
+
+function formatArchiveDateLabel(resolvedDate: string | null | undefined) {
+  const normalizedResolvedDate = normalizeResolvedDate(resolvedDate);
+
+  if (!normalizedResolvedDate) {
+    return 'Unknown';
+  }
+
+  const parsedDate = parseDateKey(normalizedResolvedDate);
+
+  if (parsedDate) {
+    return parsedDate.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  }
+
+  const resolvedMoment = new Date(normalizedResolvedDate);
+
+  if (Number.isNaN(resolvedMoment.getTime())) {
+    return normalizedResolvedDate;
+  }
+
+  return resolvedMoment.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function formatArchiveGroupLabel(resolvedDate: string | null | undefined) {
+  const normalizedResolvedDate = normalizeResolvedDate(resolvedDate);
+
+  if (!normalizedResolvedDate) {
+    return 'Unknown Archive';
+  }
+
+  const parsedDate = parseDateKey(normalizedResolvedDate);
+
+  if (parsedDate) {
+    return parsedDate.toLocaleDateString('en-US', {
+      month: 'long',
+      year: 'numeric',
+    });
+  }
+
+  const resolvedMoment = new Date(normalizedResolvedDate);
+
+  if (Number.isNaN(resolvedMoment.getTime())) {
+    return 'Unknown Archive';
+  }
+
+  return resolvedMoment.toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
   });
 }
 
@@ -1655,6 +1718,10 @@ function matchesHistoryPeriod(
   historyPeriodFilter: HistoryPeriodFilter,
   todayKey = getDateKey(),
 ) {
+  if (historyPeriodFilter === 'All Time') {
+    return resolvedDate !== null;
+  }
+
   if (!resolvedDate) {
     return false;
   }
@@ -1666,11 +1733,7 @@ function matchesHistoryPeriod(
     return false;
   }
 
-  if (historyPeriodFilter === 'Day') {
-    return resolvedDate === todayKey;
-  }
-
-  if (historyPeriodFilter === 'Month') {
+  if (historyPeriodFilter === 'This Month') {
     return (
       resolvedDay.getFullYear() === todayDate.getFullYear() &&
       resolvedDay.getMonth() === todayDate.getMonth()
@@ -1712,27 +1775,41 @@ function sortHistoryQuests(quests: Quest[]) {
 
 function buildCalendarDays(
   activeDateKeys: string[],
+  streakDateKeys: string[] = [],
   referenceDate = new Date(),
+  todayDate = new Date(),
 ) {
   const year = referenceDate.getFullYear();
   const monthIndex = referenceDate.getMonth();
   const firstOfMonth = new Date(year, monthIndex, 1);
+  const previousMonthDate = new Date(year, monthIndex, 0);
+  const previousMonthDayCount = previousMonthDate.getDate();
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
   const leadingEmptyDays = firstOfMonth.getDay();
   const activeDateSet = new Set(activeDateKeys);
-  const todayKey = getDateKey(referenceDate);
-  const calendarDays: Array<
-    | null
-    | {
-        dayNumber: number;
-        dateKey: string;
-        isActive: boolean;
-        isToday: boolean;
-      }
-  > = [];
+  const streakDateSet = new Set(streakDateKeys);
+  const todayKey = getDateKey(todayDate);
+  const calendarDays: Array<{
+    dayNumber: number;
+    dateKey: string;
+    isActive: boolean;
+    isMomentum: boolean;
+    isToday: boolean;
+    isCurrentMonth: boolean;
+  }> = [];
 
-  for (let index = 0; index < leadingEmptyDays; index += 1) {
-    calendarDays.push(null);
+  for (let index = leadingEmptyDays - 1; index >= 0; index -= 1) {
+    const dayNumber = previousMonthDayCount - index;
+    const dateKey = getDateKey(new Date(year, monthIndex - 1, dayNumber));
+
+    calendarDays.push({
+      dayNumber,
+      dateKey,
+      isActive: activeDateSet.has(dateKey),
+      isMomentum: streakDateSet.has(dateKey),
+      isToday: dateKey === todayKey,
+      isCurrentMonth: false,
+    });
   }
 
   for (let dayNumber = 1; dayNumber <= daysInMonth; dayNumber += 1) {
@@ -1742,11 +1819,58 @@ function buildCalendarDays(
       dayNumber,
       dateKey,
       isActive: activeDateSet.has(dateKey),
+      isMomentum: streakDateSet.has(dateKey),
       isToday: dateKey === todayKey,
+      isCurrentMonth: true,
     });
   }
 
+  let trailingDayNumber = 1;
+
+  while (calendarDays.length % 7 !== 0 || calendarDays.length < 35) {
+    const dateKey = getDateKey(new Date(year, monthIndex + 1, trailingDayNumber));
+
+    calendarDays.push({
+      dayNumber: trailingDayNumber,
+      dateKey,
+      isActive: activeDateSet.has(dateKey),
+      isMomentum: streakDateSet.has(dateKey),
+      isToday: dateKey === todayKey,
+      isCurrentMonth: false,
+    });
+    trailingDayNumber += 1;
+  }
+
   return calendarDays;
+}
+
+function getCurrentStreakDateKeys(hero: HeroProgress) {
+  if (!hero.lastCompletedDate) {
+    return [];
+  }
+
+  const sortedActiveDateKeys = normalizeActiveDateKeys(hero.activeDateKeys);
+
+  if (!sortedActiveDateKeys.includes(hero.lastCompletedDate)) {
+    return [];
+  }
+
+  const streakDateKeys: string[] = [];
+  let currentDateKey = hero.lastCompletedDate;
+
+  while (sortedActiveDateKeys.includes(currentDateKey)) {
+    streakDateKeys.unshift(currentDateKey);
+    const previousDate = parseDateKey(currentDateKey);
+
+    if (!previousDate) {
+      break;
+    }
+
+    previousDate.setDate(previousDate.getDate() - 1);
+    currentDateKey = getDateKey(previousDate);
+  }
+
+  return streakDateKeys;
 }
 
 function shouldUnlockAchievement({
@@ -2036,6 +2160,27 @@ function ThemeToggle({
   );
 }
 
+function getQuestDetailComponents(questDetails: QuestDetailsResponse) {
+  const paceGuidance =
+    questDetails.difficultyLabel === 'Epic'
+      ? 'Break the quest into clear milestones'
+      : questDetails.difficultyLabel === 'Hard'
+        ? 'Protect a deep focus block'
+        : questDetails.difficultyLabel === 'Medium'
+          ? 'Keep one strong visible outcome'
+          : 'Use it as a quick momentum win';
+  const routeGuidance =
+    questDetails.categoryLabel === 'Main Quest'
+      ? 'Treat it as the main path for today'
+      : 'Keep it as a lighter supporting objective';
+
+  return [
+    `${questDetails.tagLabel} focus anchor`,
+    routeGuidance,
+    paceGuidance,
+  ];
+}
+
 function ReminderPromptOverlay({
   reminderPrompt,
   onComplete,
@@ -2127,61 +2272,63 @@ function QuestCard({
         dueDetails.isOverdue && styles.questCardOverdue,
       ]}
       testID={`open-quest-details-${quest.id}`}>
-      <View style={styles.questHeaderRow}>
-        <Text style={styles.questTitle}>{quest.title}</Text>
-        <View style={styles.questHeaderActions}>
-          <View
-            style={[
-              styles.statusBadge,
-              isResolved ? styles.statusBadgeDone : styles.statusBadgeActive,
-            ]}>
-            <Text
-              style={[
-                styles.statusBadgeText,
-                isResolved && styles.statusBadgeTextDone,
-              ]}>
-              {quest.status}
-            </Text>
+      <View style={styles.questCardTopRow}>
+        <View style={styles.questArtTile}>
+          <View style={styles.questArtShapePrimary} />
+          <View style={styles.questArtShapeSecondary} />
+          <View style={styles.questArtShapeAccent} />
+        </View>
+        <View style={styles.questHeaderMeta}>
+          <View style={styles.questHeaderRow}>
+            <Text style={styles.questCategoryLine}>{quest.category}</Text>
+            <View style={styles.questHeaderActions}>
+              <View
+                style={[
+                  styles.statusBadge,
+                  isResolved ? styles.statusBadgeDone : styles.statusBadgeActive,
+                ]}>
+                <Text
+                  style={[
+                    styles.statusBadgeText,
+                    isResolved && styles.statusBadgeTextDone,
+                  ]}>
+                  {quest.status}
+                </Text>
+              </View>
+              {onToggleExpand ? (
+                <Pressable
+                  onPress={event => {
+                    event.stopPropagation();
+                    onToggleExpand(quest.id);
+                  }}
+                  style={styles.expandChevronButton}
+                  testID={`toggle-quest-expand-${quest.id}`}>
+                  <Text style={styles.expandChevronIcon}>
+                    {isExpanded ? '^' : 'v'}
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
-          {onToggleExpand ? (
-            <Pressable
-              onPress={event => {
-                event.stopPropagation();
-                onToggleExpand(quest.id);
-              }}
-              style={styles.expandChevronButton}
-              testID={`toggle-quest-expand-${quest.id}`}>
-              <Text style={styles.expandChevronIcon}>
-                {isExpanded ? '^' : 'v'}
-              </Text>
-            </Pressable>
-          ) : null}
+          <Text style={styles.questTitle}>{quest.title}</Text>
+          <View style={styles.questRewardRow}>
+            <View style={styles.questRewardBadge}>
+              <Text style={styles.questRewardText}>{`+${quest.xpReward} XP`}</Text>
+            </View>
+            <Text style={styles.questMiniMetaText}>{quest.difficulty}</Text>
+          </View>
         </View>
       </View>
 
-      <View style={styles.metaRow}>
-        <View style={styles.metaPill}>
-          <Text style={styles.metaLabel}>Due Date</Text>
-          <Text style={styles.metaValue}>{dueDetails.dueDateLabel}</Text>
-        </View>
-        <View
+      <View style={styles.questCardTimelineRow}>
+        <Text style={styles.questTimelineText}>{dueDetails.dueDateLabel}</Text>
+        <Text
           style={[
-            styles.metaPill,
-            dueDetails.isUrgent ? styles.metaPillHighlight : null,
+            styles.questTimelineState,
+            dueDetails.isUrgent ? styles.questTimelineStateUrgent : null,
           ]}>
-          <Text style={styles.metaLabel}>Timeline</Text>
-          <Text
-            style={[
-              styles.metaValue,
-              dueDetails.isUrgent ? styles.metaValueHighlight : null,
-            ]}>
-            {dueDetails.dueStateLabel}
-          </Text>
-        </View>
-        <View style={styles.metaPill}>
-          <Text style={styles.metaLabel}>Difficulty</Text>
-          <Text style={styles.metaValue}>{quest.difficulty}</Text>
-        </View>
+          {dueDetails.dueStateLabel}
+        </Text>
       </View>
 
       {isExpanded ? (
@@ -2456,68 +2603,77 @@ function QuestBoardScreen({
           onPress={onNavigateToProgress}
           style={styles.heroOverviewPressable}
           testID="hero-overview-button">
-          <View style={styles.heroHeader}>
+          <View style={styles.boardRankHeader}>
             <View>
-              <Text style={styles.heroEyebrow}>{appConfig.heroEyebrow}</Text>
-              <Text style={styles.heroTitle}>
-                {appConfig.boardHeroTitlePrefix}: {hero.rankTitle}
-              </Text>
+              <Text style={styles.heroEyebrow}>Current Rank</Text>
+              <Text style={styles.boardRankTitle}>{hero.rankTitle}</Text>
             </View>
             <View style={styles.heroOrb} />
           </View>
 
+          <View style={styles.boardRankMetaRow}>
+            <View style={styles.boardLevelChip}>
+              <Text style={styles.boardLevelChipText}>
+                Level {getLevelForXp(hero.xp)}
+              </Text>
+            </View>
+            <Text style={styles.boardRankXpText}>
+              {`${hero.xp} / ${rankProgress.nextRankMinimumXp} XP`}
+            </Text>
+          </View>
+
+          <View style={styles.boardRankProgressHeader}>
+            <Text style={styles.boardRankProgressLabel}>
+              {`Progress to ${rankProgress.nextRankTitle}`}
+            </Text>
+            <Text style={styles.detailsProgressValue}>
+              {Math.round(rankProgress.progressPercent)}%
+            </Text>
+          </View>
+
+          <View style={styles.detailsProgressTrack}>
+            <View
+              style={[
+                styles.detailsProgressFill,
+                { width: `${rankProgress.progressPercent}%` },
+              ]}
+            />
+          </View>
+          <Text style={styles.boardRankProgressNote}>{rankProgress.progressText}</Text>
           <Text style={styles.heroTapHint}>Tap hero overview for profile</Text>
         </Pressable>
 
-        <View style={styles.heroStatsRow}>
-          <HeroStat
-            accentStyle={styles.levelAccent}
-            label="Level"
-            onPress={onNavigateToProgress}
-            styles={styles}
-            testID="hero-level-button"
-            value={getLevelForXp(hero.xp)}
-          />
-          <HeroStat
-            accentStyle={styles.xpAccent}
-            label="XP"
-            onPress={onNavigateToProgress}
-            styles={styles}
-            testID="hero-xp-button"
-            value={`${hero.xp}`}
-          />
-          <HeroStat
-            accentStyle={styles.streakAccent}
-            label="Streak"
+        <View style={styles.boardMiniStatRow}>
+          <Pressable
             onPress={onNavigateToStreak}
-            styles={styles}
-            testID="hero-streak-button"
-            value={`${hero.streakCount}d`}
-          />
+            style={styles.boardMiniStatCard}
+            testID="hero-streak-button">
+            <Text style={styles.boardMiniStatLabel}>Streak</Text>
+            <Text style={[styles.boardMiniStatValue, styles.streakAccent]}>
+              {`${hero.streakCount}d`}
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={onNavigateToProgress}
+            style={styles.boardMiniStatCard}
+            testID="hero-next-rank-button">
+            <Text style={styles.boardMiniStatLabel}>Next Rank</Text>
+            <Text
+              numberOfLines={2}
+              style={[styles.boardMiniStatValue, styles.xpAccent]}>
+              {rankProgress.nextRankTitle}
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={onNavigateToProgress}
+            style={styles.boardMiniStatCard}
+            testID="hero-active-count-button">
+            <Text style={styles.boardMiniStatLabel}>Active</Text>
+            <Text style={[styles.boardMiniStatValue, styles.levelAccent]}>
+              {visibleQuests.length}
+            </Text>
+          </Pressable>
         </View>
-
-        <Pressable
-          onPress={onNavigateToProgress}
-          style={styles.heroOverviewPressable}
-          testID="hero-rank-progress-button">
-          <View style={styles.detailsProgressSection}>
-            <View style={styles.detailsProgressHeader}>
-              <Text style={styles.formLabel}>Rank Progress</Text>
-              <Text style={styles.detailsProgressValue}>
-                {Math.round(rankProgress.progressPercent)}%
-              </Text>
-            </View>
-            <View style={styles.detailsProgressTrack}>
-              <View
-                style={[
-                  styles.detailsProgressFill,
-                  { width: `${rankProgress.progressPercent}%` },
-                ]}
-              />
-            </View>
-          </View>
-          <Text style={styles.heroSupportText}>{rankProgress.progressText}</Text>
-        </Pressable>
       </View>
 
       {completionFeedback ? (
@@ -2811,7 +2967,10 @@ function QuestBoardScreen({
 
       {questSections.map(section => (
         <View key={section.key} style={styles.section}>
-          <Text style={styles.sectionTitle}>{section.title}</Text>
+          <View style={styles.questSectionHeader}>
+            <View style={styles.questSectionSignal} />
+            <Text style={styles.sectionTitle}>{section.title}</Text>
+          </View>
           {section.quests.map(quest => (
             <QuestCard
               key={quest.id}
@@ -3240,37 +3399,77 @@ function ThemeSanctumScreen({
       <Text style={styles.title}>{themeSanctum.title}</Text>
       <Text style={styles.subtitle}>{themeSanctum.subtitle}</Text>
 
-      <View style={styles.heroCard}>
-        <View style={styles.heroHeader}>
+      <View style={styles.themeHeroCard}>
+        <View style={styles.themeHeroHeader}>
           <View>
-            <Text style={styles.heroEyebrow}>Active Essence</Text>
-            <Text style={styles.heroTitle}>{themeSanctum.activeThemeLabel}</Text>
+            <Text style={styles.heroEyebrow}>Active Theme</Text>
+            <Text style={styles.themeHeroTitle}>{themeSanctum.activeThemeLabel}</Text>
           </View>
-          <View style={styles.heroOrb} />
+          <View style={styles.themeSanctumMark} />
         </View>
 
-        <View style={styles.heroStatsRow}>
-          <HeroStat
-            accentStyle={styles.levelAccent}
-            label="Mode"
-            styles={styles}
-            value={themeSanctum.activeModeLabel}
-          />
-          <HeroStat
-            accentStyle={styles.xpAccent}
-            label="Accent"
-            styles={styles}
-            value={themeSanctum.accentEnergyLabel}
-          />
-          <HeroStat
-            accentStyle={styles.streakAccent}
-            label="Surface"
-            styles={styles}
-            value={themeSanctum.surfaceToneLabel}
-          />
+        <View style={styles.themeMetricGrid}>
+          <View style={styles.themeMetricCard}>
+            <Text style={styles.themeMetricLabel}>Active Mode</Text>
+            <Text style={styles.themeMetricValue}>{themeSanctum.activeModeLabel}</Text>
+          </View>
+          <View style={styles.themeMetricCard}>
+            <Text style={styles.themeMetricLabel}>Accent Energy</Text>
+            <Text style={styles.themeMetricValue}>{themeSanctum.accentEnergyLabel}</Text>
+          </View>
+          <View style={styles.themeMetricCard}>
+            <Text style={styles.themeMetricLabel}>Surface Tone</Text>
+            <Text style={styles.themeMetricValue}>{themeSanctum.surfaceToneLabel}</Text>
+          </View>
+          <View style={styles.themeMetricCard}>
+            <Text style={styles.themeMetricLabel}>Realm Notes</Text>
+            <Text style={styles.themeMetricValue}>{themeSanctum.realmNotesLabel}</Text>
+          </View>
         </View>
+      </View>
 
-        <Text style={styles.heroSupportText}>{themeSanctum.realmNotesLabel}</Text>
+      <View style={styles.formCard}>
+        <Text style={styles.sectionTitle}>{themeSanctum.availableEssencesTitle}</Text>
+
+        {themeSanctum.availableThemePacks.map(themePack => {
+          const isCurrent = themePack.statusLabel === 'Current';
+          const swatchStyle =
+            themePack.id === 'void-drifter'
+              ? styles.themePackSwatchVoid
+              : themePack.id === 'luminous-paladin'
+                ? styles.themePackSwatchLuminous
+                : styles.themePackSwatchForge;
+
+          return (
+            <View key={themePack.id} style={styles.themePackRow}>
+              <View style={[styles.themePackSwatch, swatchStyle]} />
+              <View style={styles.themePackCopy}>
+                <Text style={styles.themePackTitle}>{themePack.name}</Text>
+                <Text style={styles.themePackSubtitle}>{themePack.description}</Text>
+              </View>
+              <Pressable
+                disabled={isCurrent}
+                onPress={() => {
+                  if (!isCurrent) {
+                    onSelectThemePack(themePack.id);
+                  }
+                }}
+                style={[
+                  styles.themePackSelectButton,
+                  isCurrent && styles.themePackSelectButtonCurrent,
+                ]}
+                testID={`select-theme-pack-${themePack.id}`}>
+                <Text
+                  style={[
+                    styles.themePackSelectButtonText,
+                    isCurrent && styles.themePackSelectButtonTextCurrent,
+                  ]}>
+                  {isCurrent ? 'Current' : 'Select'}
+                </Text>
+              </Pressable>
+            </View>
+          );
+        })}
 
         <Pressable
           onPress={onRefresh}
@@ -3280,55 +3479,6 @@ function ThemeSanctumScreen({
             {isRefreshingThemeSanctum ? 'Refreshing Sanctum...' : 'Refresh Theme Sanctum'}
           </Text>
         </Pressable>
-      </View>
-
-      <View style={styles.formCard}>
-        <Text style={styles.sectionTitle}>{themeSanctum.availableEssencesTitle}</Text>
-        <Text style={styles.formIntro}>{themeSanctum.availableEssencesIntro}</Text>
-
-        {themeSanctum.availableThemePacks.map(themePack => {
-          const isCurrent = themePack.statusLabel === 'Current';
-
-          return (
-            <View key={themePack.id} style={styles.suggestionCard}>
-              <View style={styles.questHeaderRow}>
-                <Text style={styles.suggestionTitle}>{themePack.name}</Text>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    isCurrent ? styles.statusBadgeDone : styles.statusBadgeActive,
-                  ]}>
-                  <Text
-                    style={[
-                      styles.statusBadgeText,
-                      isCurrent ? styles.statusBadgeTextDone : null,
-                    ]}>
-                    {themePack.statusLabel}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.formHint}>{themePack.description}</Text>
-              <View style={styles.metaRow}>
-                <View style={styles.metaPill}>
-                  <Text style={styles.metaLabel}>Accent Energy</Text>
-                  <Text style={styles.metaValue}>{themePack.accentEnergy}</Text>
-                </View>
-                <View style={styles.metaPill}>
-                  <Text style={styles.metaLabel}>Surface Tone</Text>
-                  <Text style={styles.metaValue}>{themePack.surfaceTone}</Text>
-                </View>
-              </View>
-              {isCurrent ? null : (
-                <Pressable
-                  onPress={() => onSelectThemePack(themePack.id)}
-                  style={styles.cardSecondaryButton}
-                  testID={`select-theme-pack-${themePack.id}`}>
-                  <Text style={styles.cardSecondaryButtonText}>Channel Essence</Text>
-                </Pressable>
-              )}
-            </View>
-          );
-        })}
       </View>
     </ScrollView>
   );
@@ -3348,7 +3498,7 @@ function HistoryScreen({
   themeMode: ThemeMode;
 }) {
   const [historyPeriodFilter, setHistoryPeriodFilter] =
-    useState<HistoryPeriodFilter>('Month');
+    useState<HistoryPeriodFilter>('All Time');
   const [historyStatusFilter, setHistoryStatusFilter] =
     useState<HistoryStatusFilter>('All');
   const historyQuests = sortHistoryQuests(
@@ -3367,6 +3517,24 @@ function HistoryScreen({
     );
   });
   const historyStats = getProgressStats(quests);
+  const historyQuestGroups = filteredHistoryQuests.reduce<
+    Array<{ label: string; quests: Quest[] }>
+  >((groups, quest) => {
+    const groupLabel = formatArchiveGroupLabel(getQuestResolvedDate(quest));
+    const lastGroup = groups[groups.length - 1];
+
+    if (lastGroup && lastGroup.label === groupLabel) {
+      lastGroup.quests.push(quest);
+      return groups;
+    }
+
+    groups.push({
+      label: groupLabel,
+      quests: [quest],
+    });
+
+    return groups;
+  }, []);
 
   return (
     <ScrollView
@@ -3388,52 +3556,92 @@ function HistoryScreen({
       </View>
 
       <Text style={styles.kicker}>Quest History</Text>
-      <Text style={styles.title}>Archive Of The Realm</Text>
+      <Text style={[styles.title, styles.historyPageTitle]}>Archive Of The Realm</Text>
       <Text style={styles.subtitle}>
-        Review the quests you completed, the ones that failed, and the pace of
-        your journey across day, month, and year windows.
+        Review the quests you completed and the ones that slipped away, all in
+        one cleaner archive view.
       </Text>
 
-      <View style={styles.heroCard}>
-        <View style={styles.heroStatsRow}>
-          <HeroStat
-            accentStyle={styles.xpAccent}
-            label="Completed"
-            styles={styles}
-            value={`${historyStats.totalCompleted}`}
-          />
-          <HeroStat
-            accentStyle={styles.levelAccent}
-            label="Failed"
-            styles={styles}
-            value={`${historyStats.totalFailed}`}
-          />
-          <HeroStat
-            accentStyle={styles.streakAccent}
-            label="Archived"
-            styles={styles}
-            value={`${historyQuests.length}`}
-          />
+      <View style={styles.historySummaryRow}>
+        <View style={[styles.historySummaryCard, styles.historySummaryCardWarm]}>
+          <View style={styles.historySummaryAccent} />
+          <Text style={styles.historySummaryLabel}>Total Completed</Text>
+          <View style={styles.historySummaryValueRow}>
+            <Text style={styles.historySummaryValue}>{historyStats.totalCompleted}</Text>
+            <Text style={styles.historySummaryGlyph}>*</Text>
+          </View>
+        </View>
+        <View style={[styles.historySummaryCard, styles.historySummaryCardRose]}>
+          <View style={[styles.historySummaryAccent, styles.historySummaryAccentRose]} />
+          <Text style={styles.historySummaryLabel}>Failed</Text>
+          <View style={styles.historySummaryValueRow}>
+            <Text style={styles.historySummaryValue}>{historyStats.totalFailed}</Text>
+            <Text style={styles.historySummaryGlyph}>x</Text>
+          </View>
         </View>
       </View>
 
-      <View style={styles.filterCard}>
-        <SectionPicker
-          label="Time Window"
-          onSelect={value => setHistoryPeriodFilter(value as HistoryPeriodFilter)}
-          options={historyPeriodOptions}
-          selectedValue={historyPeriodFilter}
-          styles={styles}
-          testIdPrefix="history-period-filter"
-        />
-        <SectionPicker
-          label="Outcome"
-          onSelect={value => setHistoryStatusFilter(value as HistoryStatusFilter)}
-          options={historyStatusOptions}
-          selectedValue={historyStatusFilter}
-          styles={styles}
-          testIdPrefix="history-status-filter"
-        />
+      <View style={styles.historyFilterCard}>
+        <View style={styles.historySegmentRow}>
+          {historyPeriodOptions.map(periodOption => {
+            const isSelected = periodOption === historyPeriodFilter;
+
+            return (
+              <Pressable
+                key={periodOption}
+                onPress={() => setHistoryPeriodFilter(periodOption)}
+                style={[
+                  styles.historySegmentChip,
+                  isSelected && styles.historySegmentChipSelected,
+                ]}
+                testID={`history-period-filter-${periodOption
+                  .replace(/\s+/g, '-')
+                  .toLowerCase()}`}>
+                <Text
+                  style={[
+                    styles.historySegmentChipText,
+                    isSelected && styles.historySegmentChipTextSelected,
+                  ]}>
+                  {periodOption}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <View style={styles.historySegmentRow}>
+          {historyStatusOptions.map(statusOption => {
+            const isSelected = statusOption === historyStatusFilter;
+            const indicatorStyle =
+              statusOption === 'Completed'
+                ? styles.historyStatusIndicatorDone
+                : styles.historyStatusIndicatorFailed;
+
+            return (
+              <Pressable
+                key={statusOption}
+                onPress={() =>
+                  setHistoryStatusFilter(currentFilter =>
+                    currentFilter === statusOption ? 'All' : statusOption,
+                  )
+                }
+                style={[
+                  styles.historySegmentChip,
+                  isSelected && styles.historySegmentChipSelected,
+                ]}
+                testID={`history-status-filter-${statusOption.toLowerCase()}`}>
+                <View style={[styles.historyStatusIndicator, indicatorStyle]} />
+                <Text
+                  style={[
+                    styles.historySegmentChipText,
+                    isSelected && styles.historySegmentChipTextSelected,
+                  ]}>
+                  {statusOption}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
 
       {filteredHistoryQuests.length === 0 ? (
@@ -3444,60 +3652,67 @@ function HistoryScreen({
           </Text>
         </View>
       ) : (
-        filteredHistoryQuests.map(quest => {
-          const resolvedDate = getQuestResolvedDate(quest) ?? 'Unknown';
+        historyQuestGroups.map(historyQuestGroup => (
+          <View
+            key={historyQuestGroup.label}
+            style={styles.historyGroupSection}>
+            <Text style={styles.historyGroupLabel}>{historyQuestGroup.label}</Text>
+            {historyQuestGroup.quests.map(quest => {
+              const resolvedDate = getQuestResolvedDate(quest) ?? 'Unknown';
+              const isCompletedQuest = quest.status === 'Completed';
+              const resolvedDateLabel = formatArchiveDateLabel(resolvedDate);
 
-          return (
-            <View
-              key={`${quest.id}-${resolvedDate}`}
-              style={styles.suggestionCard}
-              testID={`history-quest-${quest.id}`}>
-              <View style={styles.questHeaderRow}>
-                <Text style={styles.suggestionTitle}>{quest.title}</Text>
+              return (
                 <View
-                  style={[
-                    styles.statusBadge,
-                    quest.status === 'Completed'
-                      ? styles.statusBadgeDone
-                      : styles.statusBadgeActive,
-                  ]}>
-                  <Text
-                    style={[
-                      styles.statusBadgeText,
-                      quest.status === 'Completed'
-                        ? styles.statusBadgeTextDone
-                        : null,
-                    ]}>
-                    {quest.status}
-                  </Text>
+                  key={`${quest.id}-${resolvedDate}`}
+                  style={styles.historyQuestCard}
+                  testID={`history-quest-${quest.id}`}>
+                  <View style={styles.historyBadgeRow}>
+                    <View style={styles.historyBadgeGroup}>
+                      <View style={styles.historyTagBadge}>
+                        <Text style={styles.historyTagBadgeText}>{quest.tag}</Text>
+                      </View>
+                      <View style={styles.historyPathBadge}>
+                        <Text style={styles.historyPathBadgeText}>{quest.category}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.historyStatusRail}>
+                      <Text style={styles.historyStatusIcon}>
+                        {isCompletedQuest ? '*' : '!'}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.historyStatusText,
+                          isCompletedQuest
+                            ? styles.historyStatusTextDone
+                            : styles.historyStatusTextFailed,
+                        ]}>
+                        {quest.status}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.historyQuestTitle}>{quest.title}</Text>
+                  <Text style={styles.historyQuestDescription}>{quest.description}</Text>
+
+                  <View style={styles.historyQuestDivider} />
+
+                  <View style={styles.historyFooterRow}>
+                    <View style={styles.historyResolvedRow}>
+                      <Text style={styles.historyResolvedIcon}>[]</Text>
+                      <Text style={styles.historyResolvedText}>{resolvedDateLabel}</Text>
+                    </View>
+                    <View style={styles.historyXpBadge}>
+                      <Text style={styles.historyXpBadgeText}>
+                        {isCompletedQuest ? `+${quest.xpReward} XP` : 'Failed'}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
-              </View>
-              <Text style={styles.questDescription}>{quest.description}</Text>
-              <View style={styles.metaRow}>
-                <View style={styles.metaPill}>
-                  <Text style={styles.metaLabel}>Resolved</Text>
-                  <Text style={styles.metaValue}>{resolvedDate}</Text>
-                </View>
-                <View style={styles.metaPill}>
-                  <Text style={styles.metaLabel}>XP Result</Text>
-                  <Text style={styles.metaValue}>
-                    {quest.status === 'Completed' ? `+${quest.xpReward}` : '0'}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.metaRow}>
-                <View style={styles.metaPill}>
-                  <Text style={styles.metaLabel}>Tag</Text>
-                  <Text style={styles.metaValue}>{quest.tag}</Text>
-                </View>
-                <View style={styles.metaPill}>
-                  <Text style={styles.metaLabel}>Difficulty</Text>
-                  <Text style={styles.metaValue}>{quest.difficulty}</Text>
-                </View>
-              </View>
-            </View>
-          );
-        })
+              );
+            })}
+          </View>
+        ))
       )}
     </ScrollView>
   );
@@ -3517,15 +3732,42 @@ function StreakScreen({
   themeMode: ThemeMode;
 }) {
   const today = new Date();
-  const calendarDays = buildCalendarDays(hero.activeDateKeys, today);
+  const [viewedMonthDate, setViewedMonthDate] = useState(
+    () => new Date(today.getFullYear(), today.getMonth(), 1),
+  );
+  const currentStreakDateKeys = getCurrentStreakDateKeys(hero);
+  const calendarDays = buildCalendarDays(
+    hero.activeDateKeys,
+    currentStreakDateKeys,
+    viewedMonthDate,
+    today,
+  );
   const bestStreak = getBestStreak(hero.activeDateKeys);
   const activeDaysThisMonth = hero.activeDateKeys.filter(activeDateKey =>
-    matchesHistoryPeriod(activeDateKey, 'Month', getDateKey(today)),
+    matchesHistoryPeriod(activeDateKey, 'This Month', getDateKey(viewedMonthDate)),
   ).length;
-  const monthLabel = today.toLocaleString(undefined, {
+  const monthLabel = viewedMonthDate.toLocaleString(undefined, {
     month: 'long',
     year: 'numeric',
   });
+  const handleViewPreviousMonth = () => {
+    setViewedMonthDate(currentViewedMonthDate =>
+      new Date(
+        currentViewedMonthDate.getFullYear(),
+        currentViewedMonthDate.getMonth() - 1,
+        1,
+      ),
+    );
+  };
+  const handleViewNextMonth = () => {
+    setViewedMonthDate(currentViewedMonthDate =>
+      new Date(
+        currentViewedMonthDate.getFullYear(),
+        currentViewedMonthDate.getMonth() + 1,
+        1,
+      ),
+    );
+  };
 
   return (
     <ScrollView
@@ -3553,31 +3795,44 @@ function StreakScreen({
         kept the guild moving.
       </Text>
 
-      <View style={styles.heroCard}>
-        <View style={styles.heroStatsRow}>
-          <HeroStat
-            accentStyle={styles.streakAccent}
-            label="Current"
-            styles={styles}
-            value={`${hero.streakCount}d`}
-          />
-          <HeroStat
-            accentStyle={styles.levelAccent}
-            label="Best"
-            styles={styles}
-            value={`${bestStreak}d`}
-          />
-          <HeroStat
-            accentStyle={styles.xpAccent}
-            label="This Month"
-            styles={styles}
-            value={`${activeDaysThisMonth}`}
-          />
+      <View style={styles.streakMetricStack}>
+        <View style={[styles.streakSpotlightCard, styles.streakSpotlightCardPrimary]}>
+          <Text style={styles.streakSpotlightLabel}>Active Momentum</Text>
+          <Text style={[styles.streakSpotlightValue, styles.streakSpotlightValuePrimary]}>
+            {hero.streakCount} Days
+          </Text>
+          <Text style={styles.streakSpotlightBody}>
+            Your forge is burning bright. Maintain the heat to unlock elder quests.
+          </Text>
+        </View>
+        <View style={styles.streakSpotlightCard}>
+          <Text style={styles.streakSpotlightLabel}>Best Streak</Text>
+          <Text style={styles.streakSpotlightValue}>{bestStreak} Days</Text>
+        </View>
+        <View style={styles.streakSpotlightCard}>
+          <Text style={styles.streakSpotlightLabel}>Active This Month</Text>
+          <Text style={styles.streakSpotlightValue}>{activeDaysThisMonth} Days</Text>
         </View>
       </View>
 
-      <View style={styles.formCard}>
-        <Text style={styles.sectionTitle}>{monthLabel}</Text>
+      <View style={styles.streakCalendarCard}>
+        <View style={styles.calendarHeaderRow}>
+          <Text style={styles.streakCalendarMonth}>{monthLabel}</Text>
+          <View style={styles.calendarNavRow}>
+            <Pressable
+              onPress={handleViewPreviousMonth}
+              style={styles.calendarNavButton}
+              testID="streak-calendar-prev-month">
+              <Text style={styles.calendarNavButtonText}>{'<'}</Text>
+            </Pressable>
+            <Pressable
+              onPress={handleViewNextMonth}
+              style={styles.calendarNavButton}
+              testID="streak-calendar-next-month">
+              <Text style={styles.calendarNavButtonText}>{'>'}</Text>
+            </Pressable>
+          </View>
+        </View>
         <View style={styles.calendarWeekRow}>
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(weekDay => (
             <Text key={weekDay} style={styles.calendarWeekday}>
@@ -3586,39 +3841,47 @@ function StreakScreen({
           ))}
         </View>
         <View style={styles.calendarGrid}>
-          {calendarDays.map((calendarDay, index) =>
-            calendarDay ? (
-              <View
-                key={calendarDay.dateKey}
+          {calendarDays.map(calendarDay => (
+            <View
+              key={calendarDay.dateKey}
+              style={[
+                styles.calendarDay,
+                calendarDay.isCurrentMonth
+                  ? styles.calendarDayCurrentMonth
+                  : styles.calendarDayOutsideMonth,
+                calendarDay.isMomentum && styles.calendarDayMomentum,
+                calendarDay.isActive &&
+                  !calendarDay.isMomentum &&
+                  styles.calendarDayActive,
+                calendarDay.isToday && styles.calendarDayToday,
+              ]}>
+              <Text
                 style={[
-                  styles.calendarDay,
-                  calendarDay.isActive && styles.calendarDayActive,
-                  calendarDay.isToday && styles.calendarDayToday,
+                  styles.calendarDayText,
+                  !calendarDay.isCurrentMonth && styles.calendarDayTextOutsideMonth,
+                  calendarDay.isMomentum && styles.calendarDayTextMomentum,
+                  calendarDay.isActive &&
+                    !calendarDay.isMomentum &&
+                    styles.calendarDayTextActive,
+                  calendarDay.isToday && styles.calendarDayTextToday,
                 ]}>
-                <Text
+                {calendarDay.dayNumber}
+              </Text>
+              {calendarDay.isToday ? (
+                <View
                   style={[
-                    styles.calendarDayText,
-                    calendarDay.isActive && styles.calendarDayTextActive,
-                    calendarDay.isToday && styles.calendarDayTextToday,
-                  ]}>
-                  {calendarDay.dayNumber}
-                </Text>
-              </View>
-            ) : (
-              <View key={`empty-day-${index}`} style={styles.calendarDayEmpty} />
-            ),
-          )}
+                    styles.calendarTodayDot,
+                    calendarDay.isActive
+                      ? styles.calendarTodayDotActive
+                      : styles.calendarTodayDotPassive,
+                  ]}
+                />
+              ) : null}
+            </View>
+          ))}
         </View>
       </View>
 
-      <View style={styles.formCard}>
-        <Text style={styles.sectionTitle}>Streak Insight</Text>
-        <Text style={styles.formIntro}>
-          Last active day: {hero.lastCompletedDate ?? 'No streak yet'}.
-          {` `}
-          Your next milestone is {Math.max(3, hero.streakCount + 1)} days.
-        </Text>
-      </View>
     </ScrollView>
   );
 }
@@ -3642,6 +3905,11 @@ function QuestDetailsScreen({
   styles: ReturnType<typeof createStyles>;
   themeMode: ThemeMode;
 }) {
+  const detailComponents = getQuestDetailComponents(questDetails);
+  const isResolved =
+    questDetails.statusLabel === 'Completed' ||
+    questDetails.statusLabel === 'Failed';
+
   return (
     <ScrollView
       contentContainerStyle={styles.scrollContent}
@@ -3702,35 +3970,42 @@ function QuestDetailsScreen({
           <View style={styles.heroOrb} />
         </View>
 
-        <View style={styles.heroStatsRow}>
-          <HeroStat
-            accentStyle={styles.levelAccent}
-            label="Difficulty"
-            styles={styles}
-            value={questDetails.difficultyLabel}
-          />
-          <HeroStat
-            accentStyle={styles.xpAccent}
-            label="Reward"
-            styles={styles}
-            value={questDetails.xpRewardLabel}
-          />
-          <HeroStat
-            accentStyle={styles.streakAccent}
-            label="Status"
-            styles={styles}
-            value={questDetails.statusLabel}
-          />
+        <View style={styles.detailsMetricGrid}>
+          <View style={styles.detailsMetricCard}>
+            <Text style={styles.detailsMetricLabel}>Difficulty</Text>
+            <Text style={styles.detailsMetricValue}>
+              {questDetails.difficultyLabel}
+            </Text>
+          </View>
+          <View style={styles.detailsMetricCard}>
+            <Text style={styles.detailsMetricLabel}>Reward</Text>
+            <Text style={[styles.detailsMetricValue, styles.xpAccent]}>
+              {questDetails.xpRewardLabel}
+            </Text>
+          </View>
         </View>
 
-        <View style={styles.metaRow}>
-          <View style={styles.metaPill}>
-            <Text style={styles.metaLabel}>Due Date</Text>
-            <Text style={styles.metaValue}>{questDetails.dueDateLabel}</Text>
+        <View style={styles.detailsTimelineStrip}>
+          <View style={styles.detailsTimelineItem}>
+            <Text style={styles.detailsMetricLabel}>Due Date</Text>
+            <Text style={styles.detailsTimelineValue}>
+              {questDetails.dueDateLabel}
+            </Text>
           </View>
-          <View style={styles.metaPill}>
-            <Text style={styles.metaLabel}>Timeline</Text>
-            <Text style={styles.metaValue}>{questDetails.dueStateLabel}</Text>
+          <View style={styles.detailsTimelineItem}>
+            <Text style={styles.detailsMetricLabel}>Timeline</Text>
+            <Text
+              style={[
+                styles.detailsTimelineValue,
+                questDetails.dueStateLabel === 'Overdue'
+                  ? styles.streakAccent
+                  : questDetails.dueStateLabel === 'Due Soon' ||
+                      questDetails.dueStateLabel === 'Due Today'
+                    ? styles.levelAccent
+                    : styles.xpAccent,
+              ]}>
+              {questDetails.dueStateLabel}
+            </Text>
           </View>
         </View>
 
@@ -3754,9 +4029,26 @@ function QuestDetailsScreen({
         <Text style={styles.heroSupportText}>{questDetails.progressStatusText}</Text>
       </View>
 
+      <View style={styles.detailsGuidanceCard}>
+        <Text style={styles.detailsGuidanceTitle}>{questDetails.guidanceTitle}</Text>
+        <Text style={styles.detailsGuidanceText}>{questDetails.guidanceText}</Text>
+      </View>
+
       <View style={styles.formCard}>
-        <Text style={styles.sectionTitle}>{questDetails.guidanceTitle}</Text>
-        <Text style={styles.formIntro}>{questDetails.guidanceText}</Text>
+        <Text style={styles.sectionTitle}>Quest Components</Text>
+        <Text style={styles.formIntro}>
+          A cleaner breakdown for starting this quest without losing momentum.
+        </Text>
+        <View style={styles.detailsComponentList}>
+          {detailComponents.map((component, index) => (
+            <View key={`${questDetails.questId}-component-${index}`} style={styles.detailsComponentRow}>
+              <View style={styles.detailsComponentMarker}>
+                <Text style={styles.detailsComponentMarkerText}>{index + 1}</Text>
+              </View>
+              <Text style={styles.detailsComponentText}>{component}</Text>
+            </View>
+          ))}
+        </View>
       </View>
 
       <View style={styles.boardActionCard}>
@@ -3780,7 +4072,7 @@ function QuestDetailsScreen({
               {questDetails.primaryActionLabel}
             </Text>
             <Text style={styles.emptyStateText}>
-              {questDetails.statusLabel === 'Failed'
+              {isResolved && questDetails.statusLabel === 'Failed'
                 ? 'This quest has been sealed inside the failed archive.'
                 : 'This quest is already sealed inside the completed ledger.'}
             </Text>
@@ -4149,9 +4441,7 @@ function QuestPoolScreen({
         <View style={styles.questPoolHeaderRow}>
           <View style={styles.questPoolHeaderCopy}>
             <Text style={styles.sectionTitle}>Template Archive</Text>
-            <Text style={styles.formIntro}>
-              Save time by dropping proven daily tasks straight into your board.
-            </Text>
+            <Text style={styles.formHint}>Daily tasks ready to drop into the board.</Text>
           </View>
           <View style={styles.filterHeaderActions}>
             <Pressable
@@ -4171,17 +4461,14 @@ function QuestPoolScreen({
           </View>
         </View>
 
-        <View style={styles.formField}>
-          <Text style={styles.formLabel}>Search Quest Pool</Text>
-          <TextInput
-            onChangeText={setSearchQuery}
-            placeholder={questPool.searchPlaceholder}
-            placeholderTextColor={styles.themePlaceholder.color}
-            style={styles.titleInput}
-            testID="quest-pool-search-input"
-            value={searchQuery}
-          />
-        </View>
+        <TextInput
+          onChangeText={setSearchQuery}
+          placeholder="Search Quests..."
+          placeholderTextColor={styles.themePlaceholder.color}
+          style={styles.questPoolSearchInput}
+          testID="quest-pool-search-input"
+          value={searchQuery}
+        />
 
         <ScrollView
           horizontal
@@ -4230,47 +4517,29 @@ function QuestPoolScreen({
           return (
             <View
               key={`${template.title}-${index}`}
-              style={styles.suggestionCard}
+              style={styles.questPoolCompactCard}
               testID={`quest-pool-card-${index}`}>
-              <Text style={styles.suggestionTitle}>{template.title}</Text>
-              <Text style={styles.questDescription}>{template.description}</Text>
-
-              <View style={styles.metaRow}>
-                <View style={styles.metaPill}>
-                  <Text style={styles.metaLabel}>Tag</Text>
-                  <Text style={styles.metaValue}>{template.tag}</Text>
-                </View>
-                <View style={styles.metaPill}>
-                  <Text style={styles.metaLabel}>Difficulty</Text>
-                  <Text style={styles.metaValue}>{template.difficulty}</Text>
-                </View>
-                <View style={styles.metaPill}>
-                  <Text style={styles.metaLabel}>Default Path</Text>
-                  <Text style={styles.metaValue}>{template.category}</Text>
-                </View>
-              </View>
-
-              {template.dueDate ? (
-                <View style={styles.metaRow}>
-                  <View style={styles.metaPill}>
-                    <Text style={styles.metaLabel}>Deadline</Text>
-                    <Text style={styles.metaValue}>{dueDetails.dueDateLabel}</Text>
+              <View style={styles.questPoolCompactHeader}>
+                <View style={styles.questPoolCompactHeaderRow}>
+                  <View style={styles.questPoolCompactTagBadge}>
+                    <Text style={styles.questPoolCompactTagText}>{template.tag}</Text>
                   </View>
-                  <View
-                    style={[
-                      styles.metaPill,
-                      dueDetails.isUrgent ? styles.metaPillHighlight : null,
-                    ]}>
-                    <Text style={styles.metaLabel}>Timeline</Text>
-                    <Text
-                      style={[
-                        styles.metaValue,
-                        dueDetails.isUrgent ? styles.metaValueHighlight : null,
-                      ]}>
-                      {dueDetails.dueStateLabel}
+                  <View style={styles.questPoolCompactDifficultyBadge}>
+                    <Text style={styles.questPoolCompactDifficultyText}>
+                      {template.difficulty}
                     </Text>
                   </View>
                 </View>
+                <Text style={styles.questPoolCompactTitle}>{template.title}</Text>
+                <Text numberOfLines={2} style={styles.questPoolCompactDescription}>
+                  {template.description}
+                </Text>
+              </View>
+
+              {template.dueDate ? (
+                <Text style={styles.questPoolCompactDueText}>
+                  {`${dueDetails.dueDateLabel} ${dueDetails.dueStateLabel}`}
+                </Text>
               ) : null}
 
               <View style={styles.questPoolActionRow}>
@@ -4295,9 +4564,9 @@ function QuestPoolScreen({
               </View>
               <Pressable
                 onPress={() => onEditTemplate(template.id)}
-                style={styles.cardSecondaryButton}
+                style={styles.questPoolCompactEditButton}
                 testID={`edit-quest-pool-template-${template.id}`}>
-                <Text style={styles.cardSecondaryButtonText}>Edit Template</Text>
+                <Text style={styles.questPoolCompactEditButtonText}>Edit Template</Text>
               </Pressable>
             </View>
           );
@@ -5291,40 +5560,40 @@ function createStyles(theme: ThemePalette) {
       overflow: 'hidden',
     },
     backgroundOrbPrimary: {
-      backgroundColor: `${theme.blue}1f`,
-      borderRadius: 220,
-      height: 220,
+      backgroundColor: `${theme.blue}14`,
+      borderRadius: 280,
+      height: 280,
       position: 'absolute',
-      right: -56,
-      top: -48,
-      width: 220,
+      right: -92,
+      top: -72,
+      width: 280,
     },
     backgroundOrbSecondary: {
-      backgroundColor: `${theme.amber}20`,
-      borderRadius: 180,
-      height: 180,
-      left: -64,
+      backgroundColor: `${theme.amber}16`,
+      borderRadius: 220,
+      height: 220,
+      left: -92,
       position: 'absolute',
-      top: 164,
-      width: 180,
+      top: 132,
+      width: 220,
     },
     backgroundOrbTertiary: {
-      backgroundColor: `${theme.success}16`,
-      borderRadius: 210,
-      bottom: -84,
-      height: 210,
+      backgroundColor: `${theme.amber}12`,
+      borderRadius: 260,
+      bottom: -104,
+      height: 260,
       position: 'absolute',
-      right: -72,
-      width: 210,
+      right: -96,
+      width: 260,
     },
     contentFrame: {
       flex: 1,
       zIndex: 1,
     },
     scrollContent: {
-      paddingHorizontal: 20,
-      paddingTop: 20,
-      paddingBottom: 42,
+      paddingHorizontal: 22,
+      paddingTop: 24,
+      paddingBottom: 56,
     },
     loadingState: {
       alignItems: 'center',
@@ -5335,14 +5604,14 @@ function createStyles(theme: ThemePalette) {
     connectionStateCard: {
       backgroundColor: theme.surface,
       borderColor: theme.ghostBorder,
-      borderRadius: 24,
+      borderRadius: 28,
       borderWidth: 1,
       maxWidth: 360,
-      padding: 24,
+      padding: 26,
       shadowColor: theme.blue,
-      shadowOffset: { width: 0, height: 16 },
-      shadowOpacity: 0.16,
-      shadowRadius: 28,
+      shadowOffset: { width: 0, height: 24 },
+      shadowOpacity: 0.12,
+      shadowRadius: 34,
       width: '100%',
     },
     loadingKicker: {
@@ -5377,11 +5646,11 @@ function createStyles(theme: ThemePalette) {
       justifyContent: 'space-between',
     },
     screenHeader: {
-      alignItems: 'center',
+      alignItems: 'flex-start',
       flexDirection: 'row',
       gap: 10,
       justifyContent: 'space-between',
-      marginBottom: 14,
+      marginBottom: 18,
     },
     themeToggleButton: {
       alignItems: 'center',
@@ -5403,12 +5672,12 @@ function createStyles(theme: ThemePalette) {
       fontWeight: '800',
     },
     backButton: {
-      backgroundColor: `${theme.surfaceHigh}ee`,
+      backgroundColor: `${theme.surfaceHigh}f2`,
       borderColor: theme.ghostBorder,
       borderRadius: 999,
       borderWidth: 1,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
+      paddingHorizontal: 16,
+      paddingVertical: 11,
     },
     backButtonText: {
       color: theme.textPrimary,
@@ -5417,13 +5686,15 @@ function createStyles(theme: ThemePalette) {
     },
     screenLabel: {
       alignSelf: 'flex-start',
-      backgroundColor: `${theme.blue}14`,
+      backgroundColor: `${theme.surfaceHighest}d9`,
+      borderColor: theme.ghostBorder,
+      borderWidth: 1,
       borderRadius: 999,
       color: theme.blueSoft,
       fontSize: 12,
       letterSpacing: 1.4,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
       textTransform: 'uppercase',
     },
     detailsBadgeRow: {
@@ -5448,42 +5719,47 @@ function createStyles(theme: ThemePalette) {
     },
     kicker: {
       alignSelf: 'flex-start',
-      backgroundColor: `${theme.amber}18`,
+      backgroundColor: `${theme.surfaceHighest}e6`,
+      borderColor: theme.ghostBorder,
+      borderWidth: 1,
       borderRadius: 999,
-      color: theme.textMuted,
-      fontSize: 13,
-      letterSpacing: 2,
-      marginBottom: 8,
+      color: theme.amberSoft,
+      fontSize: 12,
+      fontWeight: '700',
+      letterSpacing: 1.8,
+      marginBottom: 10,
       overflow: 'hidden',
-      paddingHorizontal: 12,
-      paddingVertical: 6,
+      paddingHorizontal: 13,
+      paddingVertical: 7,
       textTransform: 'uppercase',
     },
     title: {
       color: theme.textPrimary,
-      fontSize: 38,
-      fontWeight: '700',
-      letterSpacing: -1,
+      fontSize: 40,
+      fontWeight: '800',
+      letterSpacing: -1.3,
+      lineHeight: 44,
+      maxWidth: 330,
     },
     subtitle: {
       color: theme.subtitle,
       fontSize: 15,
-      lineHeight: 22,
-      marginTop: 10,
-      maxWidth: 340,
+      lineHeight: 24,
+      marginTop: 14,
+      maxWidth: 350,
     },
     heroCard: {
       backgroundColor: theme.surface,
-      borderColor: `${theme.amber}32`,
-      borderRadius: 24,
+      borderColor: theme.ghostBorder,
+      borderRadius: 30,
       borderWidth: 1,
-      marginTop: 24,
+      marginTop: 28,
       overflow: 'hidden',
-      padding: 20,
+      padding: 24,
       shadowColor: theme.blue,
-      shadowOffset: { width: 0, height: 18 },
-      shadowOpacity: 0.18,
-      shadowRadius: 30,
+      shadowOffset: { width: 0, height: 24 },
+      shadowOpacity: 0.14,
+      shadowRadius: 36,
     },
     heroHeader: {
       alignItems: 'flex-start',
@@ -5496,43 +5772,73 @@ function createStyles(theme: ThemePalette) {
       gap: 10,
     },
     heroEyebrow: {
-      color: theme.textMuted,
-      fontSize: 12,
+      color: theme.amberSoft,
+      fontSize: 11,
+      fontWeight: '700',
       letterSpacing: 1.4,
-      marginBottom: 6,
+      marginBottom: 8,
       textTransform: 'uppercase',
     },
     heroTitle: {
       color: theme.textPrimary,
-      fontSize: 22,
-      fontWeight: '700',
-      maxWidth: 220,
+      fontSize: 24,
+      fontWeight: '800',
+      lineHeight: 30,
+      maxWidth: 236,
     },
     heroOrb: {
-      backgroundColor: theme.blue,
-      borderRadius: 24,
-      height: 24,
-      shadowColor: theme.blue,
+      backgroundColor: theme.amber,
+      borderRadius: 28,
+      height: 28,
+      shadowColor: theme.amber,
       shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.42,
-      shadowRadius: 16,
-      width: 24,
+      shadowOpacity: 0.34,
+      shadowRadius: 18,
+      width: 28,
     },
     heroStatsRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
+      gap: 14,
+      marginTop: 24,
+    },
+    boardHeroPillRow: {
+      flexDirection: 'row',
       gap: 12,
-      marginTop: 22,
+      marginTop: 18,
+    },
+    boardHeroPill: {
+      backgroundColor: `${theme.surfaceHigh}f8`,
+      borderColor: theme.ghostBorder,
+      borderRadius: 20,
+      borderWidth: 1,
+      flex: 1,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+    },
+    boardHeroPillLabel: {
+      color: theme.textMuted,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 1.1,
+      marginBottom: 6,
+      textTransform: 'uppercase',
+    },
+    boardHeroPillValue: {
+      color: theme.textPrimary,
+      fontSize: 22,
+      fontWeight: '800',
     },
     heroStat: {
-      backgroundColor: `${theme.surfaceHigh}f2`,
-      borderRadius: 18,
+      backgroundColor: `${theme.surfaceHigh}f8`,
+      borderRadius: 22,
       flexGrow: 1,
       flexBasis: '30%',
       borderWidth: 1,
       borderColor: theme.ghostBorder,
-      paddingHorizontal: 14,
-      paddingVertical: 16,
+      minHeight: 94,
+      paddingHorizontal: 16,
+      paddingVertical: 18,
     },
     heroStatInteractive: {
       borderColor: `${theme.blue}48`,
@@ -5544,7 +5850,7 @@ function createStyles(theme: ThemePalette) {
       color: theme.blueSoft,
       fontSize: 12,
       fontWeight: '600',
-      marginTop: 10,
+      marginTop: 12,
     },
     heroStatLabel: {
       color: theme.textMuted,
@@ -5554,14 +5860,233 @@ function createStyles(theme: ThemePalette) {
     },
     heroStatValue: {
       color: theme.textPrimary,
-      fontSize: 22,
-      fontWeight: '700',
+      fontSize: 24,
+      fontWeight: '800',
     },
     heroSupportText: {
       color: theme.subtitle,
       fontSize: 14,
-      lineHeight: 21,
+      lineHeight: 22,
+      marginTop: 20,
+    },
+    boardRankHeader: {
+      alignItems: 'flex-start',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    boardRankTitle: {
+      color: theme.textPrimary,
+      fontFamily: 'serif',
+      fontSize: 28,
+      fontWeight: '700',
+      letterSpacing: -0.7,
+      lineHeight: 34,
+      maxWidth: 240,
+    },
+    boardRankMetaRow: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 14,
       marginTop: 18,
+    },
+    boardLevelChip: {
+      alignSelf: 'flex-start',
+      backgroundColor: `${theme.amber}18`,
+      borderColor: `${theme.amber}4a`,
+      borderRadius: 12,
+      borderWidth: 1,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+    },
+    boardLevelChipText: {
+      color: theme.buttonText,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    boardRankXpText: {
+      color: theme.subtitle,
+      flex: 1,
+      fontSize: 14,
+      fontWeight: '600',
+      textAlign: 'right',
+    },
+    boardRankProgressHeader: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 10,
+      marginTop: 18,
+    },
+    boardRankProgressLabel: {
+      color: theme.subtitle,
+      flex: 1,
+      fontSize: 13,
+      fontWeight: '600',
+      marginRight: 12,
+    },
+    boardRankProgressNote: {
+      color: theme.subtitle,
+      fontSize: 14,
+      lineHeight: 20,
+      marginTop: 12,
+    },
+    boardMiniStatRow: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 20,
+    },
+    boardMiniStatCard: {
+      backgroundColor: `${theme.surfaceHigh}f8`,
+      borderColor: `${theme.blue}4a`,
+      borderRadius: 22,
+      borderWidth: 1,
+      flex: 1,
+      minHeight: 108,
+      paddingHorizontal: 14,
+      paddingVertical: 16,
+    },
+    boardMiniStatLabel: {
+      color: theme.textMuted,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 1.1,
+      marginBottom: 10,
+      textTransform: 'uppercase',
+    },
+    boardMiniStatValue: {
+      color: theme.textPrimary,
+      fontSize: 19,
+      fontWeight: '800',
+      letterSpacing: -0.3,
+      lineHeight: 24,
+    },
+    themeHeroCard: {
+      backgroundColor: theme.surface,
+      borderColor: theme.ghostBorder,
+      borderRadius: 26,
+      borderWidth: 1,
+      marginTop: 28,
+      paddingHorizontal: 20,
+      paddingVertical: 20,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 18 },
+      shadowOpacity: 0.1,
+      shadowRadius: 22,
+    },
+    themeHeroHeader: {
+      alignItems: 'flex-start',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 18,
+    },
+    themeHeroTitle: {
+      color: theme.textPrimary,
+      fontFamily: 'serif',
+      fontSize: 28,
+      fontWeight: '700',
+      letterSpacing: -0.7,
+      lineHeight: 34,
+      maxWidth: 230,
+    },
+    themeSanctumMark: {
+      backgroundColor: `${theme.textMuted}22`,
+      borderRadius: 18,
+      height: 40,
+      width: 40,
+    },
+    themeMetricGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+    },
+    themeMetricCard: {
+      backgroundColor: `${theme.surfaceHigh}f8`,
+      borderColor: theme.ghostBorder,
+      borderRadius: 22,
+      borderWidth: 1,
+      minHeight: 104,
+      paddingHorizontal: 14,
+      paddingVertical: 14,
+      width: '47%',
+    },
+    themeMetricLabel: {
+      color: theme.textMuted,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 1.1,
+      marginBottom: 10,
+      textTransform: 'uppercase',
+    },
+    themeMetricValue: {
+      color: theme.textPrimary,
+      fontSize: 17,
+      fontWeight: '700',
+      lineHeight: 22,
+    },
+    themePackRow: {
+      alignItems: 'center',
+      backgroundColor: `${theme.surfaceHigh}f2`,
+      borderColor: theme.ghostBorder,
+      borderRadius: 22,
+      borderWidth: 1,
+      flexDirection: 'row',
+      gap: 14,
+      marginTop: 14,
+      paddingHorizontal: 14,
+      paddingVertical: 14,
+    },
+    themePackSwatch: {
+      borderRadius: 14,
+      height: 42,
+      width: 42,
+    },
+    themePackSwatchForge: {
+      backgroundColor: '#2f2540',
+    },
+    themePackSwatchLuminous: {
+      backgroundColor: '#b1a37c',
+    },
+    themePackSwatchVoid: {
+      backgroundColor: '#1d90a9',
+    },
+    themePackCopy: {
+      flex: 1,
+    },
+    themePackTitle: {
+      color: theme.textPrimary,
+      fontSize: 20,
+      fontWeight: '700',
+      lineHeight: 24,
+    },
+    themePackSubtitle: {
+      color: theme.subtitle,
+      fontSize: 13,
+      lineHeight: 18,
+      marginTop: 4,
+    },
+    themePackSelectButton: {
+      alignItems: 'center',
+      backgroundColor: `${theme.surfaceHighest}f4`,
+      borderColor: theme.ghostBorder,
+      borderRadius: 999,
+      borderWidth: 1,
+      justifyContent: 'center',
+      minHeight: 40,
+      minWidth: 82,
+      paddingHorizontal: 16,
+    },
+    themePackSelectButtonCurrent: {
+      backgroundColor: `${theme.amber}1c`,
+      borderColor: `${theme.amber}4a`,
+    },
+    themePackSelectButtonText: {
+      color: theme.textPrimary,
+      fontSize: 13,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+    },
+    themePackSelectButtonTextCurrent: {
+      color: theme.amberSoft,
     },
     detailsProgressSection: {
       marginTop: 18,
@@ -5578,11 +6103,11 @@ function createStyles(theme: ThemePalette) {
       fontWeight: '700',
     },
     detailsProgressTrack: {
-      backgroundColor: `${theme.surfaceHigh}f0`,
+      backgroundColor: `${theme.surfaceHighest}f0`,
       borderColor: theme.ghostBorder,
       borderRadius: 999,
       borderWidth: 1,
-      height: 12,
+      height: 14,
       overflow: 'hidden',
     },
     detailsProgressFill: {
@@ -5608,14 +6133,14 @@ function createStyles(theme: ThemePalette) {
     boardActionCard: {
       backgroundColor: theme.surface,
       borderColor: theme.ghostBorder,
-      borderRadius: 24,
+      borderRadius: 28,
       borderWidth: 1,
       marginTop: 28,
-      padding: 20,
-      shadowColor: theme.amber,
-      shadowOffset: { width: 0, height: 14 },
-      shadowOpacity: 0.12,
-      shadowRadius: 24,
+      padding: 22,
+      shadowColor: theme.blue,
+      shadowOffset: { width: 0, height: 18 },
+      shadowOpacity: 0.08,
+      shadowRadius: 28,
     },
     sectionHeaderRow: {
       alignItems: 'center',
@@ -5627,22 +6152,22 @@ function createStyles(theme: ThemePalette) {
       flex: 1,
     },
     suggestionCard: {
-      backgroundColor: theme.surfaceLow,
+      backgroundColor: theme.surfaceHigh,
       borderColor: theme.ghostBorder,
-      borderRadius: 20,
+      borderRadius: 24,
       borderWidth: 1,
-      marginTop: 12,
-      padding: 16,
-      shadowColor: theme.blue,
-      shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: 0.08,
-      shadowRadius: 18,
+      marginTop: 14,
+      padding: 18,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 0.06,
+      shadowRadius: 20,
     },
     suggestionTitle: {
       color: theme.textPrimary,
-      fontSize: 18,
-      fontWeight: '700',
-      lineHeight: 24,
+      fontSize: 19,
+      fontWeight: '800',
+      lineHeight: 25,
     },
     questPoolHeaderRow: {
       alignItems: 'flex-start',
@@ -5652,6 +6177,17 @@ function createStyles(theme: ThemePalette) {
     },
     questPoolHeaderCopy: {
       flex: 1,
+    },
+    questPoolSearchInput: {
+      backgroundColor: `${theme.surfaceHigh}f2`,
+      borderColor: theme.ghostBorder,
+      borderRadius: 18,
+      borderWidth: 1,
+      color: theme.textPrimary,
+      fontSize: 16,
+      marginTop: 18,
+      paddingHorizontal: 18,
+      paddingVertical: 14,
     },
     questPoolChipRow: {
       gap: 10,
@@ -5664,6 +6200,92 @@ function createStyles(theme: ThemePalette) {
       flexDirection: 'row',
       gap: 10,
       marginTop: 14,
+    },
+    questPoolCompactCard: {
+      backgroundColor: theme.surface,
+      borderColor: theme.ghostBorder,
+      borderRadius: 24,
+      borderWidth: 1,
+      marginTop: 18,
+      paddingHorizontal: 18,
+      paddingVertical: 18,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 14 },
+      shadowOpacity: 0.08,
+      shadowRadius: 20,
+    },
+    questPoolCompactHeader: {
+      gap: 10,
+    },
+    questPoolCompactHeaderRow: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 10,
+      justifyContent: 'space-between',
+    },
+    questPoolCompactTagBadge: {
+      alignSelf: 'flex-start',
+      backgroundColor: `${theme.blue}18`,
+      borderColor: `${theme.blue}42`,
+      borderRadius: 12,
+      borderWidth: 1,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    questPoolCompactTagText: {
+      color: theme.blueSoft,
+      fontSize: 11,
+      fontWeight: '800',
+      textTransform: 'uppercase',
+    },
+    questPoolCompactDifficultyBadge: {
+      alignSelf: 'flex-start',
+      backgroundColor: `${theme.surfaceHighest}f2`,
+      borderColor: theme.ghostBorder,
+      borderRadius: 999,
+      borderWidth: 1,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+    },
+    questPoolCompactDifficultyText: {
+      color: theme.textMuted,
+      fontSize: 11,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+    },
+    questPoolCompactTitle: {
+      color: theme.textPrimary,
+      fontFamily: 'serif',
+      fontSize: 22,
+      fontWeight: '700',
+      letterSpacing: -0.4,
+      lineHeight: 28,
+    },
+    questPoolCompactDescription: {
+      color: theme.subtitle,
+      fontSize: 15,
+      lineHeight: 22,
+    },
+    questPoolCompactDueText: {
+      color: theme.textMuted,
+      fontSize: 13,
+      fontWeight: '600',
+      marginTop: 12,
+    },
+    questPoolCompactEditButton: {
+      alignItems: 'center',
+      backgroundColor: `${theme.surfaceHighest}f0`,
+      borderColor: theme.ghostBorder,
+      borderRadius: 16,
+      borderWidth: 1,
+      marginTop: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 13,
+    },
+    questPoolCompactEditButtonText: {
+      color: theme.textPrimary,
+      fontSize: 15,
+      fontWeight: '700',
     },
     poolActionButton: {
       alignItems: 'center',
@@ -5690,21 +6312,37 @@ function createStyles(theme: ThemePalette) {
     questDescription: {
       color: theme.subtitle,
       fontSize: 14,
-      lineHeight: 21,
-      marginTop: 10,
+      lineHeight: 22,
+      marginTop: 12,
+    },
+    questSectionHeader: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 10,
+      marginBottom: 14,
+    },
+    questSectionSignal: {
+      backgroundColor: theme.amber,
+      borderRadius: 999,
+      height: 4,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.26,
+      shadowRadius: 10,
+      width: 16,
     },
     completionBanner: {
-      backgroundColor: `${theme.success}18`,
-      borderColor: theme.success,
-      borderRadius: 24,
+      backgroundColor: `${theme.surfaceHigh}f7`,
+      borderColor: `${theme.success}55`,
+      borderRadius: 26,
       borderWidth: 1,
       marginTop: 18,
-      paddingHorizontal: 18,
-      paddingVertical: 16,
+      paddingHorizontal: 20,
+      paddingVertical: 18,
       shadowColor: theme.success,
-      shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: 0.18,
-      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 14 },
+      shadowOpacity: 0.16,
+      shadowRadius: 24,
     },
     completionBannerKicker: {
       color: theme.success,
@@ -5728,14 +6366,14 @@ function createStyles(theme: ThemePalette) {
     filterCard: {
       backgroundColor: theme.surface,
       borderColor: theme.ghostBorder,
-      borderRadius: 24,
+      borderRadius: 28,
       borderWidth: 1,
       marginTop: 20,
-      padding: 20,
+      padding: 22,
       shadowColor: theme.blue,
-      shadowOffset: { width: 0, height: 12 },
-      shadowOpacity: 0.1,
-      shadowRadius: 22,
+      shadowOffset: { width: 0, height: 16 },
+      shadowOpacity: 0.08,
+      shadowRadius: 24,
     },
     filterHeaderRow: {
       alignItems: 'center',
@@ -5752,15 +6390,15 @@ function createStyles(theme: ThemePalette) {
       alignItems: 'center',
       backgroundColor: theme.amber,
       borderColor: `${theme.amberSoft}80`,
-      borderRadius: 18,
+      borderRadius: 20,
       borderWidth: 1,
-      marginTop: 10,
+      marginTop: 12,
       paddingHorizontal: 18,
-      paddingVertical: 16,
+      paddingVertical: 17,
       shadowColor: theme.amber,
-      shadowOffset: { width: 0, height: 12 },
-      shadowOpacity: 0.24,
-      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 14 },
+      shadowOpacity: 0.2,
+      shadowRadius: 20,
     },
     primaryActionText: {
       color: theme.buttonText,
@@ -5770,17 +6408,17 @@ function createStyles(theme: ThemePalette) {
     },
     secondaryActionButton: {
       alignItems: 'center',
-      backgroundColor: `${theme.blue}18`,
-      borderColor: `${theme.blue}45`,
-      borderRadius: 18,
+      backgroundColor: `${theme.surfaceHigh}f7`,
+      borderColor: theme.ghostBorder,
+      borderRadius: 20,
       borderWidth: 1,
       marginTop: 12,
       paddingHorizontal: 18,
-      paddingVertical: 16,
+      paddingVertical: 17,
       shadowColor: theme.blue,
-      shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: 0.12,
-      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 0.06,
+      shadowRadius: 18,
     },
     secondaryActionText: {
       color: theme.blueSoft,
@@ -5790,7 +6428,7 @@ function createStyles(theme: ThemePalette) {
     },
     inlineUtilityButton: {
       alignItems: 'center',
-      backgroundColor: `${theme.surfaceHigh}f2`,
+      backgroundColor: `${theme.surfaceHighest}e8`,
       borderColor: theme.ghostBorder,
       borderRadius: 999,
       borderWidth: 1,
@@ -5808,27 +6446,27 @@ function createStyles(theme: ThemePalette) {
     formCard: {
       backgroundColor: theme.surface,
       borderColor: theme.ghostBorder,
-      borderRadius: 24,
+      borderRadius: 28,
       borderWidth: 1,
       marginTop: 28,
-      padding: 20,
-      shadowColor: theme.amber,
-      shadowOffset: { width: 0, height: 14 },
-      shadowOpacity: 0.1,
-      shadowRadius: 24,
+      padding: 22,
+      shadowColor: theme.blue,
+      shadowOffset: { width: 0, height: 18 },
+      shadowOpacity: 0.08,
+      shadowRadius: 26,
     },
     formIntro: {
       color: theme.subtitle,
       fontSize: 14,
-      lineHeight: 21,
+      lineHeight: 22,
       marginBottom: 18,
-      marginTop: -4,
+      marginTop: -2,
     },
     formHint: {
       color: theme.textMuted,
       fontSize: 13,
-      lineHeight: 20,
-      marginTop: -4,
+      lineHeight: 19,
+      marginTop: -2,
     },
     formField: {
       marginTop: 14,
@@ -5841,19 +6479,19 @@ function createStyles(theme: ThemePalette) {
       textTransform: 'uppercase',
     },
     titleInput: {
-      backgroundColor: theme.surfaceLow,
+      backgroundColor: theme.surfaceHigh,
       borderColor: theme.ghostBorder,
-      borderRadius: 18,
+      borderRadius: 20,
       borderWidth: 1,
       color: theme.textPrimary,
       fontSize: 16,
       paddingHorizontal: 16,
-      paddingVertical: 14,
+      paddingVertical: 15,
     },
     notesInput: {
-      backgroundColor: theme.surfaceLow,
+      backgroundColor: theme.surfaceHigh,
       borderColor: theme.ghostBorder,
-      borderRadius: 18,
+      borderRadius: 20,
       borderWidth: 1,
       color: theme.textPrimary,
       fontSize: 15,
@@ -5888,7 +6526,7 @@ function createStyles(theme: ThemePalette) {
       gap: 10,
     },
     optionChip: {
-      backgroundColor: theme.surfaceLow,
+      backgroundColor: theme.surfaceHigh,
       borderColor: theme.ghostBorder,
       borderRadius: 999,
       borderWidth: 1,
@@ -5896,8 +6534,8 @@ function createStyles(theme: ThemePalette) {
       paddingVertical: 10,
     },
     optionChipSelected: {
-      backgroundColor: `${theme.blue}1b`,
-      borderColor: `${theme.blue}4d`,
+      backgroundColor: `${theme.blue}16`,
+      borderColor: `${theme.blue}30`,
     },
     optionChipText: {
       color: theme.textMuted,
@@ -5911,15 +6549,15 @@ function createStyles(theme: ThemePalette) {
       alignItems: 'center',
       backgroundColor: theme.amber,
       borderColor: `${theme.amberSoft}80`,
-      borderRadius: 18,
+      borderRadius: 20,
       borderWidth: 1,
       marginTop: 22,
       paddingHorizontal: 18,
-      paddingVertical: 16,
+      paddingVertical: 17,
       shadowColor: theme.amber,
-      shadowOffset: { width: 0, height: 12 },
-      shadowOpacity: 0.24,
-      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 14 },
+      shadowOpacity: 0.2,
+      shadowRadius: 20,
     },
     saveButtonDisabled: {
       backgroundColor: theme.buttonDisabled,
@@ -5935,16 +6573,16 @@ function createStyles(theme: ThemePalette) {
       marginTop: 28,
     },
     emptyStateCard: {
-      backgroundColor: theme.surfaceLow,
+      backgroundColor: theme.surfaceHigh,
       borderColor: theme.ghostBorder,
-      borderRadius: 22,
+      borderRadius: 26,
       borderWidth: 1,
       marginTop: 28,
-      padding: 18,
-      shadowColor: theme.blue,
-      shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: 0.08,
-      shadowRadius: 16,
+      padding: 20,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 0.06,
+      shadowRadius: 18,
     },
     emptyStateTitle: {
       color: theme.textPrimary,
@@ -5970,31 +6608,74 @@ function createStyles(theme: ThemePalette) {
     reminderCard: {
       backgroundColor: theme.surface,
       borderColor: `${theme.blue}42`,
-      borderRadius: 24,
+      borderRadius: 28,
       borderWidth: 1,
-      padding: 20,
+      padding: 22,
       shadowColor: theme.blue,
-      shadowOffset: { width: 0, height: 18 },
-      shadowOpacity: 0.24,
-      shadowRadius: 26,
+      shadowOffset: { width: 0, height: 24 },
+      shadowOpacity: 0.18,
+      shadowRadius: 30,
     },
     sectionTitle: {
       color: theme.textPrimary,
-      fontSize: 22,
-      fontWeight: '700',
+      fontSize: 24,
+      fontWeight: '800',
+      letterSpacing: -0.4,
       marginBottom: 14,
     },
     questCard: {
-      backgroundColor: theme.surfaceLow,
+      backgroundColor: theme.surfaceHigh,
+      borderColor: theme.ghostBorder,
+      borderRadius: 26,
+      borderWidth: 1,
+      marginBottom: 14,
+      padding: 20,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 0.06,
+      shadowRadius: 20,
+    },
+    questCardTopRow: {
+      alignItems: 'stretch',
+      flexDirection: 'row',
+      gap: 16,
+    },
+    questArtTile: {
+      backgroundColor: `${theme.surfaceHighest}f2`,
       borderColor: theme.ghostBorder,
       borderRadius: 22,
       borderWidth: 1,
-      marginBottom: 14,
-      padding: 18,
-      shadowColor: theme.blue,
-      shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: 0.08,
-      shadowRadius: 18,
+      minHeight: 90,
+      overflow: 'hidden',
+      position: 'relative',
+      width: 82,
+    },
+    questArtShapePrimary: {
+      backgroundColor: `${theme.amber}45`,
+      borderRadius: 16,
+      height: 34,
+      left: 14,
+      position: 'absolute',
+      top: 14,
+      width: 34,
+    },
+    questArtShapeSecondary: {
+      backgroundColor: `${theme.blue}34`,
+      borderRadius: 999,
+      bottom: 14,
+      height: 28,
+      position: 'absolute',
+      right: 16,
+      width: 28,
+    },
+    questArtShapeAccent: {
+      backgroundColor: `${theme.blue}70`,
+      borderRadius: 999,
+      height: 48,
+      position: 'absolute',
+      right: 12,
+      top: 18,
+      width: 10,
     },
     questCardCompleted: {
       backgroundColor: `${theme.success}12`,
@@ -6022,6 +6703,19 @@ function createStyles(theme: ThemePalette) {
       gap: 10,
       marginLeft: 12,
     },
+    questHeaderMeta: {
+      flex: 1,
+      justifyContent: 'space-between',
+    },
+    questCategoryLine: {
+      color: theme.textMuted,
+      flex: 1,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 1.1,
+      marginRight: 12,
+      textTransform: 'uppercase',
+    },
     expandChevronButton: {
       alignItems: 'center',
       justifyContent: 'center',
@@ -6036,9 +6730,60 @@ function createStyles(theme: ThemePalette) {
     questTitle: {
       color: theme.textPrimary,
       flex: 1,
-      fontSize: 18,
+      fontSize: 19,
+      fontWeight: '800',
+      lineHeight: 25,
+    },
+    questRewardRow: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 10,
+      marginTop: 12,
+    },
+    questRewardBadge: {
+      alignSelf: 'flex-start',
+      backgroundColor: `${theme.amber}18`,
+      borderColor: `${theme.amber}45`,
+      borderRadius: 999,
+      borderWidth: 1,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+    },
+    questRewardText: {
+      color: theme.amberSoft,
+      fontSize: 12,
       fontWeight: '700',
-      lineHeight: 24,
+      letterSpacing: 0.3,
+    },
+    questMiniMetaText: {
+      color: theme.subtitle,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    questCardTimelineRow: {
+      alignItems: 'center',
+      borderTopColor: theme.ghostBorder,
+      borderTopWidth: 1,
+      flexDirection: 'row',
+      gap: 12,
+      justifyContent: 'space-between',
+      marginTop: 16,
+      paddingTop: 14,
+    },
+    questTimelineText: {
+      color: theme.subtitle,
+      flex: 1,
+      fontSize: 13,
+      lineHeight: 18,
+    },
+    questTimelineState: {
+      color: theme.textMuted,
+      fontSize: 12,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+    },
+    questTimelineStateUrgent: {
+      color: theme.amberSoft,
     },
     questCardHint: {
       color: theme.textMuted,
@@ -6072,13 +6817,13 @@ function createStyles(theme: ThemePalette) {
       marginTop: 16,
     },
     metaPill: {
-      backgroundColor: `${theme.surfaceHigh}f2`,
-      borderRadius: 16,
+      backgroundColor: `${theme.surfaceHighest}ef`,
+      borderRadius: 18,
       borderWidth: 1,
       borderColor: theme.ghostBorder,
       flex: 1,
-      paddingHorizontal: 12,
-      paddingVertical: 12,
+      paddingHorizontal: 13,
+      paddingVertical: 13,
     },
     metaPillHighlight: {
       backgroundColor: `${theme.blue}1f`,
@@ -6100,13 +6845,13 @@ function createStyles(theme: ThemePalette) {
     },
     completeButton: {
       alignItems: 'center',
-      backgroundColor: `${theme.blue}18`,
-      borderColor: `${theme.blue}48`,
-      borderRadius: 16,
+      backgroundColor: `${theme.blue}12`,
+      borderColor: `${theme.blue}28`,
+      borderRadius: 18,
       borderWidth: 1,
       marginTop: 16,
       paddingHorizontal: 16,
-      paddingVertical: 12,
+      paddingVertical: 13,
     },
     completeButtonText: {
       color: theme.blueSoft,
@@ -6115,13 +6860,13 @@ function createStyles(theme: ThemePalette) {
     },
     cardSecondaryButton: {
       alignItems: 'center',
-      backgroundColor: `${theme.surfaceHigh}ee`,
+      backgroundColor: `${theme.surfaceHighest}ee`,
       borderColor: theme.ghostBorder,
-      borderRadius: 16,
+      borderRadius: 18,
       borderWidth: 1,
       marginTop: 12,
       paddingHorizontal: 16,
-      paddingVertical: 12,
+      paddingVertical: 13,
     },
     cardSecondaryButtonText: {
       color: theme.textPrimary,
@@ -6141,10 +6886,10 @@ function createStyles(theme: ThemePalette) {
       alignItems: 'center',
       backgroundColor: theme.doneBadgeBackground,
       borderColor: theme.success,
-      borderRadius: 16,
+      borderRadius: 18,
       borderWidth: 1,
       paddingHorizontal: 16,
-      paddingVertical: 12,
+      paddingVertical: 13,
     },
     inlineDangerButtonText: {
       color: theme.success,
@@ -6155,11 +6900,11 @@ function createStyles(theme: ThemePalette) {
       alignItems: 'center',
       backgroundColor: theme.doneBadgeBackground,
       borderColor: theme.success,
-      borderRadius: 18,
+      borderRadius: 20,
       borderWidth: 1,
       marginTop: 12,
       paddingHorizontal: 18,
-      paddingVertical: 16,
+      paddingVertical: 17,
     },
     deleteButtonText: {
       color: theme.success,
@@ -6172,15 +6917,15 @@ function createStyles(theme: ThemePalette) {
       marginTop: 8,
     },
     progressMetricCard: {
-      backgroundColor: theme.surfaceLow,
+      backgroundColor: theme.surfaceHigh,
       borderColor: theme.ghostBorder,
-      borderRadius: 20,
+      borderRadius: 24,
       borderWidth: 1,
-      paddingHorizontal: 16,
-      paddingVertical: 16,
-      shadowColor: theme.amber,
+      paddingHorizontal: 18,
+      paddingVertical: 18,
+      shadowColor: theme.blue,
       shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: 0.08,
+      shadowOpacity: 0.05,
       shadowRadius: 16,
     },
     progressMetricLabel: {
@@ -6195,15 +6940,482 @@ function createStyles(theme: ThemePalette) {
       fontSize: 24,
       fontWeight: '700',
     },
+    historyPageTitle: {
+      fontFamily: 'serif',
+      letterSpacing: -0.8,
+    },
+    historySummaryRow: {
+      flexDirection: 'row',
+      gap: 14,
+      marginTop: 26,
+    },
+    historySummaryCard: {
+      backgroundColor: theme.surface,
+      borderColor: theme.ghostBorder,
+      borderRadius: 22,
+      borderWidth: 1,
+      flex: 1,
+      height: 104,
+      overflow: 'hidden',
+      justifyContent: 'space-between',
+      paddingBottom: 14,
+      paddingLeft: 20,
+      paddingRight: 18,
+      paddingTop: 14,
+      position: 'relative',
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 16 },
+      shadowOpacity: 0.08,
+      shadowRadius: 22,
+    },
+    historySummaryCardWarm: {
+      shadowColor: theme.amber,
+    },
+    historySummaryCardRose: {
+      shadowColor: theme.blue,
+    },
+    historySummaryAccent: {
+      backgroundColor: theme.amber,
+      borderBottomLeftRadius: 22,
+      borderTopLeftRadius: 22,
+      bottom: 0,
+      left: 0,
+      position: 'absolute',
+      top: 0,
+      width: 7,
+    },
+    historySummaryAccentRose: {
+      backgroundColor: '#ffb4b4',
+    },
+    historySummaryLabel: {
+      color: theme.textMuted,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 1.6,
+      lineHeight: 16,
+      maxWidth: 96,
+      textTransform: 'uppercase',
+    },
+    historySummaryValueRow: {
+      alignItems: 'flex-end',
+      flexDirection: 'row',
+      gap: 8,
+    },
+    historySummaryValue: {
+      color: theme.amberSoft,
+      fontFamily: 'serif',
+      fontSize: 40,
+      fontWeight: '700',
+      letterSpacing: -1,
+      lineHeight: 42,
+    },
+    historySummaryGlyph: {
+      color: theme.amber,
+      fontSize: 16,
+      fontWeight: '800',
+      lineHeight: 18,
+      marginBottom: 6,
+    },
+    historyOverviewLeadCard: {
+      backgroundColor: theme.surface,
+      borderColor: theme.ghostBorder,
+      borderRadius: 28,
+      borderWidth: 1,
+      marginTop: 26,
+      paddingHorizontal: 20,
+      paddingVertical: 20,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 18 },
+      shadowOpacity: 0.08,
+      shadowRadius: 24,
+    },
+    historyOverviewLeadLabel: {
+      color: theme.textMuted,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 1.2,
+      marginBottom: 10,
+      textTransform: 'uppercase',
+    },
+    historyOverviewLeadValue: {
+      color: theme.textPrimary,
+      fontSize: 38,
+      fontWeight: '800',
+      letterSpacing: -1,
+      lineHeight: 42,
+    },
+    historyOverviewLeadCaption: {
+      color: theme.subtitle,
+      fontSize: 14,
+      lineHeight: 22,
+      marginTop: 8,
+    },
+    historyOverviewGrid: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 14,
+    },
+    historyOverviewMetricCard: {
+      backgroundColor: `${theme.surfaceHigh}f8`,
+      borderColor: theme.ghostBorder,
+      borderRadius: 22,
+      borderWidth: 1,
+      flex: 1,
+      minHeight: 104,
+      paddingHorizontal: 14,
+      paddingVertical: 16,
+    },
+    historyOverviewMetricLabel: {
+      color: theme.textMuted,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 1.1,
+      marginBottom: 10,
+      textTransform: 'uppercase',
+    },
+    historyOverviewMetricValue: {
+      color: theme.textPrimary,
+      fontSize: 28,
+      fontWeight: '800',
+      letterSpacing: -0.4,
+    },
+    historyFilterCard: {
+      marginTop: 24,
+      padding: 0,
+    },
+    historySegmentRow: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 0,
+      marginBottom: 12,
+    },
+    historySegmentChip: {
+      alignItems: 'center',
+      backgroundColor: `${theme.surfaceHighest}e8`,
+      borderColor: theme.ghostBorder,
+      borderRadius: 999,
+      borderWidth: 1,
+      flexDirection: 'row',
+      gap: 10,
+      minHeight: 48,
+      paddingHorizontal: 18,
+      paddingVertical: 12,
+    },
+    historySegmentChipSelected: {
+      backgroundColor: `${theme.amber}1c`,
+      borderColor: `${theme.amber}55`,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.14,
+      shadowRadius: 16,
+    },
+    historySegmentChipText: {
+      color: theme.textPrimary,
+      fontSize: 15,
+      fontWeight: '600',
+    },
+    historySegmentChipTextSelected: {
+      color: theme.amberSoft,
+      fontWeight: '700',
+    },
+    historyStatusIndicator: {
+      borderRadius: 999,
+      height: 8,
+      width: 8,
+    },
+    historyStatusIndicatorDone: {
+      backgroundColor: theme.blue,
+    },
+    historyStatusIndicatorFailed: {
+      backgroundColor: '#ffb4b4',
+    },
+    historyFilterHeader: {
+      alignItems: 'flex-start',
+      flexDirection: 'row',
+      gap: 12,
+      justifyContent: 'space-between',
+      marginBottom: 12,
+    },
+    historyFilterHeaderCopy: {
+      flex: 1,
+    },
+    historyViewBadge: {
+      alignSelf: 'flex-start',
+      backgroundColor: `${theme.surfaceHigh}f4`,
+      borderColor: theme.ghostBorder,
+      borderRadius: 999,
+      borderWidth: 1,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+    },
+    historyViewBadgeText: {
+      color: theme.blueSoft,
+      fontSize: 12,
+      fontWeight: '700',
+      letterSpacing: 0.2,
+    },
+    historyQuestCard: {
+      backgroundColor: theme.surface,
+      borderColor: theme.ghostBorder,
+      borderRadius: 28,
+      borderWidth: 1,
+      marginTop: 16,
+      paddingHorizontal: 18,
+      paddingVertical: 18,
+      shadowColor: theme.blue,
+      shadowOffset: { width: 0, height: 18 },
+      shadowOpacity: 0.08,
+      shadowRadius: 24,
+    },
+    historyGroupSection: {
+      marginTop: 22,
+    },
+    historyGroupLabel: {
+      color: theme.subtitle,
+      fontFamily: 'serif',
+      fontSize: 22,
+      fontStyle: 'italic',
+      lineHeight: 28,
+      marginBottom: 16,
+      marginLeft: 6,
+    },
+    historyBadgeRow: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 12,
+      justifyContent: 'space-between',
+    },
+    historyBadgeGroup: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+    },
+    historyTagBadge: {
+      backgroundColor: `${theme.blue}18`,
+      borderColor: `${theme.blue}42`,
+      borderRadius: 12,
+      borderWidth: 1,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+    },
+    historyTagBadgeText: {
+      color: theme.blueSoft,
+      fontSize: 11,
+      fontWeight: '800',
+      textTransform: 'uppercase',
+    },
+    historyPathBadge: {
+      backgroundColor: `${theme.amber}16`,
+      borderColor: `${theme.amber}42`,
+      borderRadius: 12,
+      borderWidth: 1,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+    },
+    historyPathBadgeText: {
+      color: theme.amberSoft,
+      fontSize: 11,
+      fontWeight: '800',
+      textTransform: 'uppercase',
+    },
+    historyStatusRail: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 8,
+      marginLeft: 12,
+    },
+    historyStatusIcon: {
+      color: theme.blueSoft,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    historyStatusText: {
+      fontSize: 11,
+      fontWeight: '800',
+      letterSpacing: 1.1,
+      textTransform: 'uppercase',
+    },
+    historyStatusTextDone: {
+      color: theme.blueSoft,
+    },
+    historyStatusTextFailed: {
+      color: theme.amberSoft,
+    },
+    historyQuestTitle: {
+      color: theme.textPrimary,
+      fontFamily: 'serif',
+      fontSize: 25,
+      fontWeight: '700',
+      letterSpacing: -0.5,
+      lineHeight: 32,
+      marginTop: 20,
+    },
+    historyQuestDescription: {
+      color: theme.subtitle,
+      fontSize: 16,
+      lineHeight: 22,
+      marginTop: 12,
+      maxWidth: '92%',
+    },
+    historyQuestDivider: {
+      backgroundColor: theme.ghostBorder,
+      height: 1,
+      marginTop: 18,
+      opacity: 0.9,
+      width: '100%',
+    },
+    historyFooterRow: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 18,
+    },
+    historyResolvedRow: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      flex: 1,
+      gap: 10,
+      marginRight: 12,
+    },
+    historyResolvedIcon: {
+      color: theme.textMuted,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    historyResolvedText: {
+      color: theme.subtitle,
+      fontSize: 15,
+      fontWeight: '600',
+    },
+    historyXpBadge: {
+      alignItems: 'center',
+      backgroundColor: `${theme.blue}18`,
+      borderColor: `${theme.blue}42`,
+      borderRadius: 14,
+      borderWidth: 1,
+      justifyContent: 'center',
+      minHeight: 42,
+      minWidth: 110,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+    },
+    historyXpBadgeText: {
+      color: theme.blueSoft,
+      fontSize: 14,
+      fontWeight: '800',
+      letterSpacing: 0.2,
+    },
+    historySupportRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+      marginTop: 14,
+    },
+    historySupportText: {
+      color: theme.textMuted,
+      fontSize: 12,
+      lineHeight: 18,
+    },
+    streakMetricStack: {
+      gap: 12,
+      marginTop: 28,
+    },
+    streakSpotlightCard: {
+      backgroundColor: theme.surface,
+      borderColor: theme.ghostBorder,
+      borderRadius: 26,
+      borderWidth: 1,
+      paddingHorizontal: 20,
+      paddingVertical: 18,
+      shadowColor: theme.blue,
+      shadowOffset: { width: 0, height: 16 },
+      shadowOpacity: 0.08,
+      shadowRadius: 22,
+    },
+    streakSpotlightCardPrimary: {
+      backgroundColor: `${theme.amber}10`,
+      borderColor: `${theme.amber}42`,
+      shadowColor: theme.amber,
+      shadowOpacity: 0.12,
+    },
+    streakSpotlightLabel: {
+      color: theme.textMuted,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 1.2,
+      marginBottom: 8,
+      textTransform: 'uppercase',
+    },
+    streakSpotlightValue: {
+      color: theme.textPrimary,
+      fontSize: 28,
+      fontWeight: '800',
+      letterSpacing: -0.6,
+    },
+    streakSpotlightValuePrimary: {
+      color: theme.amberSoft,
+    },
+    streakSpotlightBody: {
+      color: theme.subtitle,
+      fontSize: 14,
+      lineHeight: 22,
+      marginTop: 10,
+    },
+    calendarHeaderRow: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 22,
+    },
+    calendarNavRow: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    streakCalendarCard: {
+      backgroundColor: theme.surface,
+      borderColor: theme.ghostBorder,
+      borderRadius: 28,
+      borderWidth: 1,
+      marginTop: 28,
+      paddingHorizontal: 18,
+      paddingVertical: 18,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 18 },
+      shadowOpacity: 0.08,
+      shadowRadius: 24,
+    },
+    streakCalendarMonth: {
+      color: theme.textPrimary,
+      fontFamily: 'serif',
+      fontSize: 24,
+      fontWeight: '700',
+      letterSpacing: -0.6,
+      lineHeight: 30,
+    },
+    calendarNavButton: {
+      alignItems: 'center',
+      backgroundColor: `${theme.surfaceHigh}f4`,
+      borderColor: theme.ghostBorder,
+      borderRadius: 14,
+      borderWidth: 1,
+      height: 46,
+      justifyContent: 'center',
+      width: 46,
+    },
+    calendarNavButtonText: {
+      color: theme.amberSoft,
+      fontSize: 22,
+      fontWeight: '700',
+    },
     calendarWeekRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      marginBottom: 12,
+      marginBottom: 16,
     },
     calendarWeekday: {
       color: theme.textMuted,
       flex: 1,
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: '700',
       textAlign: 'center',
       textTransform: 'uppercase',
@@ -6211,54 +7423,92 @@ function createStyles(theme: ThemePalette) {
     calendarGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 8,
+      gap: 10,
     },
     calendarDay: {
       alignItems: 'center',
-      backgroundColor: theme.surfaceLow,
-      borderColor: theme.ghostBorder,
-      borderRadius: 16,
+      borderRadius: 14,
       borderWidth: 1,
-      height: 42,
+      height: 48,
       justifyContent: 'center',
-      width: '13%',
+      position: 'relative',
+      width: '12.8%',
     },
-    calendarDayActive: {
-      backgroundColor: `${theme.blue}22`,
-      borderColor: `${theme.blue}55`,
+    calendarDayCurrentMonth: {
+      backgroundColor: 'transparent',
+      borderColor: 'transparent',
     },
-    calendarDayToday: {
-      borderColor: theme.amber,
+    calendarDayOutsideMonth: {
+      backgroundColor: 'transparent',
+      borderColor: 'transparent',
+      opacity: 0.58,
+    },
+    calendarDayMomentum: {
+      backgroundColor: `${theme.amber}16`,
+      borderColor: `${theme.amber}70`,
       shadowColor: theme.amber,
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: 0.18,
-      shadowRadius: 10,
+      shadowRadius: 14,
+    },
+    calendarDayActive: {
+      backgroundColor: `${theme.blue}18`,
+      borderColor: `${theme.blue}72`,
+      shadowColor: theme.blue,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.16,
+      shadowRadius: 14,
+    },
+    calendarDayToday: {
+      borderColor: theme.amber,
+      backgroundColor: theme.amber,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.22,
+      shadowRadius: 16,
     },
     calendarDayText: {
       color: theme.textMuted,
-      fontSize: 14,
+      fontSize: 16,
       fontWeight: '600',
+    },
+    calendarDayTextOutsideMonth: {
+      color: theme.placeholder,
+    },
+    calendarDayTextMomentum: {
+      color: theme.amberSoft,
+      fontWeight: '700',
     },
     calendarDayTextActive: {
       color: theme.blueSoft,
       fontWeight: '700',
     },
     calendarDayTextToday: {
-      color: theme.amberSoft,
+      color: theme.buttonText,
     },
-    calendarDayEmpty: {
-      height: 42,
-      width: '13%',
+    calendarTodayDot: {
+      borderRadius: 999,
+      height: 9,
+      position: 'absolute',
+      right: -2,
+      top: -2,
+      width: 9,
+    },
+    calendarTodayDotActive: {
+      backgroundColor: theme.blue,
+    },
+    calendarTodayDotPassive: {
+      backgroundColor: theme.blueSoft,
     },
     achievementGrid: {
       gap: 12,
       marginTop: 8,
     },
     achievementCard: {
-      borderRadius: 20,
+      borderRadius: 24,
       borderWidth: 1,
-      paddingHorizontal: 16,
-      paddingVertical: 16,
+      paddingHorizontal: 18,
+      paddingVertical: 18,
     },
     achievementCardUnlocked: {
       backgroundColor: theme.activeBadgeBackground,
@@ -6301,6 +7551,115 @@ function createStyles(theme: ThemePalette) {
     },
     achievementStatusLocked: {
       color: theme.textMuted,
+    },
+    streakInsightText: {
+      color: theme.subtitle,
+      fontSize: 15,
+      lineHeight: 23,
+    },
+    detailsMetricGrid: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 22,
+    },
+    detailsMetricCard: {
+      backgroundColor: `${theme.surfaceHigh}f8`,
+      borderColor: theme.ghostBorder,
+      borderRadius: 22,
+      borderWidth: 1,
+      flex: 1,
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+    },
+    detailsMetricLabel: {
+      color: theme.textMuted,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 1.1,
+      marginBottom: 8,
+      textTransform: 'uppercase',
+    },
+    detailsMetricValue: {
+      color: theme.textPrimary,
+      fontSize: 21,
+      fontWeight: '800',
+      lineHeight: 26,
+    },
+    detailsTimelineStrip: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 16,
+    },
+    detailsTimelineItem: {
+      backgroundColor: `${theme.surfaceHigh}f8`,
+      borderColor: theme.ghostBorder,
+      borderRadius: 20,
+      borderWidth: 1,
+      flex: 1,
+      paddingHorizontal: 14,
+      paddingVertical: 14,
+    },
+    detailsTimelineValue: {
+      color: theme.textPrimary,
+      fontSize: 14,
+      fontWeight: '700',
+      lineHeight: 20,
+    },
+    detailsGuidanceCard: {
+      backgroundColor: `${theme.amber}0f`,
+      borderColor: `${theme.amber}40`,
+      borderRadius: 26,
+      borderWidth: 1,
+      marginTop: 24,
+      paddingHorizontal: 20,
+      paddingVertical: 18,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 14 },
+      shadowOpacity: 0.08,
+      shadowRadius: 20,
+    },
+    detailsGuidanceTitle: {
+      color: theme.textPrimary,
+      fontSize: 22,
+      fontWeight: '800',
+      letterSpacing: -0.3,
+      marginBottom: 10,
+    },
+    detailsGuidanceText: {
+      color: theme.subtitle,
+      fontSize: 15,
+      lineHeight: 23,
+    },
+    detailsComponentList: {
+      gap: 12,
+      marginTop: 2,
+    },
+    detailsComponentRow: {
+      alignItems: 'flex-start',
+      flexDirection: 'row',
+      gap: 12,
+    },
+    detailsComponentMarker: {
+      alignItems: 'center',
+      backgroundColor: `${theme.blue}18`,
+      borderColor: `${theme.blue}42`,
+      borderRadius: 999,
+      borderWidth: 1,
+      height: 30,
+      justifyContent: 'center',
+      width: 30,
+    },
+    detailsComponentMarkerText: {
+      color: theme.blueSoft,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    detailsComponentText: {
+      color: theme.textPrimary,
+      flex: 1,
+      fontSize: 14,
+      lineHeight: 22,
+      paddingTop: 4,
     },
   });
 }
