@@ -1046,11 +1046,11 @@ function buildThemeSanctum(gameState, appConfig) {
         : {
             name: 'Ethereal Forge',
             description:
-              'Amber gold and deep slate.',
+              'Gold & slate',
             accentEnergy:
               gameState.themeMode === 'dark'
-                ? 'Amber #FFBF00'
-                : 'Sun Gold',
+                ? 'Amber'
+                : 'Sun',
             surfaceTone:
               gameState.themeMode === 'dark'
                 ? 'Deep Stone'
@@ -1066,7 +1066,7 @@ function buildThemeSanctum(gameState, appConfig) {
       gameState.themeMode === 'dark' ? 'Dark Alchemist' : 'Light Alchemist',
     accentEnergyLabel: activeThemePack.accentEnergy,
     surfaceToneLabel: activeThemePack.surfaceTone,
-    realmNotesLabel: `System v${appConfig.configVersion}`,
+    realmNotesLabel: `${appConfig.configVersion}.0.0`,
     availableEssencesTitle: 'Available Essences',
     availableEssencesIntro:
       'These packs are described by the backend first so the app can evolve into a more configurable visual system over time.',
@@ -1074,7 +1074,7 @@ function buildThemeSanctum(gameState, appConfig) {
       {
         id: 'ethereal-forge',
         name: 'Ethereal Forge',
-        description: 'Amber gold & deep slate',
+        description: 'Gold & slate',
         accentEnergy: 'Amber Gold',
         surfaceTone: 'Deep Slate',
         statusLabel:
@@ -1083,7 +1083,7 @@ function buildThemeSanctum(gameState, appConfig) {
       {
         id: 'luminous-paladin',
         name: 'Luminous Paladin',
-        description: 'Radiant gold & marble',
+        description: 'Gold & marble',
         accentEnergy: 'Sunsteel',
         surfaceTone: 'Ivory Plate',
         statusLabel:
@@ -1092,7 +1092,7 @@ function buildThemeSanctum(gameState, appConfig) {
       {
         id: 'void-drifter',
         name: 'Void Drifter',
-        description: 'Celestial teal & starlight',
+        description: 'Teal & starlight',
         accentEnergy: 'Nebula Cyan',
         surfaceTone: 'Void Indigo',
         statusLabel: activeThemePackId === 'void-drifter' ? 'Current' : 'Dormant',
@@ -2229,6 +2229,3 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`QuestForge backend running at http://localhost:${PORT}`);
 });
-
-
-

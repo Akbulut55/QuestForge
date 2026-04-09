@@ -2159,12 +2159,12 @@ function ThemeToggle({
 
   return (
     <Pressable
-      accessibilityLabel={nextThemeLabel}
-      accessibilityRole="button"
       onPress={onToggleTheme}
-      style={styles.themeToggleButton}
+      style={styles.secondaryActionButton}
       testID="theme-toggle-button">
-      <Text style={styles.themeToggleText}>{nextThemeIcon}</Text>
+      <Text style={styles.secondaryActionText}>
+        {nextThemeIcon ? nextThemeLabel : nextThemeLabel}
+      </Text>
     </Pressable>
   );
 }
@@ -3145,16 +3145,6 @@ function ProgressScreen({
     <ScrollView
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}>
-      <View style={styles.screenHeader}>
-        <View style={styles.screenHeaderSpacer} />
-        <View style={styles.screenHeaderSpacer} />
-        <ThemeToggle
-          onToggleTheme={onToggleTheme}
-          styles={styles}
-          themeMode={themeMode}
-        />
-      </View>
-
       <Text style={styles.kicker}>{appConfig.progressKicker}</Text>
       <Text style={styles.title}>{appConfig.progressTitle}</Text>
       <Text style={styles.subtitle}>
@@ -3168,7 +3158,6 @@ function ProgressScreen({
             <Text style={styles.heroEyebrow}>{appConfig.progressHeroEyebrow}</Text>
             <Text style={styles.heroTitle}>Rank Title: {hero.rankTitle}</Text>
           </View>
-          <View style={styles.heroOrb} />
         </View>
 
         <View style={styles.heroStatsRow}>
@@ -3251,6 +3240,12 @@ function ProgressScreen({
           />
         </View>
 
+        <ThemeToggle
+          onToggleTheme={onToggleTheme}
+          styles={styles}
+          themeMode={themeMode}
+        />
+
         <Pressable
           onPress={onNavigateToHistory}
           style={styles.secondaryActionButton}
@@ -3306,7 +3301,7 @@ function ProgressScreen({
 
 function RealmCodexScreen({
   isRefreshingRealmCodex,
-  onBack,
+  onBack: _onBack,
   onRefresh,
   onToggleTheme: _onToggleTheme,
   realmCodex,
@@ -3328,17 +3323,6 @@ function RealmCodexScreen({
     <ScrollView
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}>
-      <View style={styles.screenHeader}>
-        <Pressable
-          onPress={onBack}
-          style={styles.backButton}
-          testID="back-from-realm-codex">
-          <Text style={styles.backButtonText}>Back</Text>
-        </Pressable>
-        <View style={styles.screenHeaderSpacer} />
-        <View style={styles.screenHeaderSpacer} />
-      </View>
-
       <Text style={styles.kicker}>{realmCodex.kicker}</Text>
       <Text style={styles.title}>{realmCodex.title}</Text>
       <Text style={styles.subtitle}>{realmCodex.subtitle}</Text>
@@ -3477,7 +3461,7 @@ function RealmCodexScreen({
 
 function ThemeSanctumScreen({
   isRefreshingThemeSanctum,
-  onBack,
+  onBack: _onBack,
   onRefresh,
   onSelectThemePack,
   onToggleTheme: _onToggleTheme,
@@ -3498,17 +3482,6 @@ function ThemeSanctumScreen({
     <ScrollView
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}>
-      <View style={styles.screenHeader}>
-        <Pressable
-          onPress={onBack}
-          style={styles.backButton}
-          testID="back-from-theme-sanctum">
-          <Text style={styles.backButtonText}>Back</Text>
-        </Pressable>
-        <View style={styles.screenHeaderSpacer} />
-        <View style={styles.screenHeaderSpacer} />
-      </View>
-
       <Text style={styles.kicker}>{themeSanctum.kicker}</Text>
       <Text style={styles.title}>{themeSanctum.title}</Text>
       <Text style={styles.subtitle}>{themeSanctum.subtitle}</Text>
@@ -3623,12 +3596,6 @@ function GuildScreen({
     <ScrollView
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}>
-      <View style={styles.screenHeader}>
-        <View style={styles.screenHeaderSpacer} />
-        <View style={styles.screenHeaderSpacer} />
-        <View style={styles.screenHeaderSpacer} />
-      </View>
-
       <Text style={styles.kicker}>Guild</Text>
       <Text style={styles.title}>Guild Hall</Text>
       <Text style={styles.subtitle}>
@@ -3648,7 +3615,7 @@ function GuildScreen({
 }
 
 function HistoryScreen({
-  onBack,
+  onBack: _onBack,
   onToggleTheme: _onToggleTheme,
   quests,
   styles,
@@ -3703,17 +3670,6 @@ function HistoryScreen({
     <ScrollView
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}>
-      <View style={styles.screenHeader}>
-        <Pressable
-          onPress={onBack}
-          style={styles.backButton}
-          testID="back-from-history-screen">
-          <Text style={styles.backButtonText}>Back</Text>
-        </Pressable>
-        <View style={styles.screenHeaderSpacer} />
-        <View style={styles.screenHeaderSpacer} />
-      </View>
-
       <Text style={styles.kicker}>Quest History</Text>
       <Text style={[styles.title, styles.historyPageTitle]}>Archive Of The Realm</Text>
       <Text style={styles.subtitle}>
@@ -3879,7 +3835,7 @@ function HistoryScreen({
 
 function StreakScreen({
   hero,
-  onBack,
+  onBack: _onBack,
   onToggleTheme: _onToggleTheme,
   styles,
   themeMode: _themeMode,
@@ -3932,17 +3888,6 @@ function StreakScreen({
     <ScrollView
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}>
-      <View style={styles.screenHeader}>
-        <Pressable
-          onPress={onBack}
-          style={styles.backButton}
-          testID="back-from-streak-screen">
-          <Text style={styles.backButtonText}>Back</Text>
-        </Pressable>
-        <View style={styles.screenHeaderSpacer} />
-        <View style={styles.screenHeaderSpacer} />
-      </View>
-
       <Text style={styles.kicker}>Streak Calendar</Text>
       <Text style={styles.title}>Keep The Flame Alive</Text>
       <Text style={styles.subtitle}>
@@ -4347,12 +4292,6 @@ function AddQuestScreen({
     <ScrollView
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}>
-      <View style={styles.screenHeader}>
-        <View style={styles.screenHeaderSpacer} />
-        <View style={styles.screenHeaderSpacer} />
-        <View style={styles.screenHeaderSpacer} />
-      </View>
-
       <Text style={styles.kicker}>
         {editorMode === 'quest-pool'
           ? isEditingPoolTemplate
