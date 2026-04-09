@@ -1101,7 +1101,7 @@ test('opens quest details by tapping the quest card and archives failed quests i
     await flushMicrotasks();
   });
 
-  expect(getRenderText(tree)).toContain('Quest Details');
+  expect(getRenderText(tree)).toContain('Defeat the Laundry Dragon');
   expect(getRenderText(tree)).toContain('Chores');
 
   await ReactTestRenderer.act(async () => {
@@ -1151,7 +1151,7 @@ test('shows a personalized profile, opens the streak calendar, and preserves str
 
   expect(getRenderText(tree)).toContain('Best streak: ');
   expect(getRenderText(tree)).toContain('Study');
-  expect(getRenderText(tree)).toContain('Rank Progress');
+  expect(getRenderText(tree)).toContain('Progress to Apprentice');
 
   await ReactTestRenderer.act(async () => {
     tree.root
@@ -1161,7 +1161,7 @@ test('shows a personalized profile, opens the streak calendar, and preserves str
 
   const streakRender = getRenderText(tree);
 
-  expect(streakRender).toContain('Streak Calendar');
+  expect(streakRender).toContain('Keep The Flame Alive');
   expect(streakRender).toContain('Active Momentum');
   expect(streakRender).toContain(currentMonthLabel);
 

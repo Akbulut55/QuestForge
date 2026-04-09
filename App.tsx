@@ -2532,9 +2532,7 @@ function QuestCard({
             </View>
           ) : null}
         </>
-      ) : (
-        <Text style={styles.questCardHint}>Tap for details. Expand for actions.</Text>
-      )}
+      ) : null}
     </Pressable>
   );
 }
@@ -2723,7 +2721,6 @@ function QuestBoardScreen({
       showsVerticalScrollIndicator={false}>
       <View style={styles.topBar}>
         <View>
-          <Text style={styles.kicker}>{appConfig.boardKicker}</Text>
           <Text style={styles.title}>Quest Forge</Text>
         </View>
         <View style={styles.topBarActions}>
@@ -3145,7 +3142,6 @@ function ProgressScreen({
     <ScrollView
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}>
-      <Text style={styles.kicker}>{appConfig.progressKicker}</Text>
       <Text style={styles.title}>{appConfig.progressTitle}</Text>
       <Text style={styles.subtitle}>
         {hero.rankTitle} of the {favoriteTag} path. Your codex keeps track of
@@ -3153,51 +3149,40 @@ function ProgressScreen({
       </Text>
 
       <View style={styles.heroCard}>
-        <View style={styles.heroHeader}>
+        <View style={styles.boardRankHeader}>
           <View>
-            <Text style={styles.heroEyebrow}>{appConfig.progressHeroEyebrow}</Text>
-            <Text style={styles.heroTitle}>Rank Title: {hero.rankTitle}</Text>
+            <Text style={styles.heroEyebrow}>Current Rank</Text>
+            <Text style={styles.boardRankTitle}>{hero.rankTitle}</Text>
           </View>
         </View>
 
-        <View style={styles.heroStatsRow}>
-          <HeroStat
-            accentStyle={styles.levelAccent}
-            label="Level"
-            styles={styles}
-            value={getLevelForXp(hero.xp)}
-          />
-          <HeroStat
-            accentStyle={styles.xpAccent}
-            label="XP"
-            styles={styles}
-            value={`${hero.xp}`}
-          />
-          <HeroStat
-            accentStyle={styles.streakAccent}
-            label="Streak"
-            styles={styles}
-            value={`${hero.streakCount}d`}
-          />
-        </View>
-
-        <View style={styles.detailsProgressSection}>
-          <View style={styles.detailsProgressHeader}>
-            <Text style={styles.formLabel}>Rank Progress</Text>
-            <Text style={styles.detailsProgressValue}>
-              {Math.round(rankProgress.progressPercent)}%
+        <View style={styles.boardRankMetaRow}>
+          <View style={styles.boardLevelChip}>
+            <Text style={styles.boardLevelChipText}>
+              Level {getLevelForXp(hero.xp)}
             </Text>
           </View>
-          <View style={styles.detailsProgressTrack}>
-            <View
-              style={[
-                styles.detailsProgressFill,
-                { width: `${rankProgress.progressPercent}%` },
-              ]}
-            />
-          </View>
+          <Text style={styles.boardRankXpText}>
+            {`${hero.xp} / ${rankProgress.nextRankMinimumXp} XP`}
+          </Text>
         </View>
-        <Text style={styles.heroSupportText}>{rankProgress.progressText}</Text>
+
+        <View style={styles.boardRankProgressHeader}>
+          <Text style={styles.boardRankProgressLabel}>
+            {`Progress to ${rankProgress.nextRankTitle}`}
+          </Text>
+          <Text style={styles.detailsProgressValue}>
+            {Math.round(rankProgress.progressPercent)}%
+          </Text>
+        </View>
+        <View style={styles.detailsProgressTrack}>
+          <View
+            style={[
+              styles.detailsProgressFill,
+              { width: `${rankProgress.progressPercent}%` },
+            ]}
+          />
+        </View>
       </View>
 
       <View style={styles.formCard}>
@@ -3323,7 +3308,6 @@ function RealmCodexScreen({
     <ScrollView
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}>
-      <Text style={styles.kicker}>{realmCodex.kicker}</Text>
       <Text style={styles.title}>{realmCodex.title}</Text>
       <Text style={styles.subtitle}>{realmCodex.subtitle}</Text>
 
@@ -3482,7 +3466,6 @@ function ThemeSanctumScreen({
     <ScrollView
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}>
-      <Text style={styles.kicker}>{themeSanctum.kicker}</Text>
       <Text style={styles.title}>{themeSanctum.title}</Text>
       <Text style={styles.subtitle}>{themeSanctum.subtitle}</Text>
 
@@ -3596,7 +3579,6 @@ function GuildScreen({
     <ScrollView
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}>
-      <Text style={styles.kicker}>Guild</Text>
       <Text style={styles.title}>Guild Hall</Text>
       <Text style={styles.subtitle}>
         This wing is reserved for future guild systems, teams, and shared
@@ -3670,7 +3652,6 @@ function HistoryScreen({
     <ScrollView
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}>
-      <Text style={styles.kicker}>Quest History</Text>
       <Text style={[styles.title, styles.historyPageTitle]}>Archive Of The Realm</Text>
       <Text style={styles.subtitle}>
         Review the quests you completed and the ones that slipped away, all in
@@ -3888,7 +3869,6 @@ function StreakScreen({
     <ScrollView
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}>
-      <Text style={styles.kicker}>Streak Calendar</Text>
       <Text style={styles.title}>Keep The Flame Alive</Text>
       <Text style={styles.subtitle}>
         Your calendar reveals the rhythm of your questing and the days when you
@@ -4025,7 +4005,6 @@ function QuestDetailsScreen({
         <View style={styles.screenHeaderSpacer} />
       </View>
 
-      <Text style={styles.kicker}>{questDetails.kicker}</Text>
       <Text style={styles.title}>{questDetails.title}</Text>
       <Text style={styles.subtitle}>{questDetails.subtitle}</Text>
 
@@ -4292,15 +4271,6 @@ function AddQuestScreen({
     <ScrollView
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}>
-      <Text style={styles.kicker}>
-        {editorMode === 'quest-pool'
-          ? isEditingPoolTemplate
-            ? 'Edit Quest Pool'
-            : 'Quest Pool'
-          : isEditingQuest
-            ? 'Edit Quest'
-            : 'Quest Forge'}
-      </Text>
       <Text style={styles.title}>
         {editorMode === 'quest-pool'
           ? isEditingPoolTemplate
@@ -4508,7 +4478,6 @@ function QuestPoolScreen({
         <View style={styles.screenHeaderSpacer} />
       </View>
 
-      <Text style={styles.kicker}>{questPool.kicker}</Text>
       <Text style={styles.title}>{questPool.title}</Text>
       <Text style={styles.subtitle}>{questPool.subtitle}</Text>
 
