@@ -125,10 +125,13 @@ type Category = 'Main Quest' | 'Side Quest';
 type Status = 'Ready' | 'In Progress' | 'Completed' | 'Failed';
 type ThemeMode = 'dark' | 'light';
 type ThemePackId =
-  | 'ethereal-forge'
-  | 'luminous-paladin'
-  | 'void-drifter'
-  | 'shadow-weaver'
+  | 'celestial-bazaar'
+  | 'moon-garden'
+  | 'sunrise-forge'
+  | 'arcade-nova'
+  | 'royal-tide'
+  | 'crimson-vault'
+  | 'sunspire'
   | 'verdant-rune';
 
 type TestQuest = {
@@ -355,7 +358,7 @@ const defaultRemoteGameState: TestGameState = {
     },
   ],
   themeMode: 'dark',
-  themePackId: 'ethereal-forge',
+  themePackId: 'celestial-bazaar',
   unlockedAchievementIds: ['first-quest', 'quest-finisher'],
   sortOption: 'Newest first',
 };
@@ -606,83 +609,110 @@ beforeEach(() => {
     themeMode: mockBackendState.themeMode,
     themePackId: mockBackendState.themePackId,
     themePalette: {
-      background: '#131313',
-      surfaceLow: '#0e0e0e',
-      surface: '#1c1b1b',
-      surfaceHigh: '#201f1f',
-      surfaceHighest: '#2a2a2a',
-      textPrimary: '#e5e2e1',
-      textMuted: '#d4c5ab',
-      amber: '#ffbf00',
-      amberSoft: '#ffe2ab',
-      blue: '#00d2fd',
-      blueSoft: '#a2e7ff',
-      success: '#63e28d',
-      ghostBorder: 'rgba(80, 69, 50, 0.24)',
-      subtitle: '#c4b9a6',
-      placeholder: '#8b816f',
-      buttonText: '#261a00',
-      buttonDisabled: '#8f7531',
-      activeBadgeBackground: 'rgba(255, 191, 0, 0.16)',
-      doneBadgeBackground: 'rgba(99, 226, 141, 0.12)',
+      background: '#0A1020',
+      surfaceLow: '#10182B',
+      surface: '#16213A',
+      surfaceHigh: '#1D2B47',
+      surfaceHighest: '#25365A',
+      textPrimary: '#F7F8FC',
+      textMuted: '#AEB9CD',
+      amber: '#F4C542',
+      amberSoft: '#5E4918',
+      blue: '#FF6B6B',
+      blueSoft: '#4E2227',
+      success: '#41D39A',
+      ghostBorder: '#314465',
+      subtitle: '#D2D9E7',
+      placeholder: '#8391A8',
+      buttonText: '#111827',
+      buttonDisabled: '#25365A',
+      activeBadgeBackground: '#4E2227',
+      doneBadgeBackground: 'rgba(67, 196, 122, 0.16)',
     },
   });
   mockFetchRemoteThemeSanctum.mockResolvedValue({
     kicker: 'Theme Sanctum',
     title: 'Theme Sanctum',
     subtitle: 'Theme summary.',
-    activeThemeLabel: 'Ethereal Forge',
+    activeThemeLabel: 'Celestial Bazaar',
     activeModeLabel: 'Dark Alchemist',
-    accentEnergyLabel: 'Amber #FFBF00',
-    accentPreviewColor: '#ffbf00',
-    surfaceToneLabel: 'Deep Stone',
+    accentEnergyLabel: 'Celestial Bazaar #F4C542',
+    accentPreviewColor: '#F4C542',
+    surfaceToneLabel: 'Starlit Silk',
     realmNotesLabel: 'v30',
     availableEssencesTitle: 'Available Essences',
     availableEssencesIntro: 'Choose a palette.',
     availableThemePacks: [
       {
-        id: 'ethereal-forge',
-        name: 'Ethereal Forge',
-        description: 'Gold, cyan, forged slate',
-        accentEnergy: 'Amber #FFBF00',
-        surfaceTone: 'Deep Slate',
-        previewSwatches: ['#ffbf00', '#00d2fd', '#1c1b1b'],
+        id: 'celestial-bazaar',
+        name: 'Celestial Bazaar',
+        description: 'Gold market glow and crimson sparks.',
+        accentEnergy: 'Celestial Bazaar #F4C542',
+        surfaceTone: 'Starlit Silk',
+        previewSwatches: ['#F4C542', '#FF6B6B', '#16213A'],
         statusLabel: 'Current',
       },
       {
-        id: 'luminous-paladin',
-        name: 'Luminous Paladin',
-        description: 'Gold, coral, marble',
-        accentEnergy: 'Sunsteel #FFC145',
-        surfaceTone: 'Velvet Plate',
-        previewSwatches: ['#ffc145', '#ff7f6a', '#32202b'],
+        id: 'moon-garden',
+        name: 'Moon Garden',
+        description: 'Mint moonlight and orchid mist.',
+        accentEnergy: 'Moon Garden #7BE0B8',
+        surfaceTone: 'Garden Glass',
+        previewSwatches: ['#7BE0B8', '#D98CFF', '#193039'],
         statusLabel: 'Select',
       },
       {
-        id: 'void-drifter',
-        name: 'Void Drifter',
-        description: 'Teal, starlight, indigo',
-        accentEnergy: 'Nebula Cyan #3FE0B5',
-        surfaceTone: 'Void Indigo',
-        previewSwatches: ['#3fe0b5', '#57c7ff', '#122541'],
+        id: 'sunrise-forge',
+        name: 'Sunrise Forge',
+        description: 'Ember orange and forge gold.',
+        accentEnergy: 'Sunrise Forge #FF8A3D',
+        surfaceTone: 'Molten Steel',
+        previewSwatches: ['#FF8A3D', '#FFD166', '#2C211C'],
         statusLabel: 'Select',
       },
       {
-        id: 'shadow-weaver',
-        name: 'Shadow Weaver',
-        description: 'Violet, orchid, obsidian',
-        accentEnergy: 'Violet Arc #9F70FF',
-        surfaceTone: 'Night Loom',
-        previewSwatches: ['#9f70ff', '#ff7ad7', '#24193c'],
+        id: 'arcade-nova',
+        name: 'Arcade Nova',
+        description: 'Neon cyan and magenta pulse.',
+        accentEnergy: 'Arcade Nova #44D1FF',
+        surfaceTone: 'Nova Chrome',
+        previewSwatches: ['#44D1FF', '#FF4FD8', '#171F38'],
+        statusLabel: 'Select',
+      },
+      {
+        id: 'royal-tide',
+        name: 'Royal Tide',
+        description: 'Tidal blue and royal violet.',
+        accentEnergy: 'Royal Tide #4DB6FF',
+        surfaceTone: 'Tide Crest',
+        previewSwatches: ['#4DB6FF', '#C792FF', '#19304A'],
+        statusLabel: 'Select',
+      },
+      {
+        id: 'crimson-vault',
+        name: 'Crimson Vault',
+        description: 'Crimson steel and violet vault.',
+        accentEnergy: 'Crimson Vault #E5485D',
+        surfaceTone: 'Vault Velvet',
+        previewSwatches: ['#E5485D', '#7C8CFF', '#271822'],
+        statusLabel: 'Select',
+      },
+      {
+        id: 'sunspire',
+        name: 'Sunspire',
+        description: 'Sun gold and sky current.',
+        accentEnergy: 'Sunspire #F2C94C',
+        surfaceTone: 'Solar Brass',
+        previewSwatches: ['#F2C94C', '#4DB6FF', '#282016'],
         statusLabel: 'Select',
       },
       {
         id: 'verdant-rune',
         name: 'Verdant Rune',
-        description: 'Lime, jade, moss',
-        accentEnergy: 'Rune Bloom #7ED957',
-        surfaceTone: 'Moss Slate',
-        previewSwatches: ['#7ed957', '#38c7a4', '#1d2b25'],
+        description: 'Verdant emerald and rune lilac.',
+        accentEnergy: 'Verdant Rune #3FC17B',
+        surfaceTone: 'Runed Canopy',
+        previewSwatches: ['#3FC17B', '#D7A6FF', '#163027'],
         statusLabel: 'Select',
       },
     ],
@@ -1100,6 +1130,55 @@ test('collapses quest sections and opens realm tools from profile', async () => 
   });
 
   expect(getRenderText(tree)).toContain('Theme Sanctum');
+});
+
+test('renders theme sanctum even when preview swatches are missing', async () => {
+  mockFetchRemoteThemeSanctum.mockResolvedValueOnce({
+    kicker: 'Theme Sanctum',
+    title: 'Theme Sanctum',
+    subtitle: 'Theme summary.',
+    activeThemeLabel: 'Celestial Bazaar',
+    activeModeLabel: 'Dark Alchemist',
+    accentEnergyLabel: 'Celestial Bazaar #F4C542',
+    accentPreviewColor: '',
+    surfaceToneLabel: 'Starlit Silk',
+    realmNotesLabel: 'v30',
+    availableEssencesTitle: 'Available Essences',
+    availableEssencesIntro: 'Choose a palette.',
+    availableThemePacks: [
+      {
+        id: 'celestial-bazaar',
+        name: 'Celestial Bazaar',
+        description: 'Gold market glow and crimson sparks.',
+        accentEnergy: 'Celestial Bazaar #F4C542',
+        surfaceTone: 'Starlit Silk',
+        statusLabel: 'Current',
+      } as {
+        id: ThemePackId;
+        name: string;
+        description: string;
+        accentEnergy: string;
+        surfaceTone: string;
+        statusLabel: string;
+      },
+    ],
+  });
+
+  const tree = await renderHydratedApp();
+
+  await ReactTestRenderer.act(async () => {
+    tree.root.findByProps({ testID: 'bottom-nav-profile' }).props.onPress();
+  });
+
+  await ReactTestRenderer.act(async () => {
+    tree.root
+      .findByProps({ testID: 'navigate-to-theme-sanctum-from-progress' })
+      .props.onPress();
+    await flushMicrotasks();
+  });
+
+  expect(getRenderText(tree)).toContain('Theme Sanctum');
+  expect(getRenderText(tree)).toContain('Celestial Bazaar');
 });
 
 test('shows richer daily suggestions with descriptions and tags and can add one to the board', async () => {

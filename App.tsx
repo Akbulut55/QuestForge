@@ -84,10 +84,13 @@ type HistoryPeriodFilter = 'All Time' | 'This Month' | 'This Year';
 type HistoryStatusFilter = 'All' | 'Completed' | 'Failed';
 type ThemeMode = 'dark' | 'light';
 type ThemePackId =
-  | 'ethereal-forge'
-  | 'luminous-paladin'
-  | 'void-drifter'
-  | 'shadow-weaver'
+  | 'celestial-bazaar'
+  | 'moon-garden'
+  | 'sunrise-forge'
+  | 'arcade-nova'
+  | 'royal-tide'
+  | 'crimson-vault'
+  | 'sunspire'
   | 'verdant-rune';
 
 type Quest = {
@@ -335,265 +338,499 @@ type ThemePalette = {
   doneBadgeBackground: string;
 };
 
-const themes: Record<ThemeMode, ThemePalette> = {
-  dark: {
-    background: '#131313',
-    surfaceLow: '#0e0e0e',
-    surface: '#1c1b1b',
-    surfaceHigh: '#201f1f',
-    surfaceHighest: '#2a2a2a',
-    textPrimary: '#e5e2e1',
-    textMuted: '#d4c5ab',
-    amber: '#ffbf00',
-    amberSoft: '#ffe2ab',
-    blue: '#00d2fd',
-    blueSoft: '#a2e7ff',
-    success: '#63e28d',
-    ghostBorder: 'rgba(80, 69, 50, 0.24)',
-    subtitle: '#c4b9a6',
-    placeholder: '#8b816f',
-    buttonText: '#261a00',
-    buttonDisabled: '#8f7531',
-    activeBadgeBackground: 'rgba(255, 191, 0, 0.16)',
-    doneBadgeBackground: 'rgba(99, 226, 141, 0.12)',
+type ThemePresetPalette = {
+  background: string;
+  surfaceLow: string;
+  surface: string;
+  surfaceHigh: string;
+  surfaceHighest: string;
+  textPrimary: string;
+  textMuted: string;
+  primaryAccent: string;
+  primaryAccentSoft: string;
+  secondaryAccent: string;
+  secondaryAccentSoft: string;
+  success: string;
+  border: string;
+  subtitle: string;
+  placeholder: string;
+  buttonText: string;
+};
+
+const questForgeThemePresets = {
+  celestialBazaar: {
+    name: 'Celestial Bazaar',
+    dark: {
+      background: '#0A1020',
+      surfaceLow: '#10182B',
+      surface: '#16213A',
+      surfaceHigh: '#1D2B47',
+      surfaceHighest: '#25365A',
+      textPrimary: '#F7F8FC',
+      textMuted: '#AEB9CD',
+      primaryAccent: '#F4C542',
+      primaryAccentSoft: '#5E4918',
+      secondaryAccent: '#FF6B6B',
+      secondaryAccentSoft: '#4E2227',
+      success: '#41D39A',
+      border: '#314465',
+      subtitle: '#D2D9E7',
+      placeholder: '#8391A8',
+      buttonText: '#111827',
+    },
+    light: {
+      background: '#F7F9FD',
+      surfaceLow: '#EDF2FA',
+      surface: '#FFFFFF',
+      surfaceHigh: '#FFF4E1',
+      surfaceHighest: '#FFE7E7',
+      textPrimary: '#1A2236',
+      textMuted: '#647188',
+      primaryAccent: '#D39A05',
+      primaryAccentSoft: '#F7E2A6',
+      secondaryAccent: '#E25555',
+      secondaryAccentSoft: '#FFD7D7',
+      success: '#24A572',
+      border: '#D7E0ED',
+      subtitle: '#394760',
+      placeholder: '#8B97AA',
+      buttonText: '#FFFFFF',
+    },
   },
-  light: {
-    background: '#f5efe5',
-    surfaceLow: '#faf4ea',
-    surface: '#fffaf3',
-    surfaceHigh: '#f0e6d6',
-    surfaceHighest: '#e8dbc8',
-    textPrimary: '#2f2419',
-    textMuted: '#8d6c35',
-    amber: '#efb10a',
-    amberSoft: '#f9d88f',
-    blue: '#11b8df',
-    blueSoft: '#52dfff',
-    success: '#2c9464',
-    ghostBorder: 'rgba(95, 73, 40, 0.14)',
-    subtitle: '#75614a',
-    placeholder: '#aa8f70',
-    buttonText: '#2f2419',
-    buttonDisabled: '#ceb68a',
-    activeBadgeBackground: 'rgba(239, 177, 10, 0.12)',
-    doneBadgeBackground: 'rgba(44, 148, 100, 0.1)',
+  moonGarden: {
+    name: 'Moon Garden',
+    dark: {
+      background: '#0C1316',
+      surfaceLow: '#132026',
+      surface: '#193039',
+      surfaceHigh: '#22404C',
+      surfaceHighest: '#2A5260',
+      textPrimary: '#F3FAF9',
+      textMuted: '#A8C4C0',
+      primaryAccent: '#7BE0B8',
+      primaryAccentSoft: '#1D4A3D',
+      secondaryAccent: '#D98CFF',
+      secondaryAccentSoft: '#4B2B5A',
+      success: '#9BE15D',
+      border: '#335460',
+      subtitle: '#D3E7E3',
+      placeholder: '#7F9E9A',
+      buttonText: '#0E1918',
+    },
+    light: {
+      background: '#F5FBFA',
+      surfaceLow: '#E7F3F1',
+      surface: '#FFFFFF',
+      surfaceHigh: '#EAFBF2',
+      surfaceHighest: '#F6EFFF',
+      textPrimary: '#1E2E31',
+      textMuted: '#62797B',
+      primaryAccent: '#2DA878',
+      primaryAccentSoft: '#CFF4E4',
+      secondaryAccent: '#A95FE0',
+      secondaryAccentSoft: '#EEDBFF',
+      success: '#6AAF2C',
+      border: '#D5E5E4',
+      subtitle: '#40585A',
+      placeholder: '#8BA0A2',
+      buttonText: '#FFFFFF',
+    },
+  },
+  sunriseForge: {
+    name: 'Sunrise Forge',
+    dark: {
+      background: '#16110E',
+      surfaceLow: '#221915',
+      surface: '#2C211C',
+      surfaceHigh: '#382A24',
+      surfaceHighest: '#47332B',
+      textPrimary: '#FFF7F2',
+      textMuted: '#D2B8A8',
+      primaryAccent: '#FF8A3D',
+      primaryAccentSoft: '#5D311B',
+      secondaryAccent: '#FFD166',
+      secondaryAccentSoft: '#5A4720',
+      success: '#52D273',
+      border: '#544037',
+      subtitle: '#EACFC0',
+      placeholder: '#A88D7F',
+      buttonText: '#1C120D',
+    },
+    light: {
+      background: '#FFF8F3',
+      surfaceLow: '#FCEDE4',
+      surface: '#FFFFFF',
+      surfaceHigh: '#FFF0DE',
+      surfaceHighest: '#FFF6D9',
+      textPrimary: '#3B271F',
+      textMuted: '#7A6358',
+      primaryAccent: '#E96A1E',
+      primaryAccentSoft: '#FFD3BE',
+      secondaryAccent: '#D9A100',
+      secondaryAccentSoft: '#F8E8B6',
+      success: '#2FA65A',
+      border: '#EDD9CE',
+      subtitle: '#5B4035',
+      placeholder: '#9E8579',
+      buttonText: '#FFFFFF',
+    },
+  },
+  arcadeNova: {
+    name: 'Arcade Nova',
+    dark: {
+      background: '#0A0D18',
+      surfaceLow: '#11162A',
+      surface: '#171F38',
+      surfaceHigh: '#1F2949',
+      surfaceHighest: '#28345D',
+      textPrimary: '#F8F9FF',
+      textMuted: '#ADB6D4',
+      primaryAccent: '#44D1FF',
+      primaryAccentSoft: '#183F53',
+      secondaryAccent: '#FF4FD8',
+      secondaryAccentSoft: '#4C1F49',
+      success: '#6BFF95',
+      border: '#334264',
+      subtitle: '#D7DDF0',
+      placeholder: '#818CAD',
+      buttonText: '#09121A',
+    },
+    light: {
+      background: '#F7F9FF',
+      surfaceLow: '#EDEFFD',
+      surface: '#FFFFFF',
+      surfaceHigh: '#E7F8FF',
+      surfaceHighest: '#FFE8FB',
+      textPrimary: '#1B2340',
+      textMuted: '#626D8C',
+      primaryAccent: '#109DCC',
+      primaryAccentSoft: '#CCF3FF',
+      secondaryAccent: '#D83AB3',
+      secondaryAccentSoft: '#FFD8F5',
+      success: '#2EBB63',
+      border: '#D9DFF1',
+      subtitle: '#37415F',
+      placeholder: '#8D98B0',
+      buttonText: '#FFFFFF',
+    },
+  },
+  royalTide: {
+    name: 'Royal Tide',
+    dark: {
+      background: '#0B1420',
+      surfaceLow: '#122033',
+      surface: '#19304A',
+      surfaceHigh: '#223C5C',
+      surfaceHighest: '#2D4A6E',
+      textPrimary: '#F6FAFF',
+      textMuted: '#AFC0D0',
+      primaryAccent: '#4DB6FF',
+      primaryAccentSoft: '#183F5E',
+      secondaryAccent: '#C792FF',
+      secondaryAccentSoft: '#432B5E',
+      success: '#49D6A3',
+      border: '#39536F',
+      subtitle: '#D7E2EE',
+      placeholder: '#8798AB',
+      buttonText: '#0C1823',
+    },
+    light: {
+      background: '#F6FAFD',
+      surfaceLow: '#EAF1F7',
+      surface: '#FFFFFF',
+      surfaceHigh: '#E8F5FF',
+      surfaceHighest: '#F3EBFF',
+      textPrimary: '#203247',
+      textMuted: '#677A8E',
+      primaryAccent: '#1F94DC',
+      primaryAccentSoft: '#D3EEFF',
+      secondaryAccent: '#9C63E6',
+      secondaryAccentSoft: '#E8D9FF',
+      success: '#27A97A',
+      border: '#D6E1EA',
+      subtitle: '#3E5268',
+      placeholder: '#8E9EB0',
+      buttonText: '#FFFFFF',
+    },
+  },
+  crimsonVault: {
+    name: 'Crimson Vault',
+    dark: {
+      background: '#140C10',
+      surfaceLow: '#1D1218',
+      surface: '#271822',
+      surfaceHigh: '#32202D',
+      surfaceHighest: '#40283A',
+      textPrimary: '#FFF7F9',
+      textMuted: '#D4B7C2',
+      primaryAccent: '#E5485D',
+      primaryAccentSoft: '#5E1F2B',
+      secondaryAccent: '#F29C38',
+      secondaryAccentSoft: '#5A3616',
+      success: '#45C486',
+      border: '#563546',
+      subtitle: '#EACFDA',
+      placeholder: '#A68895',
+      buttonText: '#FFF8FA',
+    },
+    light: {
+      background: '#FFF8FA',
+      surfaceLow: '#FCEEF2',
+      surface: '#FFFFFF',
+      surfaceHigh: '#FFF0F3',
+      surfaceHighest: '#EEF6FC',
+      textPrimary: '#3A2028',
+      textMuted: '#7D626C',
+      primaryAccent: '#CF2F49',
+      primaryAccentSoft: '#FFD6DE',
+      secondaryAccent: '#D47A16',
+      secondaryAccentSoft: '#F7DFC2',
+      success: '#2DAA66',
+      border: '#ECD8DF',
+      subtitle: '#5A3A45',
+      placeholder: '#9A828C',
+      buttonText: '#FFFFFF',
+    },
+  },
+  sunspire: {
+    name: 'Sunspire',
+    dark: {
+      background: '#151109',
+      surfaceLow: '#1E1810',
+      surface: '#282016',
+      surfaceHigh: '#33281B',
+      surfaceHighest: '#423322',
+      textPrimary: '#FFF9F0',
+      textMuted: '#D7C3A4',
+      primaryAccent: '#F2C94C',
+      primaryAccentSoft: '#624B17',
+      secondaryAccent: '#4DB6FF',
+      secondaryAccentSoft: '#1A425C',
+      success: '#58CC78',
+      border: '#5B4930',
+      subtitle: '#EADCC2',
+      placeholder: '#A89579',
+      buttonText: '#1C1408',
+    },
+    light: {
+      background: '#FFFBF3',
+      surfaceLow: '#F9F1DE',
+      surface: '#FFFFFF',
+      surfaceHigh: '#FFF6E2',
+      surfaceHighest: '#EAF6FF',
+      textPrimary: '#3A2D14',
+      textMuted: '#7C6A4E',
+      primaryAccent: '#D4A106',
+      primaryAccentSoft: '#F8E5A8',
+      secondaryAccent: '#1F95D1',
+      secondaryAccentSoft: '#D3EEFB',
+      success: '#33A85B',
+      border: '#EADFC9',
+      subtitle: '#5E4A29',
+      placeholder: '#9B8A70',
+      buttonText: '#FFFFFF',
+    },
+  },
+  verdantRune: {
+    name: 'Verdant Rune',
+    dark: {
+      background: '#09140F',
+      surfaceLow: '#102019',
+      surface: '#163027',
+      surfaceHigh: '#1D3D31',
+      surfaceHighest: '#275041',
+      textPrimary: '#F4FCF7',
+      textMuted: '#B1CCBF',
+      primaryAccent: '#3FC17B',
+      primaryAccentSoft: '#184631',
+      secondaryAccent: '#D9A441',
+      secondaryAccentSoft: '#4F3A17',
+      success: '#79D956',
+      border: '#355747',
+      subtitle: '#D5E9DE',
+      placeholder: '#85A395',
+      buttonText: '#08160F',
+    },
+    light: {
+      background: '#F6FCF8',
+      surfaceLow: '#E8F4ED',
+      surface: '#FFFFFF',
+      surfaceHigh: '#ECFBF2',
+      surfaceHighest: '#FFF6E7',
+      textPrimary: '#1F342A',
+      textMuted: '#637D71',
+      primaryAccent: '#239A5B',
+      primaryAccentSoft: '#CEF2DD',
+      secondaryAccent: '#B78018',
+      secondaryAccentSoft: '#F7E7C2',
+      success: '#5AB53B',
+      border: '#D7E7DE',
+      subtitle: '#3F5B4E',
+      placeholder: '#8AA194',
+      buttonText: '#FFFFFF',
+    },
+  },
+} as const;
+
+function toRgba(hex: string, alpha: number) {
+  const normalizedHex = hex.replace('#', '');
+  const value =
+    normalizedHex.length === 3
+      ? normalizedHex
+          .split('')
+          .map(character => `${character}${character}`)
+          .join('')
+      : normalizedHex;
+
+  const red = Number.parseInt(value.slice(0, 2), 16);
+  const green = Number.parseInt(value.slice(2, 4), 16);
+  const blue = Number.parseInt(value.slice(4, 6), 16);
+
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
+function getReadableTextColor(
+  backgroundHex: string,
+  darkText = '#101418',
+  lightText = '#FFFFFF',
+) {
+  const normalizedHex = backgroundHex.replace('#', '');
+
+  if (!/^[\da-fA-F]{6}$/.test(normalizedHex)) {
+    return lightText;
+  }
+
+  const channels = [0, 2, 4].map(offset =>
+    Number.parseInt(normalizedHex.slice(offset, offset + 2), 16) / 255,
+  );
+  const [red, green, blue] = channels.map(channel =>
+    channel <= 0.03928
+      ? channel / 12.92
+      : Math.pow((channel + 0.055) / 1.055, 2.4),
+  );
+  const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+
+  return luminance > 0.52 ? darkText : lightText;
+}
+
+function buildThemePaletteFromPreset(presetPalette: ThemePresetPalette): ThemePalette {
+  return {
+    background: presetPalette.background,
+    surfaceLow: presetPalette.surfaceLow,
+    surface: presetPalette.surface,
+    surfaceHigh: presetPalette.surfaceHigh,
+    surfaceHighest: presetPalette.surfaceHighest,
+    textPrimary: presetPalette.textPrimary,
+    textMuted: presetPalette.textMuted,
+    amber: presetPalette.primaryAccent,
+    amberSoft: presetPalette.primaryAccentSoft,
+    blue: presetPalette.secondaryAccent,
+    blueSoft: presetPalette.secondaryAccentSoft,
+    success: presetPalette.success,
+    ghostBorder: presetPalette.border,
+    subtitle: presetPalette.subtitle,
+    placeholder: presetPalette.placeholder,
+    buttonText: presetPalette.buttonText,
+    buttonDisabled: presetPalette.surfaceHighest,
+    activeBadgeBackground: presetPalette.secondaryAccentSoft,
+    doneBadgeBackground: toRgba(presetPalette.success, 0.16),
+  };
+}
+
+const themePackPalettes: Record<ThemePackId, Record<ThemeMode, ThemePalette>> = {
+  'celestial-bazaar': {
+    dark: buildThemePaletteFromPreset(questForgeThemePresets.celestialBazaar.dark),
+    light: buildThemePaletteFromPreset(questForgeThemePresets.celestialBazaar.light),
+  },
+  'moon-garden': {
+    dark: buildThemePaletteFromPreset(questForgeThemePresets.moonGarden.dark),
+    light: buildThemePaletteFromPreset(questForgeThemePresets.moonGarden.light),
+  },
+  'sunrise-forge': {
+    dark: buildThemePaletteFromPreset(questForgeThemePresets.sunriseForge.dark),
+    light: buildThemePaletteFromPreset(questForgeThemePresets.sunriseForge.light),
+  },
+  'arcade-nova': {
+    dark: buildThemePaletteFromPreset(questForgeThemePresets.arcadeNova.dark),
+    light: buildThemePaletteFromPreset(questForgeThemePresets.arcadeNova.light),
+  },
+  'royal-tide': {
+    dark: buildThemePaletteFromPreset(questForgeThemePresets.royalTide.dark),
+    light: buildThemePaletteFromPreset(questForgeThemePresets.royalTide.light),
+  },
+  'crimson-vault': {
+    dark: buildThemePaletteFromPreset(questForgeThemePresets.crimsonVault.dark),
+    light: buildThemePaletteFromPreset(questForgeThemePresets.crimsonVault.light),
+  },
+  sunspire: {
+    dark: buildThemePaletteFromPreset(questForgeThemePresets.sunspire.dark),
+    light: buildThemePaletteFromPreset(questForgeThemePresets.sunspire.light),
+  },
+  'verdant-rune': {
+    dark: buildThemePaletteFromPreset(questForgeThemePresets.verdantRune.dark),
+    light: buildThemePaletteFromPreset(questForgeThemePresets.verdantRune.light),
   },
 };
 
-const luminousPaladinThemes: Record<ThemeMode, ThemePalette> = {
-  dark: {
-    background: '#181116',
-    surfaceLow: '#261820',
-    surface: '#32202b',
-    surfaceHigh: '#432835',
-    surfaceHighest: '#573547',
-    textPrimary: '#fff5ef',
-    textMuted: '#ffcd6d',
-    amber: '#ffc145',
-    amberSoft: '#ffe3a6',
-    blue: '#ff7f6a',
-    blueSoft: '#ffb4a8',
-    success: '#87e0a2',
-    ghostBorder: 'rgba(255, 180, 168, 0.16)',
-    subtitle: '#d7b9c0',
-    placeholder: '#a7868f',
-    buttonText: '#351d00',
-    buttonDisabled: '#9e7f39',
-    activeBadgeBackground: 'rgba(255, 193, 69, 0.18)',
-    doneBadgeBackground: 'rgba(135, 224, 162, 0.16)',
-  },
-  light: {
-    background: '#fff4ef',
-    surfaceLow: '#ffe6da',
-    surface: '#fff8f3',
-    surfaceHigh: '#ffd3bf',
-    surfaceHighest: '#ffc1a6',
-    textPrimary: '#341c14',
-    textMuted: '#b3681e',
-    amber: '#f5ab2f',
-    amberSoft: '#ffd98e',
-    blue: '#ea6b56',
-    blueSoft: '#ffb39d',
-    success: '#2c9f67',
-    ghostBorder: 'rgba(234, 107, 86, 0.14)',
-    subtitle: '#8a6657',
-    placeholder: '#b38773',
-    buttonText: '#341c14',
-    buttonDisabled: '#d8ae75',
-    activeBadgeBackground: 'rgba(245, 171, 47, 0.12)',
-    doneBadgeBackground: 'rgba(44, 159, 103, 0.12)',
-  },
-};
-
-const voidDrifterThemes: Record<ThemeMode, ThemePalette> = {
-  dark: {
-    background: '#08111f',
-    surfaceLow: '#0d1d31',
-    surface: '#122541',
-    surfaceHigh: '#1b3458',
-    surfaceHighest: '#274772',
-    textPrimary: '#eefbff',
-    textMuted: '#7ae7d0',
-    amber: '#3fe0b5',
-    amberSoft: '#9af6de',
-    blue: '#57c7ff',
-    blueSoft: '#aee9ff',
-    success: '#8de07b',
-    ghostBorder: 'rgba(87, 199, 255, 0.16)',
-    subtitle: '#aac8d9',
-    placeholder: '#7893a5',
-    buttonText: '#03251b',
-    buttonDisabled: '#4c9d84',
-    activeBadgeBackground: 'rgba(63, 224, 181, 0.18)',
-    doneBadgeBackground: 'rgba(141, 224, 123, 0.16)',
-  },
-  light: {
-    background: '#ecfbff',
-    surfaceLow: '#d9f5fb',
-    surface: '#f5fdff',
-    surfaceHigh: '#bfeff8',
-    surfaceHighest: '#9de3f0',
-    textPrimary: '#102433',
-    textMuted: '#0c8c79',
-    amber: '#22c6a0',
-    amberSoft: '#7ce9d2',
-    blue: '#2da9e2',
-    blueSoft: '#87dcff',
-    success: '#4cae5f',
-    ghostBorder: 'rgba(45, 169, 226, 0.14)',
-    subtitle: '#517181',
-    placeholder: '#7d9aa8',
-    buttonText: '#102433',
-    buttonDisabled: '#7dc1b0',
-    activeBadgeBackground: 'rgba(34, 198, 160, 0.12)',
-    doneBadgeBackground: 'rgba(76, 174, 95, 0.12)',
-  },
-};
-
-const shadowWeaverThemes: Record<ThemeMode, ThemePalette> = {
-  dark: {
-    background: '#140f1f',
-    surfaceLow: '#1b1430',
-    surface: '#24193c',
-    surfaceHigh: '#302052',
-    surfaceHighest: '#3c2a67',
-    textPrimary: '#f6efff',
-    textMuted: '#c7b3ff',
-    amber: '#9f70ff',
-    amberSoft: '#d6c1ff',
-    blue: '#ff7ad7',
-    blueSoft: '#ffb4ef',
-    success: '#7fe0b0',
-    ghostBorder: 'rgba(214, 193, 255, 0.18)',
-    subtitle: '#c9bfde',
-    placeholder: '#8e84a6',
-    buttonText: '#150d28',
-    buttonDisabled: '#7b63ab',
-    activeBadgeBackground: 'rgba(159, 112, 255, 0.18)',
-    doneBadgeBackground: 'rgba(127, 224, 176, 0.16)',
-  },
-  light: {
-    background: '#f9f3ff',
-    surfaceLow: '#f1e8ff',
-    surface: '#fff8ff',
-    surfaceHigh: '#e6d8ff',
-    surfaceHighest: '#d9c5ff',
-    textPrimary: '#2c1f46',
-    textMuted: '#7b54c7',
-    amber: '#8d5cff',
-    amberSoft: '#cdb7ff',
-    blue: '#ec6fc6',
-    blueSoft: '#f7b6e4',
-    success: '#2f9f78',
-    ghostBorder: 'rgba(141, 92, 255, 0.14)',
-    subtitle: '#74648e',
-    placeholder: '#9b8bb3',
-    buttonText: '#24173f',
-    buttonDisabled: '#baa6dc',
-    activeBadgeBackground: 'rgba(141, 92, 255, 0.12)',
-    doneBadgeBackground: 'rgba(47, 159, 120, 0.12)',
-  },
-};
-
-const verdantRuneThemes: Record<ThemeMode, ThemePalette> = {
-  dark: {
-    background: '#0f1714',
-    surfaceLow: '#16211d',
-    surface: '#1d2b25',
-    surfaceHigh: '#27362f',
-    surfaceHighest: '#31453d',
-    textPrimary: '#eef7ef',
-    textMuted: '#b8d88a',
-    amber: '#7ed957',
-    amberSoft: '#c6f3a0',
-    blue: '#38c7a4',
-    blueSoft: '#8ef0d6',
-    success: '#66d992',
-    ghostBorder: 'rgba(142, 240, 214, 0.16)',
-    subtitle: '#bfd0bd',
-    placeholder: '#87998a',
-    buttonText: '#122017',
-    buttonDisabled: '#699860',
-    activeBadgeBackground: 'rgba(126, 217, 87, 0.16)',
-    doneBadgeBackground: 'rgba(56, 199, 164, 0.16)',
-  },
-  light: {
-    background: '#f1f9f1',
-    surfaceLow: '#e4f2e4',
-    surface: '#fbfffa',
-    surfaceHigh: '#d4ecd4',
-    surfaceHighest: '#c5e4c5',
-    textPrimary: '#1f3322',
-    textMuted: '#5c8a43',
-    amber: '#7bc64d',
-    amberSoft: '#d6f2ad',
-    blue: '#27b391',
-    blueSoft: '#88e7cf',
-    success: '#3a9d6e',
-    ghostBorder: 'rgba(39, 179, 145, 0.14)',
-    subtitle: '#607861',
-    placeholder: '#86a088',
-    buttonText: '#183021',
-    buttonDisabled: '#aac7ab',
-    activeBadgeBackground: 'rgba(123, 198, 77, 0.12)',
-    doneBadgeBackground: 'rgba(39, 179, 145, 0.12)',
-  },
+const themePackPreviewSwatches: Record<ThemePackId, string[]> = {
+  'celestial-bazaar': ['#F4C542', '#FF6B6B', '#16213A'],
+  'moon-garden': ['#7BE0B8', '#D98CFF', '#193039'],
+  'sunrise-forge': ['#FF8A3D', '#FFD166', '#2C211C'],
+  'arcade-nova': ['#44D1FF', '#FF4FD8', '#171F38'],
+  'royal-tide': ['#4DB6FF', '#C792FF', '#19304A'],
+  'crimson-vault': ['#E5485D', '#7C8CFF', '#271822'],
+  sunspire: ['#F2C94C', '#4DB6FF', '#282016'],
+  'verdant-rune': ['#3FC17B', '#D7A6FF', '#163027'],
 };
 
 function normalizeThemePackId(themePackId: string | undefined): ThemePackId {
   if (
-    themePackId === 'luminous-paladin' ||
-    themePackId === 'void-drifter' ||
-    themePackId === 'shadow-weaver' ||
+    themePackId === 'moon-garden' ||
+    themePackId === 'sunrise-forge' ||
+    themePackId === 'arcade-nova' ||
+    themePackId === 'royal-tide' ||
+    themePackId === 'crimson-vault' ||
+    themePackId === 'sunspire' ||
     themePackId === 'verdant-rune'
   ) {
     return themePackId;
   }
 
-  return 'ethereal-forge';
+  return 'celestial-bazaar';
 }
 
 function getThemePalette(
   themeMode: ThemeMode,
   themePackId: ThemePackId,
 ): ThemePalette {
-  if (themePackId === 'luminous-paladin') {
-    return luminousPaladinThemes[themeMode];
-  }
+  return themePackPalettes[normalizeThemePackId(themePackId)][themeMode];
+}
 
-  if (themePackId === 'void-drifter') {
-    return voidDrifterThemes[themeMode];
-  }
+function getFallbackThemePreviewSwatches(themePackId: ThemePackId) {
+  return themePackPreviewSwatches[normalizeThemePackId(themePackId)];
+}
 
-  if (themePackId === 'shadow-weaver') {
-    return shadowWeaverThemes[themeMode];
-  }
+function normalizeThemeSanctumResponse(
+  themeSanctum: ThemeSanctumResponse,
+): ThemeSanctumResponse {
+  const availableThemePacks = (themeSanctum.availableThemePacks ?? []).map(themePack => ({
+    ...themePack,
+    previewSwatches:
+      Array.isArray(themePack.previewSwatches) && themePack.previewSwatches.length > 0
+        ? themePack.previewSwatches
+        : getFallbackThemePreviewSwatches(themePack.id),
+  }));
+  const currentThemePack =
+    availableThemePacks.find(themePack => themePack.statusLabel === 'Current') ?? null;
 
-  if (themePackId === 'verdant-rune') {
-    return verdantRuneThemes[themeMode];
-  }
-
-  return themes[themeMode];
+  return {
+    ...themeSanctum,
+    accentPreviewColor:
+      themeSanctum.accentPreviewColor ||
+      currentThemePack?.previewSwatches[0] ||
+      '#F4C542',
+    availableThemePacks,
+  };
 }
 const difficultyOptions: Difficulty[] = ['Easy', 'Medium', 'Hard', 'Epic'];
 const categoryOptions: Category[] = ['Main Quest', 'Side Quest'];
@@ -1494,7 +1731,7 @@ function createInitialGameState(): GameState {
     hero,
     quests: normalizedQuests,
     themeMode: 'dark',
-    themePackId: 'ethereal-forge',
+    themePackId: 'celestial-bazaar',
     sortOption: 'Newest first',
     unlockedAchievementIds: getUnlockedAchievementIds({
       hero,
@@ -1518,7 +1755,7 @@ function migrateLegacyQuests(quests: Quest[]): GameState {
     hero,
     quests: normalizedQuests,
     themeMode: 'dark',
-    themePackId: 'ethereal-forge',
+    themePackId: 'celestial-bazaar',
     sortOption: 'Newest first',
     unlockedAchievementIds: getUnlockedAchievementIds({
       hero,
@@ -4614,7 +4851,7 @@ function QuestPoolScreen({
 
         <TextInput
           onChangeText={setSearchQuery}
-          placeholder="Search Quests..."
+          placeholder={questPool.searchPlaceholder}
           placeholderTextColor={styles.themePlaceholder.color}
           style={styles.questPoolSearchInput}
           testID="quest-pool-search-input"
@@ -4747,7 +4984,7 @@ function App() {
   const [themeSanctum, setThemeSanctum] = useState<ThemeSanctumResponse | null>(null);
   const [isRefreshingThemeSanctum, setIsRefreshingThemeSanctum] = useState(false);
   const [remoteThemePalette, setRemoteThemePalette] = useState<ThemePalette>(() =>
-    getThemePalette('dark', 'ethereal-forge'),
+    getThemePalette('dark', 'celestial-bazaar'),
   );
   const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null);
   const [questDetails, setQuestDetails] = useState<QuestDetailsResponse | null>(null);
@@ -4819,9 +5056,11 @@ function App() {
   };
 
   const applyRemoteThemeSanctum = (nextThemeSanctum: ThemeSanctumResponse) => {
-    setThemeSanctum(nextThemeSanctum);
+    const normalizedThemeSanctum = normalizeThemeSanctumResponse(nextThemeSanctum);
 
-    return nextThemeSanctum;
+    setThemeSanctum(normalizedThemeSanctum);
+
+    return normalizedThemeSanctum;
   };
 
   const applyRemoteThemePalette = (
@@ -5789,6 +6028,15 @@ function App() {
 }
 
 function createStyles(theme: ThemePalette) {
+  const primaryActionTextColor = getReadableTextColor(
+    theme.amber,
+    theme.buttonText,
+    '#FFFFFF',
+  );
+  const secondaryActionTextColor = getReadableTextColor(theme.blue);
+  const tagBadgeTextColor = getReadableTextColor(theme.blueSoft);
+  const surfaceBadgeTextColor = getReadableTextColor(theme.surfaceHighest);
+
   return StyleSheet.create({
     safeArea: {
       flex: 1,
@@ -5964,30 +6212,32 @@ function createStyles(theme: ThemePalette) {
       paddingVertical: 8,
     },
     bottomNavItemActive: {
-      backgroundColor: `${theme.amber}18`,
-      shadowColor: theme.amber,
+      backgroundColor: `${theme.blue}18`,
+      borderColor: `${theme.blue}55`,
+      borderWidth: 1,
+      shadowColor: theme.blue,
       shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.22,
+      shadowOpacity: 0.18,
       shadowRadius: 18,
     },
     bottomNavGlyph: {
-      color: theme.textMuted,
+      color: theme.subtitle,
       fontSize: 16,
       fontWeight: '800',
       marginBottom: 4,
     },
     bottomNavGlyphActive: {
-      color: theme.amberSoft,
+      color: theme.blue,
     },
     bottomNavLabel: {
-      color: theme.textMuted,
+      color: theme.subtitle,
       fontSize: 11,
       fontWeight: '700',
       letterSpacing: 0.9,
       textTransform: 'uppercase',
     },
     bottomNavLabelActive: {
-      color: theme.amberSoft,
+      color: theme.blue,
     },
     screenLabel: {
       alignSelf: 'flex-start',
@@ -6077,9 +6327,9 @@ function createStyles(theme: ThemePalette) {
       gap: 10,
     },
     heroEyebrow: {
-      color: theme.amberSoft,
+      color: theme.subtitle,
       fontSize: 11,
-      fontWeight: '700',
+      fontWeight: '800',
       letterSpacing: 1.4,
       marginBottom: 8,
       textTransform: 'uppercase',
@@ -6398,8 +6648,8 @@ function createStyles(theme: ThemePalette) {
       paddingHorizontal: 16,
     },
     themePackSelectButtonCurrent: {
-      backgroundColor: `${theme.amber}1c`,
-      borderColor: `${theme.amber}4a`,
+      backgroundColor: theme.amber,
+      borderColor: `${theme.amberSoft}88`,
     },
     themePackSelectButtonText: {
       color: theme.textPrimary,
@@ -6408,7 +6658,7 @@ function createStyles(theme: ThemePalette) {
       textTransform: 'uppercase',
     },
     themePackSelectButtonTextCurrent: {
-      color: theme.amberSoft,
+      color: theme.buttonText,
     },
     detailsProgressSection: {
       marginTop: 18,
@@ -6420,9 +6670,9 @@ function createStyles(theme: ThemePalette) {
       marginBottom: 10,
     },
     detailsProgressValue: {
-      color: theme.blueSoft,
+      color: theme.amber,
       fontSize: 14,
-      fontWeight: '700',
+      fontWeight: '800',
     },
     detailsProgressTrack: {
       backgroundColor: `${theme.surfaceHighest}f0`,
@@ -6504,8 +6754,8 @@ function createStyles(theme: ThemePalette) {
       flex: 1,
     },
     questPoolSearchInput: {
-      backgroundColor: `${theme.surfaceHigh}f2`,
-      borderColor: theme.ghostBorder,
+      backgroundColor: theme.surfaceLow,
+      borderColor: toRgba(theme.blue, 0.28),
       borderRadius: 18,
       borderWidth: 1,
       color: theme.textPrimary,
@@ -6528,14 +6778,14 @@ function createStyles(theme: ThemePalette) {
       marginTop: 14,
     },
     questPoolCompactCard: {
-      backgroundColor: theme.surface,
+      backgroundColor: theme.surfaceHigh,
       borderColor: theme.ghostBorder,
       borderRadius: 24,
       borderWidth: 1,
       marginTop: 18,
       paddingHorizontal: 18,
       paddingVertical: 18,
-      shadowColor: theme.amber,
+      shadowColor: theme.blue,
       shadowOffset: { width: 0, height: 14 },
       shadowOpacity: 0.08,
       shadowRadius: 20,
@@ -6551,22 +6801,22 @@ function createStyles(theme: ThemePalette) {
     },
     questPoolCompactTagBadge: {
       alignSelf: 'flex-start',
-      backgroundColor: `${theme.blue}18`,
-      borderColor: `${theme.blue}42`,
+      backgroundColor: theme.blueSoft,
+      borderColor: toRgba(theme.blue, 0.34),
       borderRadius: 12,
       borderWidth: 1,
       paddingHorizontal: 12,
       paddingVertical: 6,
     },
     questPoolCompactTagText: {
-      color: theme.blueSoft,
+      color: tagBadgeTextColor,
       fontSize: 11,
       fontWeight: '800',
       textTransform: 'uppercase',
     },
     questPoolCompactDifficultyBadge: {
       alignSelf: 'flex-start',
-      backgroundColor: `${theme.surfaceHighest}f2`,
+      backgroundColor: theme.surfaceHighest,
       borderColor: theme.ghostBorder,
       borderRadius: 999,
       borderWidth: 1,
@@ -6574,7 +6824,7 @@ function createStyles(theme: ThemePalette) {
       paddingVertical: 6,
     },
     questPoolCompactDifficultyText: {
-      color: theme.textMuted,
+      color: surfaceBadgeTextColor,
       fontSize: 11,
       fontWeight: '700',
       textTransform: 'uppercase',
@@ -6600,7 +6850,7 @@ function createStyles(theme: ThemePalette) {
     },
     questPoolCompactEditButton: {
       alignItems: 'center',
-      backgroundColor: `${theme.surfaceHighest}f0`,
+      backgroundColor: theme.surfaceHighest,
       borderColor: theme.ghostBorder,
       borderRadius: 16,
       borderWidth: 1,
@@ -6616,24 +6866,29 @@ function createStyles(theme: ThemePalette) {
     poolActionButton: {
       alignItems: 'center',
       backgroundColor: theme.amber,
-      borderColor: `${theme.amberSoft}80`,
+      borderColor: toRgba(theme.amber, 0.52),
       borderRadius: 14,
       borderWidth: 1,
       flex: 1,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.12,
+      shadowRadius: 14,
       paddingHorizontal: 14,
       paddingVertical: 12,
     },
     poolActionButtonSecondary: {
-      backgroundColor: `${theme.blue}14`,
-      borderColor: `${theme.blue}42`,
+      backgroundColor: theme.blue,
+      borderColor: toRgba(theme.blue, 0.48),
+      shadowColor: theme.blue,
     },
     poolActionButtonText: {
-      color: theme.buttonText,
+      color: primaryActionTextColor,
       fontSize: 14,
       fontWeight: '700',
     },
     poolActionButtonTextSecondary: {
-      color: theme.blueSoft,
+      color: secondaryActionTextColor,
     },
     questDescription: {
       color: theme.subtitle,
@@ -6734,8 +6989,8 @@ function createStyles(theme: ThemePalette) {
     },
     secondaryActionButton: {
       alignItems: 'center',
-      backgroundColor: `${theme.surfaceHigh}f7`,
-      borderColor: theme.ghostBorder,
+      backgroundColor: `${theme.surfaceHighest}f8`,
+      borderColor: `${theme.blue}2f`,
       borderRadius: 20,
       borderWidth: 1,
       marginTop: 12,
@@ -6747,7 +7002,7 @@ function createStyles(theme: ThemePalette) {
       shadowRadius: 18,
     },
     secondaryActionText: {
-      color: theme.blueSoft,
+      color: theme.textPrimary,
       fontSize: 16,
       fontWeight: '700',
       letterSpacing: 0.3,
@@ -6764,7 +7019,7 @@ function createStyles(theme: ThemePalette) {
       paddingVertical: 8,
     },
     inlineUtilityButtonText: {
-      color: theme.blueSoft,
+      color: theme.textPrimary,
       fontSize: 13,
       fontWeight: '700',
       letterSpacing: 0.2,
@@ -6841,7 +7096,7 @@ function createStyles(theme: ThemePalette) {
       paddingHorizontal: 14,
     },
     iconUtilityButtonText: {
-      color: theme.blueSoft,
+      color: theme.textPrimary,
       fontSize: 18,
       fontWeight: '700',
       lineHeight: 20,
@@ -6860,16 +7115,16 @@ function createStyles(theme: ThemePalette) {
       paddingVertical: 10,
     },
     optionChipSelected: {
-      backgroundColor: `${theme.blue}16`,
-      borderColor: `${theme.blue}30`,
+      backgroundColor: theme.amber,
+      borderColor: `${theme.amberSoft}90`,
     },
     optionChipText: {
-      color: theme.textMuted,
+      color: theme.subtitle,
       fontSize: 14,
       fontWeight: '600',
     },
     optionChipTextSelected: {
-      color: theme.blueSoft,
+      color: theme.buttonText,
     },
     saveButton: {
       alignItems: 'center',
@@ -7049,7 +7304,7 @@ function createStyles(theme: ThemePalette) {
       minWidth: 26,
     },
     expandChevronIcon: {
-      color: theme.blueSoft,
+      color: theme.blue,
       fontSize: 18,
       fontWeight: '700',
     },
@@ -7068,15 +7323,15 @@ function createStyles(theme: ThemePalette) {
     },
     questRewardBadge: {
       alignSelf: 'flex-start',
-      backgroundColor: `${theme.amber}18`,
-      borderColor: `${theme.amber}45`,
+      backgroundColor: theme.amber,
+      borderColor: `${theme.amberSoft}88`,
       borderRadius: 999,
       borderWidth: 1,
       paddingHorizontal: 10,
       paddingVertical: 6,
     },
     questRewardText: {
-      color: theme.amberSoft,
+      color: theme.buttonText,
       fontSize: 12,
       fontWeight: '700',
       letterSpacing: 0.3,
@@ -7109,7 +7364,7 @@ function createStyles(theme: ThemePalette) {
       textTransform: 'uppercase',
     },
     questTimelineStateUrgent: {
-      color: theme.amberSoft,
+      color: theme.amber,
     },
     questCardHint: {
       color: theme.textMuted,
@@ -7123,13 +7378,13 @@ function createStyles(theme: ThemePalette) {
       paddingVertical: 6,
     },
     statusBadgeActive: {
-      backgroundColor: `${theme.amber}22`,
+      backgroundColor: theme.activeBadgeBackground,
     },
     statusBadgeDone: {
-      backgroundColor: `${theme.success}20`,
+      backgroundColor: theme.doneBadgeBackground,
     },
     statusBadgeText: {
-      color: theme.amberSoft,
+      color: theme.blue,
       fontSize: 11,
       fontWeight: '700',
       textTransform: 'uppercase',
@@ -7720,8 +7975,8 @@ function createStyles(theme: ThemePalette) {
     },
     calendarNavButton: {
       alignItems: 'center',
-      backgroundColor: `${theme.surfaceHigh}f4`,
-      borderColor: theme.ghostBorder,
+      backgroundColor: `${theme.surfaceHigh}fc`,
+      borderColor: `${theme.blue}32`,
       borderRadius: 14,
       borderWidth: 1,
       height: 46,
@@ -7729,7 +7984,7 @@ function createStyles(theme: ThemePalette) {
       width: 46,
     },
     calendarNavButtonText: {
-      color: theme.amberSoft,
+      color: theme.blue,
       fontSize: 22,
       fontWeight: '700',
     },
@@ -7739,7 +7994,7 @@ function createStyles(theme: ThemePalette) {
       marginBottom: 16,
     },
     calendarWeekday: {
-      color: theme.textMuted,
+      color: theme.subtitle,
       flex: 1,
       fontSize: 13,
       fontWeight: '700',
@@ -7770,27 +8025,27 @@ function createStyles(theme: ThemePalette) {
       opacity: 0.58,
     },
     calendarDayMomentum: {
-      backgroundColor: `${theme.amber}16`,
-      borderColor: `${theme.amber}70`,
+      backgroundColor: `${theme.amber}20`,
+      borderColor: `${theme.amber}82`,
       shadowColor: theme.amber,
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: 0.18,
       shadowRadius: 14,
     },
     calendarDayActive: {
-      backgroundColor: `${theme.blue}18`,
-      borderColor: `${theme.blue}72`,
-      shadowColor: theme.blue,
+      backgroundColor: `${theme.success}18`,
+      borderColor: `${theme.success}72`,
+      shadowColor: theme.success,
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: 0.16,
       shadowRadius: 14,
     },
     calendarDayToday: {
-      borderColor: theme.amber,
-      backgroundColor: theme.amber,
-      shadowColor: theme.amber,
+      borderColor: theme.blue,
+      borderWidth: 2,
+      shadowColor: theme.blue,
       shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.22,
+      shadowOpacity: 0.18,
       shadowRadius: 16,
     },
     calendarDayText: {
@@ -7802,15 +8057,15 @@ function createStyles(theme: ThemePalette) {
       color: theme.placeholder,
     },
     calendarDayTextMomentum: {
-      color: theme.amberSoft,
+      color: theme.textPrimary,
       fontWeight: '700',
     },
     calendarDayTextActive: {
-      color: theme.blueSoft,
+      color: theme.textPrimary,
       fontWeight: '700',
     },
     calendarDayTextToday: {
-      color: theme.buttonText,
+      color: theme.textPrimary,
     },
     calendarTodayDot: {
       borderRadius: 999,
@@ -7824,7 +8079,7 @@ function createStyles(theme: ThemePalette) {
       backgroundColor: theme.blue,
     },
     calendarTodayDotPassive: {
-      backgroundColor: theme.blueSoft,
+      backgroundColor: theme.blue,
     },
     achievementGrid: {
       gap: 12,
@@ -7833,12 +8088,17 @@ function createStyles(theme: ThemePalette) {
     achievementCard: {
       borderRadius: 24,
       borderWidth: 1,
+      overflow: 'hidden',
       paddingHorizontal: 18,
       paddingVertical: 18,
     },
     achievementCardUnlocked: {
-      backgroundColor: theme.activeBadgeBackground,
-      borderColor: theme.amber,
+      backgroundColor: theme.surfaceHigh,
+      borderColor: `${theme.amber}66`,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.08,
+      shadowRadius: 16,
     },
     achievementCardLocked: {
       backgroundColor: theme.surfaceLow,
@@ -7853,7 +8113,7 @@ function createStyles(theme: ThemePalette) {
       color: theme.textPrimary,
     },
     achievementTitleLocked: {
-      color: theme.textMuted,
+      color: theme.subtitle,
     },
     achievementDescription: {
       fontSize: 13,
@@ -7864,18 +8124,27 @@ function createStyles(theme: ThemePalette) {
       color: theme.subtitle,
     },
     achievementDescriptionLocked: {
-      color: theme.placeholder,
+      color: theme.textMuted,
     },
     achievementStatus: {
+      alignSelf: 'flex-start',
+      borderRadius: 999,
+      borderWidth: 1,
       fontSize: 12,
       fontWeight: '700',
       letterSpacing: 1.1,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
       textTransform: 'uppercase',
     },
     achievementStatusUnlocked: {
-      color: theme.amberSoft,
+      backgroundColor: `${theme.amber}18`,
+      borderColor: `${theme.amber}4f`,
+      color: theme.amber,
     },
     achievementStatusLocked: {
+      backgroundColor: `${theme.surfaceHighest}e4`,
+      borderColor: theme.ghostBorder,
       color: theme.textMuted,
     },
     streakInsightText: {

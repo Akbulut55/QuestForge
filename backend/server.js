@@ -50,308 +50,463 @@ const achievementDefinitions = [
   'quest-master',
 ];
 const defaultQuestSectionOrder = ['main', 'side', 'completed'];
-const themeCatalog = {
-  'ethereal-forge': {
-    name: 'Ethereal Forge',
-    description: 'Gold, cyan, forged slate',
-    accentEnergy: {
-      dark: 'Amber #FFBF00',
-      light: 'Sun Gold #EFB10A',
+const questForgeThemePresets = {
+  celestialBazaar: {
+    name: 'Celestial Bazaar',
+    dark: {
+      background: '#0A1020',
+      surfaceLow: '#10182B',
+      surface: '#16213A',
+      surfaceHigh: '#1D2B47',
+      surfaceHighest: '#25365A',
+      textPrimary: '#F7F8FC',
+      textMuted: '#AEB9CD',
+      primaryAccent: '#F4C542',
+      primaryAccentSoft: '#5E4918',
+      secondaryAccent: '#FF6B6B',
+      secondaryAccentSoft: '#4E2227',
+      success: '#41D39A',
+      border: '#314465',
+      subtitle: '#D2D9E7',
+      placeholder: '#8391A8',
+      buttonText: '#111827',
     },
-    surfaceTone: {
-      dark: 'Deep Slate',
-      light: 'Ivory Slate',
-    },
-    previewSwatches: {
-      dark: ['#ffbf00', '#00d2fd', '#1c1b1b'],
-      light: ['#efb10a', '#11b8df', '#fffaf3'],
-    },
-    palette: {
-      dark: {
-        background: '#131313',
-        surfaceLow: '#0e0e0e',
-        surface: '#1c1b1b',
-        surfaceHigh: '#201f1f',
-        surfaceHighest: '#2a2a2a',
-        textPrimary: '#e5e2e1',
-        textMuted: '#d4c5ab',
-        amber: '#ffbf00',
-        amberSoft: '#ffe2ab',
-        blue: '#00d2fd',
-        blueSoft: '#a2e7ff',
-        success: '#63e28d',
-        ghostBorder: 'rgba(80, 69, 50, 0.24)',
-        subtitle: '#c4b9a6',
-        placeholder: '#8b816f',
-        buttonText: '#261a00',
-        buttonDisabled: '#8f7531',
-        activeBadgeBackground: 'rgba(255, 191, 0, 0.16)',
-        doneBadgeBackground: 'rgba(99, 226, 141, 0.12)',
-      },
-      light: {
-        background: '#f5efe5',
-        surfaceLow: '#faf4ea',
-        surface: '#fffaf3',
-        surfaceHigh: '#f0e6d6',
-        surfaceHighest: '#e8dbc8',
-        textPrimary: '#2f2419',
-        textMuted: '#8d6c35',
-        amber: '#efb10a',
-        amberSoft: '#f9d88f',
-        blue: '#11b8df',
-        blueSoft: '#52dfff',
-        success: '#2c9464',
-        ghostBorder: 'rgba(95, 73, 40, 0.14)',
-        subtitle: '#75614a',
-        placeholder: '#aa8f70',
-        buttonText: '#2f2419',
-        buttonDisabled: '#ceb68a',
-        activeBadgeBackground: 'rgba(239, 177, 10, 0.12)',
-        doneBadgeBackground: 'rgba(44, 148, 100, 0.10)',
-      },
+    light: {
+      background: '#F7F9FD',
+      surfaceLow: '#EDF2FA',
+      surface: '#FFFFFF',
+      surfaceHigh: '#FFF4E1',
+      surfaceHighest: '#FFE7E7',
+      textPrimary: '#1A2236',
+      textMuted: '#647188',
+      primaryAccent: '#D39A05',
+      primaryAccentSoft: '#F7E2A6',
+      secondaryAccent: '#E25555',
+      secondaryAccentSoft: '#FFD7D7',
+      success: '#24A572',
+      border: '#D7E0ED',
+      subtitle: '#394760',
+      placeholder: '#8B97AA',
+      buttonText: '#FFFFFF',
     },
   },
-  'luminous-paladin': {
-    name: 'Luminous Paladin',
-    description: 'Gold, coral, marble',
-    accentEnergy: {
-      dark: 'Sunsteel #FFC145',
-      light: 'Sunsteel #F5AB2F',
+  moonGarden: {
+    name: 'Moon Garden',
+    dark: {
+      background: '#0C1316',
+      surfaceLow: '#132026',
+      surface: '#193039',
+      surfaceHigh: '#22404C',
+      surfaceHighest: '#2A5260',
+      textPrimary: '#F3FAF9',
+      textMuted: '#A8C4C0',
+      primaryAccent: '#7BE0B8',
+      primaryAccentSoft: '#1D4A3D',
+      secondaryAccent: '#D98CFF',
+      secondaryAccentSoft: '#4B2B5A',
+      success: '#9BE15D',
+      border: '#335460',
+      subtitle: '#D3E7E3',
+      placeholder: '#7F9E9A',
+      buttonText: '#0E1918',
     },
-    surfaceTone: {
-      dark: 'Velvet Plate',
-      light: 'Ivory Plate',
-    },
-    previewSwatches: {
-      dark: ['#ffc145', '#ff7f6a', '#32202b'],
-      light: ['#f5ab2f', '#ea6b56', '#fff8f3'],
-    },
-    palette: {
-      dark: {
-        background: '#181116',
-        surfaceLow: '#261820',
-        surface: '#32202b',
-        surfaceHigh: '#432835',
-        surfaceHighest: '#573547',
-        textPrimary: '#fff5ef',
-        textMuted: '#ffcd6d',
-        amber: '#ffc145',
-        amberSoft: '#ffe3a6',
-        blue: '#ff7f6a',
-        blueSoft: '#ffb4a8',
-        success: '#87e0a2',
-        ghostBorder: 'rgba(255, 180, 168, 0.16)',
-        subtitle: '#d7b9c0',
-        placeholder: '#a7868f',
-        buttonText: '#351d00',
-        buttonDisabled: '#9e7f39',
-        activeBadgeBackground: 'rgba(255, 193, 69, 0.18)',
-        doneBadgeBackground: 'rgba(135, 224, 162, 0.16)',
-      },
-      light: {
-        background: '#fff4ef',
-        surfaceLow: '#ffe6da',
-        surface: '#fff8f3',
-        surfaceHigh: '#ffd3bf',
-        surfaceHighest: '#ffc1a6',
-        textPrimary: '#341c14',
-        textMuted: '#b3681e',
-        amber: '#f5ab2f',
-        amberSoft: '#ffd98e',
-        blue: '#ea6b56',
-        blueSoft: '#ffb39d',
-        success: '#2c9f67',
-        ghostBorder: 'rgba(234, 107, 86, 0.14)',
-        subtitle: '#8a6657',
-        placeholder: '#b38773',
-        buttonText: '#341c14',
-        buttonDisabled: '#d8ae75',
-        activeBadgeBackground: 'rgba(245, 171, 47, 0.12)',
-        doneBadgeBackground: 'rgba(44, 159, 103, 0.12)',
-      },
+    light: {
+      background: '#F5FBFA',
+      surfaceLow: '#E7F3F1',
+      surface: '#FFFFFF',
+      surfaceHigh: '#EAFBF2',
+      surfaceHighest: '#F6EFFF',
+      textPrimary: '#1E2E31',
+      textMuted: '#62797B',
+      primaryAccent: '#2DA878',
+      primaryAccentSoft: '#CFF4E4',
+      secondaryAccent: '#A95FE0',
+      secondaryAccentSoft: '#EEDBFF',
+      success: '#6AAF2C',
+      border: '#D5E5E4',
+      subtitle: '#40585A',
+      placeholder: '#8BA0A2',
+      buttonText: '#FFFFFF',
     },
   },
-  'void-drifter': {
-    name: 'Void Drifter',
-    description: 'Teal, starlight, indigo',
-    accentEnergy: {
-      dark: 'Nebula Cyan #3FE0B5',
-      light: 'Aether Teal #22C6A0',
+  sunriseForge: {
+    name: 'Sunrise Forge',
+    dark: {
+      background: '#16110E',
+      surfaceLow: '#221915',
+      surface: '#2C211C',
+      surfaceHigh: '#382A24',
+      surfaceHighest: '#47332B',
+      textPrimary: '#FFF7F2',
+      textMuted: '#D2B8A8',
+      primaryAccent: '#FF8A3D',
+      primaryAccentSoft: '#5D311B',
+      secondaryAccent: '#FFD166',
+      secondaryAccentSoft: '#5A4720',
+      success: '#52D273',
+      border: '#544037',
+      subtitle: '#EACFC0',
+      placeholder: '#A88D7F',
+      buttonText: '#1C120D',
     },
-    surfaceTone: {
-      dark: 'Void Indigo',
-      light: 'Mist Glass',
-    },
-    previewSwatches: {
-      dark: ['#3fe0b5', '#57c7ff', '#122541'],
-      light: ['#22c6a0', '#2da9e2', '#f5fdff'],
-    },
-    palette: {
-      dark: {
-        background: '#08111f',
-        surfaceLow: '#0d1d31',
-        surface: '#122541',
-        surfaceHigh: '#1b3458',
-        surfaceHighest: '#274772',
-        textPrimary: '#eefbff',
-        textMuted: '#7ae7d0',
-        amber: '#3fe0b5',
-        amberSoft: '#9af6de',
-        blue: '#57c7ff',
-        blueSoft: '#aee9ff',
-        success: '#8de07b',
-        ghostBorder: 'rgba(87, 199, 255, 0.16)',
-        subtitle: '#aac8d9',
-        placeholder: '#7893a5',
-        buttonText: '#03251b',
-        buttonDisabled: '#4c9d84',
-        activeBadgeBackground: 'rgba(63, 224, 181, 0.18)',
-        doneBadgeBackground: 'rgba(141, 224, 123, 0.16)',
-      },
-      light: {
-        background: '#ecfbff',
-        surfaceLow: '#d9f5fb',
-        surface: '#f5fdff',
-        surfaceHigh: '#bfeff8',
-        surfaceHighest: '#9de3f0',
-        textPrimary: '#102433',
-        textMuted: '#0c8c79',
-        amber: '#22c6a0',
-        amberSoft: '#7ce9d2',
-        blue: '#2da9e2',
-        blueSoft: '#87dcff',
-        success: '#4cae5f',
-        ghostBorder: 'rgba(45, 169, 226, 0.14)',
-        subtitle: '#517181',
-        placeholder: '#7d9aa8',
-        buttonText: '#102433',
-        buttonDisabled: '#7dc1b0',
-        activeBadgeBackground: 'rgba(34, 198, 160, 0.12)',
-        doneBadgeBackground: 'rgba(76, 174, 95, 0.12)',
-      },
+    light: {
+      background: '#FFF8F3',
+      surfaceLow: '#FCEDE4',
+      surface: '#FFFFFF',
+      surfaceHigh: '#FFF0DE',
+      surfaceHighest: '#FFF6D9',
+      textPrimary: '#3B271F',
+      textMuted: '#7A6358',
+      primaryAccent: '#E96A1E',
+      primaryAccentSoft: '#FFD3BE',
+      secondaryAccent: '#D9A100',
+      secondaryAccentSoft: '#F8E8B6',
+      success: '#2FA65A',
+      border: '#EDD9CE',
+      subtitle: '#5B4035',
+      placeholder: '#9E8579',
+      buttonText: '#FFFFFF',
     },
   },
-  'shadow-weaver': {
-    name: 'Shadow Weaver',
-    description: 'Violet, orchid, obsidian',
-    accentEnergy: {
-      dark: 'Violet Arc #9F70FF',
-      light: 'Orchid Arc #8D5CFF',
+  arcadeNova: {
+    name: 'Arcade Nova',
+    dark: {
+      background: '#0A0D18',
+      surfaceLow: '#11162A',
+      surface: '#171F38',
+      surfaceHigh: '#1F2949',
+      surfaceHighest: '#28345D',
+      textPrimary: '#F8F9FF',
+      textMuted: '#ADB6D4',
+      primaryAccent: '#44D1FF',
+      primaryAccentSoft: '#183F53',
+      secondaryAccent: '#FF4FD8',
+      secondaryAccentSoft: '#4C1F49',
+      success: '#6BFF95',
+      border: '#334264',
+      subtitle: '#D7DDF0',
+      placeholder: '#818CAD',
+      buttonText: '#09121A',
     },
-    surfaceTone: {
-      dark: 'Night Loom',
-      light: 'Lavender Haze',
-    },
-    previewSwatches: {
-      dark: ['#9f70ff', '#ff7ad7', '#24193c'],
-      light: ['#8d5cff', '#ec6fc6', '#fff8ff'],
-    },
-    palette: {
-      dark: {
-        background: '#140f1f',
-        surfaceLow: '#1b1430',
-        surface: '#24193c',
-        surfaceHigh: '#302052',
-        surfaceHighest: '#3c2a67',
-        textPrimary: '#f6efff',
-        textMuted: '#c7b3ff',
-        amber: '#9f70ff',
-        amberSoft: '#d6c1ff',
-        blue: '#ff7ad7',
-        blueSoft: '#ffb4ef',
-        success: '#7fe0b0',
-        ghostBorder: 'rgba(214, 193, 255, 0.18)',
-        subtitle: '#c9bfde',
-        placeholder: '#8e84a6',
-        buttonText: '#150d28',
-        buttonDisabled: '#7b63ab',
-        activeBadgeBackground: 'rgba(159, 112, 255, 0.18)',
-        doneBadgeBackground: 'rgba(127, 224, 176, 0.16)',
-      },
-      light: {
-        background: '#f9f3ff',
-        surfaceLow: '#f1e8ff',
-        surface: '#fff8ff',
-        surfaceHigh: '#e6d8ff',
-        surfaceHighest: '#d9c5ff',
-        textPrimary: '#2c1f46',
-        textMuted: '#7b54c7',
-        amber: '#8d5cff',
-        amberSoft: '#cdb7ff',
-        blue: '#ec6fc6',
-        blueSoft: '#f7b6e4',
-        success: '#2f9f78',
-        ghostBorder: 'rgba(141, 92, 255, 0.14)',
-        subtitle: '#74648e',
-        placeholder: '#9b8bb3',
-        buttonText: '#24173f',
-        buttonDisabled: '#baa6dc',
-        activeBadgeBackground: 'rgba(141, 92, 255, 0.12)',
-        doneBadgeBackground: 'rgba(47, 159, 120, 0.12)',
-      },
+    light: {
+      background: '#F7F9FF',
+      surfaceLow: '#EDEFFD',
+      surface: '#FFFFFF',
+      surfaceHigh: '#E7F8FF',
+      surfaceHighest: '#FFE8FB',
+      textPrimary: '#1B2340',
+      textMuted: '#626D8C',
+      primaryAccent: '#109DCC',
+      primaryAccentSoft: '#CCF3FF',
+      secondaryAccent: '#D83AB3',
+      secondaryAccentSoft: '#FFD8F5',
+      success: '#2EBB63',
+      border: '#D9DFF1',
+      subtitle: '#37415F',
+      placeholder: '#8D98B0',
+      buttonText: '#FFFFFF',
     },
   },
-  'verdant-rune': {
+  royalTide: {
+    name: 'Royal Tide',
+    dark: {
+      background: '#0B1420',
+      surfaceLow: '#122033',
+      surface: '#19304A',
+      surfaceHigh: '#223C5C',
+      surfaceHighest: '#2D4A6E',
+      textPrimary: '#F6FAFF',
+      textMuted: '#AFC0D0',
+      primaryAccent: '#4DB6FF',
+      primaryAccentSoft: '#183F5E',
+      secondaryAccent: '#C792FF',
+      secondaryAccentSoft: '#432B5E',
+      success: '#49D6A3',
+      border: '#39536F',
+      subtitle: '#D7E2EE',
+      placeholder: '#8798AB',
+      buttonText: '#0C1823',
+    },
+    light: {
+      background: '#F6FAFD',
+      surfaceLow: '#EAF1F7',
+      surface: '#FFFFFF',
+      surfaceHigh: '#E8F5FF',
+      surfaceHighest: '#F3EBFF',
+      textPrimary: '#203247',
+      textMuted: '#677A8E',
+      primaryAccent: '#1F94DC',
+      primaryAccentSoft: '#D3EEFF',
+      secondaryAccent: '#9C63E6',
+      secondaryAccentSoft: '#E8D9FF',
+      success: '#27A97A',
+      border: '#D6E1EA',
+      subtitle: '#3E5268',
+      placeholder: '#8E9EB0',
+      buttonText: '#FFFFFF',
+    },
+  },
+  crimsonVault: {
+    name: 'Crimson Vault',
+    dark: {
+      background: '#140C10',
+      surfaceLow: '#1D1218',
+      surface: '#271822',
+      surfaceHigh: '#32202D',
+      surfaceHighest: '#40283A',
+      textPrimary: '#FFF7F9',
+      textMuted: '#D4B7C2',
+      primaryAccent: '#E5485D',
+      primaryAccentSoft: '#5E1F2B',
+      secondaryAccent: '#F29C38',
+      secondaryAccentSoft: '#5A3616',
+      success: '#45C486',
+      border: '#563546',
+      subtitle: '#EACFDA',
+      placeholder: '#A68895',
+      buttonText: '#FFF8FA',
+    },
+    light: {
+      background: '#FFF8FA',
+      surfaceLow: '#FCEEF2',
+      surface: '#FFFFFF',
+      surfaceHigh: '#FFF0F3',
+      surfaceHighest: '#EEF6FC',
+      textPrimary: '#3A2028',
+      textMuted: '#7D626C',
+      primaryAccent: '#CF2F49',
+      primaryAccentSoft: '#FFD6DE',
+      secondaryAccent: '#D47A16',
+      secondaryAccentSoft: '#F7DFC2',
+      success: '#2DAA66',
+      border: '#ECD8DF',
+      subtitle: '#5A3A45',
+      placeholder: '#9A828C',
+      buttonText: '#FFFFFF',
+    },
+  },
+  sunspire: {
+    name: 'Sunspire',
+    dark: {
+      background: '#151109',
+      surfaceLow: '#1E1810',
+      surface: '#282016',
+      surfaceHigh: '#33281B',
+      surfaceHighest: '#423322',
+      textPrimary: '#FFF9F0',
+      textMuted: '#D7C3A4',
+      primaryAccent: '#F2C94C',
+      primaryAccentSoft: '#624B17',
+      secondaryAccent: '#4DB6FF',
+      secondaryAccentSoft: '#1A425C',
+      success: '#58CC78',
+      border: '#5B4930',
+      subtitle: '#EADCC2',
+      placeholder: '#A89579',
+      buttonText: '#1C1408',
+    },
+    light: {
+      background: '#FFFBF3',
+      surfaceLow: '#F9F1DE',
+      surface: '#FFFFFF',
+      surfaceHigh: '#FFF6E2',
+      surfaceHighest: '#EAF6FF',
+      textPrimary: '#3A2D14',
+      textMuted: '#7C6A4E',
+      primaryAccent: '#D4A106',
+      primaryAccentSoft: '#F8E5A8',
+      secondaryAccent: '#1F95D1',
+      secondaryAccentSoft: '#D3EEFB',
+      success: '#33A85B',
+      border: '#EADFC9',
+      subtitle: '#5E4A29',
+      placeholder: '#9B8A70',
+      buttonText: '#FFFFFF',
+    },
+  },
+  verdantRune: {
     name: 'Verdant Rune',
-    description: 'Lime, jade, moss',
-    accentEnergy: {
-      dark: 'Rune Bloom #7ED957',
-      light: 'Rune Bloom #7BC64D',
+    dark: {
+      background: '#09140F',
+      surfaceLow: '#102019',
+      surface: '#163027',
+      surfaceHigh: '#1D3D31',
+      surfaceHighest: '#275041',
+      textPrimary: '#F4FCF7',
+      textMuted: '#B1CCBF',
+      primaryAccent: '#3FC17B',
+      primaryAccentSoft: '#184631',
+      secondaryAccent: '#D9A441',
+      secondaryAccentSoft: '#4F3A17',
+      success: '#79D956',
+      border: '#355747',
+      subtitle: '#D5E9DE',
+      placeholder: '#85A395',
+      buttonText: '#08160F',
     },
-    surfaceTone: {
-      dark: 'Moss Slate',
-      light: 'Sage Canvas',
-    },
-    previewSwatches: {
-      dark: ['#7ed957', '#38c7a4', '#1d2b25'],
-      light: ['#7bc64d', '#27b391', '#fbfffa'],
-    },
-    palette: {
-      dark: {
-        background: '#0f1714',
-        surfaceLow: '#16211d',
-        surface: '#1d2b25',
-        surfaceHigh: '#27362f',
-        surfaceHighest: '#31453d',
-        textPrimary: '#eef7ef',
-        textMuted: '#b8d88a',
-        amber: '#7ed957',
-        amberSoft: '#c6f3a0',
-        blue: '#38c7a4',
-        blueSoft: '#8ef0d6',
-        success: '#66d992',
-        ghostBorder: 'rgba(142, 240, 214, 0.16)',
-        subtitle: '#bfd0bd',
-        placeholder: '#87998a',
-        buttonText: '#122017',
-        buttonDisabled: '#699860',
-        activeBadgeBackground: 'rgba(126, 217, 87, 0.16)',
-        doneBadgeBackground: 'rgba(56, 199, 164, 0.16)',
-      },
-      light: {
-        background: '#f1f9f1',
-        surfaceLow: '#e4f2e4',
-        surface: '#fbfffa',
-        surfaceHigh: '#d4ecd4',
-        surfaceHighest: '#c5e4c5',
-        textPrimary: '#1f3322',
-        textMuted: '#5c8a43',
-        amber: '#7bc64d',
-        amberSoft: '#d6f2ad',
-        blue: '#27b391',
-        blueSoft: '#88e7cf',
-        success: '#3a9d6e',
-        ghostBorder: 'rgba(39, 179, 145, 0.14)',
-        subtitle: '#607861',
-        placeholder: '#86a088',
-        buttonText: '#183021',
-        buttonDisabled: '#aac7ab',
-        activeBadgeBackground: 'rgba(123, 198, 77, 0.12)',
-        doneBadgeBackground: 'rgba(39, 179, 145, 0.12)',
-      },
+    light: {
+      background: '#F6FCF8',
+      surfaceLow: '#E8F4ED',
+      surface: '#FFFFFF',
+      surfaceHigh: '#ECFBF2',
+      surfaceHighest: '#FFF6E7',
+      textPrimary: '#1F342A',
+      textMuted: '#637D71',
+      primaryAccent: '#239A5B',
+      primaryAccentSoft: '#CEF2DD',
+      secondaryAccent: '#B78018',
+      secondaryAccentSoft: '#F7E7C2',
+      success: '#5AB53B',
+      border: '#D7E7DE',
+      subtitle: '#3F5B4E',
+      placeholder: '#8AA194',
+      buttonText: '#FFFFFF',
     },
   },
 };
+
+function toRgba(hex, alpha) {
+  const normalizedHex = hex.replace('#', '');
+  const value =
+    normalizedHex.length === 3
+      ? normalizedHex
+          .split('')
+          .map(character => `${character}${character}`)
+          .join('')
+      : normalizedHex;
+
+  const red = Number.parseInt(value.slice(0, 2), 16);
+  const green = Number.parseInt(value.slice(2, 4), 16);
+  const blue = Number.parseInt(value.slice(4, 6), 16);
+
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
+function buildThemePaletteFromPreset(presetPalette) {
+  return {
+    background: presetPalette.background,
+    surfaceLow: presetPalette.surfaceLow,
+    surface: presetPalette.surface,
+    surfaceHigh: presetPalette.surfaceHigh,
+    surfaceHighest: presetPalette.surfaceHighest,
+    textPrimary: presetPalette.textPrimary,
+    textMuted: presetPalette.textMuted,
+    amber: presetPalette.primaryAccent,
+    amberSoft: presetPalette.primaryAccentSoft,
+    blue: presetPalette.secondaryAccent,
+    blueSoft: presetPalette.secondaryAccentSoft,
+    success: presetPalette.success,
+    ghostBorder: presetPalette.border,
+    subtitle: presetPalette.subtitle,
+    placeholder: presetPalette.placeholder,
+    buttonText: presetPalette.buttonText,
+    buttonDisabled: presetPalette.surfaceHighest,
+    activeBadgeBackground: presetPalette.secondaryAccentSoft,
+    doneBadgeBackground: toRgba(presetPalette.success, 0.16),
+  };
+}
+
+const themePackMetadata = {
+  'celestial-bazaar': {
+    presetKey: 'celestialBazaar',
+    description: 'Gold market glow and crimson sparks.',
+    surfaceTone: {
+      dark: 'Starlit Silk',
+      light: 'Bazaar Marble',
+    },
+  },
+  'moon-garden': {
+    presetKey: 'moonGarden',
+    description: 'Mint moonlight and orchid mist.',
+    surfaceTone: {
+      dark: 'Garden Glass',
+      light: 'Moon Petal',
+    },
+  },
+  'sunrise-forge': {
+    presetKey: 'sunriseForge',
+    description: 'Ember orange and forge gold.',
+    surfaceTone: {
+      dark: 'Molten Steel',
+      light: 'Sunwashed Clay',
+    },
+  },
+  'arcade-nova': {
+    presetKey: 'arcadeNova',
+    description: 'Neon cyan and magenta pulse.',
+    surfaceTone: {
+      dark: 'Nova Chrome',
+      light: 'Pixel Pearl',
+    },
+  },
+  'royal-tide': {
+    presetKey: 'royalTide',
+    description: 'Tidal blue and royal violet.',
+    surfaceTone: {
+      dark: 'Tide Crest',
+      light: 'Royal Mist',
+    },
+  },
+  'crimson-vault': {
+    presetKey: 'crimsonVault',
+    description: 'Crimson steel and violet vault.',
+    surfaceTone: {
+      dark: 'Vault Velvet',
+      light: 'Rose Ledger',
+    },
+  },
+  sunspire: {
+    presetKey: 'sunspire',
+    description: 'Sun gold and sky current.',
+    surfaceTone: {
+      dark: 'Solar Brass',
+      light: 'Dawn Porcelain',
+    },
+  },
+  'verdant-rune': {
+    presetKey: 'verdantRune',
+    description: 'Verdant emerald and rune lilac.',
+    surfaceTone: {
+      dark: 'Runed Canopy',
+      light: 'Spring Marble',
+    },
+  },
+};
+
+const themeCatalog = Object.fromEntries(
+  Object.entries(themePackMetadata).map(([themePackId, metadata]) => {
+    const preset = questForgeThemePresets[metadata.presetKey];
+
+    return [
+      themePackId,
+      {
+        name: preset.name,
+        description: metadata.description,
+        accentEnergy: {
+          dark: `${preset.name} ${preset.dark.primaryAccent}`,
+          light: `${preset.name} ${preset.light.primaryAccent}`,
+        },
+        surfaceTone: metadata.surfaceTone,
+        previewSwatches: {
+          dark: [
+            preset.dark.primaryAccent,
+            preset.dark.secondaryAccent,
+            preset.dark.surface,
+          ],
+          light: [
+            preset.light.primaryAccent,
+            preset.light.secondaryAccent,
+            preset.light.surface,
+          ],
+        },
+        palette: {
+          dark: buildThemePaletteFromPreset(preset.dark),
+          light: buildThemePaletteFromPreset(preset.light),
+        },
+      },
+    ];
+  }),
+);
 const themePackOptions = Object.keys(themeCatalog);
 const rankThresholds = [
   { minimumXp: 2100, title: 'Ascendant' },
@@ -430,7 +585,7 @@ const defaultGameState = {
     },
   ],
   themeMode: 'dark',
-  themePackId: 'ethereal-forge',
+  themePackId: 'celestial-bazaar',
   unlockedAchievementIds: ['first-quest', 'quest-finisher'],
   sortOption: 'Newest first',
 };
@@ -470,163 +625,867 @@ const defaultAppConfig = {
   },
 };
 
-const defaultQuestPoolTemplates = [
-  {
-    id: 'template-refill-mana-flask',
-    title: 'Refill the Mana Flask',
-    description:
-      'Refill your water bottle and reset your desk before the next focus session begins.',
-    tag: 'Health',
-    difficulty: 'Easy',
-    category: 'Side Quest',
-    dueDate: null,
-  },
-  {
-    id: 'template-map-day-ahead',
-    title: 'Map the Day Ahead',
-    description:
-      'Sketch the top priorities for today so the main quest line stays clear.',
-    tag: 'Planning',
-    difficulty: 'Easy',
-    category: 'Main Quest',
-    dueDate: null,
-  },
-  {
-    id: 'template-train-focus-familiar',
-    title: 'Train the Focus Familiar',
-    description:
-      'Silence distractions and prepare one clean work block with a single outcome.',
-    tag: 'Focus',
-    difficulty: 'Medium',
-    category: 'Side Quest',
-    dueDate: null,
-  },
-  {
-    id: 'template-polish-guild-resume',
-    title: 'Polish the Guild Resume',
-    description:
-      'Improve one practical part of your portfolio, CV, or professional profile.',
-    tag: 'Work',
-    difficulty: 'Medium',
-    category: 'Main Quest',
-    dueDate: null,
-  },
-  {
-    id: 'template-clear-inbox-cavern',
-    title: 'Clear the Inbox Cavern',
-    description:
-      'Answer or archive the messages that keep pulling your attention away.',
-    tag: 'Admin',
-    difficulty: 'Hard',
-    category: 'Main Quest',
-    dueDate: null,
-  },
-  {
-    id: 'template-raid-laundry-keep',
-    title: 'Raid the Laundry Keep',
-    description:
-      'Wash, dry, and fold one full load before the pile grows stronger.',
-    tag: 'Chores',
-    difficulty: 'Hard',
-    category: 'Side Quest',
-    dueDate: null,
-  },
-  {
-    id: 'template-weekly-master-plan',
-    title: 'Forge a Weekly Master Plan',
-    description:
-      'Lay out your week with deadlines, recovery time, and one stretch goal.',
-    tag: 'Planning',
-    difficulty: 'Epic',
-    category: 'Main Quest',
-    dueDate: null,
-  },
-  {
-    id: 'template-evening-wind-down',
-    title: 'Protect the Evening Wind-Down',
-    description:
-      'Create a calm finish to the day so tomorrow begins with more energy.',
-    tag: 'Self Care',
-    difficulty: 'Easy',
-    category: 'Side Quest',
-    dueDate: null,
-  },
-  {
-    id: 'template-restore-study-desk',
-    title: 'Restore the Study Desk',
-    description: 'Reset your workspace so the next session starts clean and focused.',
-    tag: 'Study',
-    difficulty: 'Easy',
-    category: 'Side Quest',
-    dueDate: null,
-  },
-  {
-    id: 'template-collect-expense-receipts',
-    title: 'Collect the Expense Receipts',
-    description:
-      'Gather the finance trail before admin tasks become a bigger boss fight.',
-    tag: 'Finance',
-    difficulty: 'Medium',
-    category: 'Side Quest',
-    dueDate: null,
-  },
-  {
-    id: 'template-deliver-guild-checkin',
-    title: 'Deliver the Guild Check-In',
-    description: 'Send the update your teammate, client, or manager is waiting on.',
-    tag: 'Work',
-    difficulty: 'Medium',
-    category: 'Main Quest',
-    dueDate: null,
-  },
-  {
-    id: 'template-lift-iron-sigils',
-    title: 'Lift the Iron Sigils',
-    description: 'Complete a short workout or movement session to keep momentum alive.',
-    tag: 'Fitness',
-    difficulty: 'Hard',
-    category: 'Side Quest',
-    dueDate: null,
-  },
-  {
-    id: 'template-prepare-market-run',
-    title: 'Prepare the Market Run',
-    description: 'Handle the errands that unblock the rest of the week.',
-    tag: 'Errands',
-    difficulty: 'Medium',
-    category: 'Side Quest',
-    dueDate: null,
-  },
-  {
-    id: 'template-shape-creative-relic',
-    title: 'Shape a Creative Relic',
-    description: 'Make visible progress on a design, sketch, draft, or passion project.',
-    tag: 'Creative',
-    difficulty: 'Hard',
-    category: 'Main Quest',
-    dueDate: null,
-  },
-  {
-    id: 'template-study-trial',
-    title: 'Sprint Through the Study Trial',
-    description:
-      'Give yourself one intense study burst and close the loop before the window slips away.',
-    tag: 'Study',
-    difficulty: 'Medium',
-    category: 'Side Quest',
-    dueDate: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'template-ship-guild-update',
-    title: 'Ship the Guild Update',
-    description:
-      'Finish the work update while the context is still hot and send it before the timer runs out.',
-    tag: 'Work',
-    difficulty: 'Hard',
-    category: 'Main Quest',
-    dueDate: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
-  },
-];
+function createRelativeDueDate(hoursFromNow) {
+  return new Date(Date.now() + hoursFromNow * 60 * 60 * 1000).toISOString();
+}
+
+const defaultQuestPoolTemplateBlueprints = {
+  General: [
+    {
+      slug: 'survey-quest-ledger',
+      title: 'Survey the Quest Ledger',
+      description:
+        'Review active, stalled, and overdue quests before choosing your next move.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'choose-keystone-task',
+      title: 'Choose the Keystone Task',
+      description:
+        'Pick the single quest that deserves your full attention first.',
+      difficulty: 'Easy',
+      category: 'Main Quest',
+    },
+    {
+      slug: 'tidy-digital-satchel',
+      title: 'Tidy the Digital Satchel',
+      description:
+        'Clear stray downloads, screenshots, and loose files from your digital bag.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'name-next-win',
+      title: 'Name the Next Win',
+      description:
+        'Write down one concrete win you want to finish before the day ends.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'close-loose-thread',
+      title: 'Close the Loose Thread',
+      description:
+        'Finish one nagging unfinished task that keeps draining your attention.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'prepare-launch-pad',
+      title: "Prepare Tomorrow's Launch Pad",
+      description:
+        'Leave one important quest set up so tomorrow starts with momentum.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+  ],
+  Chores: [
+    {
+      slug: 'reclaim-kitchen-counter',
+      title: 'Reclaim the Kitchen Counter',
+      description:
+        'Clear and wipe the kitchen counter so the space feels usable again.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'sweep-hearth-paths',
+      title: 'Sweep the Hearth Paths',
+      description:
+        'Sweep or vacuum the main walking areas to reset the home base.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'empty-recycling-cache',
+      title: 'Empty the Recycling Cache',
+      description:
+        'Take out the recycling before it turns into a stacked side quest.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'reset-bathroom-mirror',
+      title: 'Reset the Bathroom Mirror',
+      description:
+        'Wipe down the sink, mirror, and quick-touch surfaces.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'change-bedroll-linen',
+      title: 'Change the Bedroll Linen',
+      description:
+        'Swap the sheets and pillowcases to refresh your rest zone.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'sort-laundry-queue',
+      title: 'Sort the Laundry Queue',
+      description:
+        'Separate clothes and start the next laundry cycle without delay.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'wipe-dust-sigils',
+      title: 'Wipe the Dust Sigils',
+      description:
+        'Dust one visible zone so the room feels less cluttered and stale.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+  ],
+  Work: [
+    {
+      slug: 'draft-client-update',
+      title: 'Draft the Client Update',
+      description:
+        'Write a clean status update that makes the next decision easy.',
+      difficulty: 'Medium',
+      category: 'Main Quest',
+      dueHours: 4,
+    },
+    {
+      slug: 'review-sprint-board',
+      title: 'Review the Sprint Board',
+      description:
+        'Sort active work and move blocked tasks into a visible lane.',
+      difficulty: 'Medium',
+      category: 'Main Quest',
+    },
+    {
+      slug: 'prepare-meeting-brief',
+      title: 'Prepare the Meeting Brief',
+      description:
+        'Gather the talking points, questions, and desired outcomes before the call.',
+      difficulty: 'Medium',
+      category: 'Main Quest',
+      dueHours: 6,
+    },
+    {
+      slug: 'ship-status-summary',
+      title: 'Ship the Status Summary',
+      description:
+        'Send the project summary while the context is still fresh.',
+      difficulty: 'Hard',
+      category: 'Main Quest',
+      dueHours: 3,
+    },
+    {
+      slug: 'organize-project-drive',
+      title: 'Organize the Project Drive',
+      description:
+        'Rename and file the documents the team keeps searching for.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'refine-portfolio-case-study',
+      title: 'Refine the Portfolio Case Study',
+      description:
+        'Improve one work sample so it better shows your thinking and results.',
+      difficulty: 'Hard',
+      category: 'Main Quest',
+    },
+    {
+      slug: 'close-approval-loop',
+      title: 'Close the Approval Loop',
+      description:
+        'Follow up on a review, sign-off, or blocker that is holding progress back.',
+      difficulty: 'Medium',
+      category: 'Main Quest',
+    },
+    {
+      slug: 'outline-next-deliverable',
+      title: 'Outline the Next Deliverable',
+      description:
+        'Break the next work deliverable into a clear first draft plan.',
+      difficulty: 'Hard',
+      category: 'Main Quest',
+    },
+  ],
+  Study: [
+    {
+      slug: 'revise-lecture-chapter',
+      title: 'Revise One Lecture Chapter',
+      description:
+        'Review one chapter or lecture section and capture the key ideas.',
+      difficulty: 'Medium',
+      category: 'Main Quest',
+    },
+    {
+      slug: 'solve-problem-set-round',
+      title: 'Solve a Problem Set Round',
+      description:
+        'Work through a focused set of questions without switching context.',
+      difficulty: 'Hard',
+      category: 'Main Quest',
+    },
+    {
+      slug: 'build-flashcards-notes',
+      title: 'Build Flashcards from Notes',
+      description:
+        "Turn today's notes into quick prompts you can review later.",
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'summarize-reading',
+      title: "Summarize Today's Reading",
+      description:
+        'Write a short summary that proves you understood the material.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'timed-practice-quiz',
+      title: 'Complete a Timed Practice Quiz',
+      description:
+        'Run a full practice quiz before the study window closes.',
+      difficulty: 'Hard',
+      category: 'Main Quest',
+      dueHours: 2,
+    },
+    {
+      slug: 'review-weak-topic-list',
+      title: 'Review the Weak Topic List',
+      description:
+        'Find the areas you still avoid and choose one to revisit.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'annotate-course-slides',
+      title: 'Annotate the Course Slides',
+      description:
+        'Mark the slides with examples, reminders, and likely exam points.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'teach-topic-back',
+      title: 'Teach the Topic Back',
+      description:
+        'Explain the topic aloud as if you are teaching it to someone else.',
+      difficulty: 'Hard',
+      category: 'Main Quest',
+    },
+  ],
+  Health: [
+    {
+      slug: 'refill-mana-flask',
+      title: 'Refill the Mana Flask',
+      description:
+        'Refill your water bottle and reset your desk before the next focus session begins.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'prep-balanced-meal',
+      title: 'Prep a Balanced Meal',
+      description:
+        'Assemble one solid meal instead of postponing it again.',
+      difficulty: 'Medium',
+      category: 'Main Quest',
+    },
+    {
+      slug: 'take-sunlight-circuit',
+      title: 'Take the Sunlight Circuit',
+      description:
+        'Step outside for daylight and a short walk to reset your energy.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'stretch-stiff-muscles',
+      title: 'Stretch the Stiff Muscles',
+      description:
+        "Spend ten minutes releasing the tension you've been carrying.",
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'schedule-checkup-ping',
+      title: 'Schedule the Checkup Ping',
+      description:
+        'Book or plan the health appointment you keep delaying.',
+      difficulty: 'Medium',
+      category: 'Main Quest',
+    },
+    {
+      slug: 'pack-healthy-snack-kit',
+      title: 'Pack the Healthy Snack Kit',
+      description:
+        'Set up a better snack option before hunger wrecks your focus.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'log-water-meals',
+      title: 'Log the Water and Meals',
+      description:
+        'Track the basics for the day so you can notice your patterns.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+  ],
+  Fitness: [
+    {
+      slug: 'lift-iron-sigils',
+      title: 'Lift the Iron Sigils',
+      description:
+        'Complete a short workout or movement session to keep momentum alive.',
+      difficulty: 'Hard',
+      category: 'Main Quest',
+    },
+    {
+      slug: 'walk-cardio-circuit',
+      title: 'Walk the Cardio Circuit',
+      description:
+        'Hit a brisk walk and let your body carry the stress out.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'mobility-reset',
+      title: 'Complete a Mobility Reset',
+      description:
+        'Open your hips, shoulders, and back before stiffness wins.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'train-core-ward',
+      title: 'Train the Core Ward',
+      description:
+        'Do a focused core routine that reinforces posture and stability.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'short-hiit-burst',
+      title: 'Finish a Short HIIT Burst',
+      description:
+        'Use one intense fitness block to spike energy and focus.',
+      difficulty: 'Hard',
+      category: 'Main Quest',
+    },
+    {
+      slug: 'recovery-steps',
+      title: 'Cool Down with Recovery Steps',
+      description:
+        'Walk and stretch long enough to bring your system back down.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+  ],
+  Errands: [
+    {
+      slug: 'prepare-market-run',
+      title: 'Prepare the Market Run',
+      description:
+        'Handle the errands that unblock the rest of the week.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+      dueHours: 5,
+    },
+    {
+      slug: 'pick-up-supplies',
+      title: 'Pick Up the Missing Supplies',
+      description:
+        'Grab the items that are quietly stalling other tasks.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+      dueHours: 3,
+    },
+    {
+      slug: 'return-borrowed-relic',
+      title: 'Return the Borrowed Relic',
+      description:
+        'Return the borrowed item before it lives in your bag forever.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'drop-off-parcel',
+      title: 'Drop Off the Parcel',
+      description:
+        'Finish the delivery run before the pickup window closes.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+      dueHours: 4,
+    },
+    {
+      slug: 'refill-monthly-essentials',
+      title: 'Refill the Monthly Essentials',
+      description:
+        'Restock the basics before you are forced into a rushed trip.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'resolve-pharmacy-stop',
+      title: 'Resolve the Pharmacy Stop',
+      description:
+        'Handle the prescription or pharmacy errand that is still pending.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+      dueHours: 8,
+    },
+  ],
+  Home: [
+    {
+      slug: 'restore-entryway',
+      title: 'Restore the Entryway',
+      description:
+        'Clear shoes, bags, and clutter so the entrance feels open again.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'clear-fridge-shelf',
+      title: 'Clear the Fridge Shelf',
+      description:
+        'Throw out stale items and make space for real meals.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'reset-living-room',
+      title: 'Reset the Living Room',
+      description:
+        'Put the main room back into a state you want to return to.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'water-indoor-grove',
+      title: 'Water the Indoor Grove',
+      description:
+        'Take care of the plants before neglect starts to show.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'organize-tool-drawer',
+      title: 'Organize the Tool Drawer',
+      description:
+        "Sort the tools so the next repair doesn't become a scavenger hunt.",
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'declutter-storage-zone',
+      title: 'Declutter One Storage Zone',
+      description:
+        'Clear one shelf, bin, or drawer instead of trying to do the whole house.',
+      difficulty: 'Hard',
+      category: 'Main Quest',
+    },
+    {
+      slug: 'ready-guest-corner',
+      title: 'Ready the Guest Corner',
+      description:
+        'Refresh the room or corner so it is actually ready for company.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+  ],
+  Focus: [
+    {
+      slug: 'train-focus-familiar',
+      title: 'Train the Focus Familiar',
+      description:
+        'Silence distractions and prepare one clean work block with a single outcome.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'seal-notification-gate',
+      title: 'Seal the Notification Gate',
+      description:
+        'Silence nonessential alerts so you can keep one thought alive.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'deep-work-block',
+      title: 'Run a 45-Minute Deep Work Block',
+      description:
+        'Stay with one difficult task for a full focused cycle.',
+      difficulty: 'Hard',
+      category: 'Main Quest',
+      dueHours: 1,
+    },
+    {
+      slug: 'single-tab-session',
+      title: 'Finish a Single-Tab Session',
+      description:
+        'Work from one tab and one goal until the session ends.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'clear-distraction-list',
+      title: 'Clear the Distraction List',
+      description:
+        'Write down tempting side tasks so they stop interrupting your main quest.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'protect-first-hour',
+      title: 'Protect the First Hour',
+      description:
+        'Use the first hour of the day on meaningful work before everything else arrives.',
+      difficulty: 'Hard',
+      category: 'Main Quest',
+    },
+  ],
+  Planning: [
+    {
+      slug: 'map-day-ahead',
+      title: 'Map the Day Ahead',
+      description:
+        'Sketch the top priorities for today so the main quest line stays clear.',
+      difficulty: 'Easy',
+      category: 'Main Quest',
+    },
+    {
+      slug: 'weekly-master-plan',
+      title: 'Forge a Weekly Master Plan',
+      description:
+        'Lay out your week with deadlines, recovery time, and one stretch goal.',
+      difficulty: 'Epic',
+      category: 'Main Quest',
+    },
+    {
+      slug: 'set-top-three',
+      title: 'Set the Top Three Priorities',
+      description:
+        'Choose the three outcomes that matter most before the day gets noisy.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'plan-budget-week',
+      title: 'Plan the Budget Week',
+      description:
+        'Assign money to the week before it quietly disappears.',
+      difficulty: 'Medium',
+      category: 'Main Quest',
+    },
+    {
+      slug: 'review-calendar-crossroads',
+      title: 'Review the Calendar Crossroads',
+      description:
+        'Scan the next seven days for conflicts, deadlines, and prep needs.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'break-big-goal-steps',
+      title: 'Break the Big Goal into Steps',
+      description:
+        'Cut a large quest into smaller parts you can actually start.',
+      difficulty: 'Hard',
+      category: 'Main Quest',
+    },
+    {
+      slug: 'schedule-recovery-window',
+      title: 'Schedule a Recovery Window',
+      description:
+        'Protect downtime before the week turns into pure reaction.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+  ],
+  Creative: [
+    {
+      slug: 'shape-creative-relic',
+      title: 'Shape a Creative Relic',
+      description:
+        'Make visible progress on a design, sketch, draft, or passion project.',
+      difficulty: 'Hard',
+      category: 'Main Quest',
+    },
+    {
+      slug: 'sketch-three-concepts',
+      title: 'Sketch Three Quick Concepts',
+      description:
+        'Generate rough ideas before chasing the polished version.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'write-rough-first-draft',
+      title: 'Write a Rough First Draft',
+      description:
+        'Get the first version onto the page without editing mid-flow.',
+      difficulty: 'Hard',
+      category: 'Main Quest',
+    },
+    {
+      slug: 'build-moodboard-fragment',
+      title: 'Build a Moodboard Fragment',
+      description:
+        'Collect references that lock in the visual tone of the project.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'record-demo-idea',
+      title: 'Record a Demo Idea',
+      description:
+        'Capture the idea while it still sounds alive in your head.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'polish-showcase-piece',
+      title: 'Polish a Showcase Piece',
+      description:
+        'Refine one finished creative piece so it feels ready to share.',
+      difficulty: 'Hard',
+      category: 'Main Quest',
+    },
+  ],
+  Finance: [
+    {
+      slug: 'collect-expense-receipts',
+      title: 'Collect the Expense Receipts',
+      description:
+        'Gather the finance trail before admin tasks become a bigger boss fight.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'reconcile-weekly-spending',
+      title: 'Reconcile the Weekly Spending',
+      description:
+        'Check where your money went and correct the drift early.',
+      difficulty: 'Medium',
+      category: 'Main Quest',
+    },
+    {
+      slug: 'pay-waiting-bill',
+      title: 'Pay the Waiting Bill',
+      description:
+        "Handle the bill before it becomes tomorrow's problem.",
+      difficulty: 'Medium',
+      category: 'Main Quest',
+      dueHours: 12,
+    },
+    {
+      slug: 'review-subscription-ledger',
+      title: 'Review the Subscription Ledger',
+      description:
+        'Cancel or confirm the recurring costs you barely notice anymore.',
+      difficulty: 'Hard',
+      category: 'Main Quest',
+    },
+    {
+      slug: 'update-savings-tracker',
+      title: 'Update the Savings Tracker',
+      description:
+        "Log this week's progress so the long game stays visible.",
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'sort-tax-folder',
+      title: 'Sort the Tax Folder',
+      description:
+        'Put the important finance records where future-you can find them.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+  ],
+  Social: [
+    {
+      slug: 'send-check-in-message',
+      title: 'Send the Check-In Message',
+      description:
+        'Reach out to someone you value instead of letting the thread fade.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+      dueHours: 8,
+    },
+    {
+      slug: 'plan-catch-up-call',
+      title: 'Plan a Catch-Up Call',
+      description:
+        'Set a real time to reconnect instead of saying someday.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'reply-missed-thread',
+      title: 'Reply to the Missed Thread',
+      description:
+        'Answer the message you meant to return to days ago.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'thank-helpful-ally',
+      title: 'Thank a Helpful Ally',
+      description:
+        'Send a genuine thank-you to someone who made your week easier.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'confirm-group-plan',
+      title: 'Confirm the Group Plan',
+      description:
+        'Lock the details so the social plan actually happens.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+      dueHours: 6,
+    },
+    {
+      slug: 'celebrate-guildmate-win',
+      title: 'Celebrate a Guildmate Win',
+      description:
+        "Notice someone else's progress and tell them it mattered.",
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+  ],
+  Admin: [
+    {
+      slug: 'clear-inbox-cavern',
+      title: 'Clear the Inbox Cavern',
+      description:
+        'Answer or archive the messages that keep pulling your attention away.',
+      difficulty: 'Hard',
+      category: 'Main Quest',
+    },
+    {
+      slug: 'rename-loose-files',
+      title: 'Rename the Loose Files',
+      description:
+        'Give the scattered files sensible names before they become impossible to find.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'update-password-ledger',
+      title: 'Update the Password Ledger',
+      description:
+        'Refresh one weak login and store it properly.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'archive-completed-paperwork',
+      title: 'Archive the Completed Paperwork',
+      description:
+        'File the finished documents so your active pile stays clean.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'submit-pending-form',
+      title: 'Submit the Pending Form',
+      description:
+        'Complete and send the form that has been sitting unfinished.',
+      difficulty: 'Medium',
+      category: 'Main Quest',
+      dueHours: 10,
+    },
+    {
+      slug: 'clean-browser-tabs',
+      title: 'Clean the Browser Tabs',
+      description:
+        'Close or bookmark the tabs that are draining your working memory.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'backup-important-folder',
+      title: 'Back Up the Important Folder',
+      description:
+        'Create a backup before a small problem becomes a disaster.',
+      difficulty: 'Medium',
+      category: 'Main Quest',
+    },
+  ],
+  'Self Care': [
+    {
+      slug: 'protect-evening-wind-down',
+      title: 'Protect the Evening Wind-Down',
+      description:
+        'Create a calm finish to the day so tomorrow begins with more energy.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'quiet-reset-break',
+      title: 'Take a Quiet Reset Break',
+      description:
+        'Step away long enough for your stress to come down a level.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'journal-days-lessons',
+      title: "Journal the Day's Lessons",
+      description:
+        'Write a few lines about what worked, what drained you, and what to change.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'read-for-calm',
+      title: 'Read for Calm for 20 Minutes',
+      description:
+        'Choose a quiet read instead of one more scroll session.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'screen-free-reset',
+      title: 'Do a Screen-Free Reset',
+      description:
+        'Leave every glowing screen alone for a short recovery block.',
+      difficulty: 'Medium',
+      category: 'Side Quest',
+    },
+    {
+      slug: 'prepare-sleep-routine',
+      title: 'Prepare a Restful Sleep Routine',
+      description:
+        'Set the room and your routine so falling asleep takes less effort.',
+      difficulty: 'Medium',
+      category: 'Main Quest',
+    },
+    {
+      slug: 'breathwork-reset',
+      title: 'Clear the Mind with Breathwork',
+      description:
+        'Use guided breathing to settle your mind before the next push.',
+      difficulty: 'Easy',
+      category: 'Side Quest',
+    },
+  ],
+};
+
+const defaultQuestPoolTemplates = Object.entries(
+  defaultQuestPoolTemplateBlueprints,
+).flatMap(([tag, templates]) =>
+  templates.map(({ slug, dueHours, ...template }) => ({
+    id: `template-${slug}`,
+    ...template,
+    tag,
+    dueDate:
+      typeof dueHours === 'number' ? createRelativeDueDate(dueHours) : null,
+  })),
+);
 
 function createQuestId() {
   return `quest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -1034,11 +1893,31 @@ function normalizeQuestPoolTemplate(template) {
 }
 
 function normalizeQuestPool(questPoolTemplates) {
+  const normalizedDefaultTemplates = defaultQuestPoolTemplates.map(
+    normalizeQuestPoolTemplate,
+  );
+
   if (!Array.isArray(questPoolTemplates)) {
-    return defaultQuestPoolTemplates.map(normalizeQuestPoolTemplate);
+    return normalizedDefaultTemplates;
   }
 
-  return questPoolTemplates.map(normalizeQuestPoolTemplate);
+  const normalizedStoredTemplates = questPoolTemplates.map(
+    normalizeQuestPoolTemplate,
+  );
+  const defaultTemplateIds = new Set(
+    normalizedDefaultTemplates.map(template => template.id),
+  );
+  const storedTemplatesById = new Map(
+    normalizedStoredTemplates.map(template => [template.id, template]),
+  );
+  const mergedDefaultTemplates = normalizedDefaultTemplates.map(
+    template => storedTemplatesById.get(template.id) ?? template,
+  );
+  const customTemplates = normalizedStoredTemplates.filter(
+    template => !defaultTemplateIds.has(template.id),
+  );
+
+  return [...mergedDefaultTemplates, ...customTemplates];
 }
 
 function getProgressStats(quests) {
@@ -1323,7 +2202,7 @@ function buildRealmCodex(gameState, appConfig) {
 }
 
 function getThemePackDefinition(themePackId) {
-  return themeCatalog[normalizeThemePackId(themePackId)] ?? themeCatalog['ethereal-forge'];
+  return themeCatalog[normalizeThemePackId(themePackId)] ?? themeCatalog['celestial-bazaar'];
 }
 
 function buildThemePalette(themePackId, themeMode) {
@@ -1506,7 +2385,7 @@ function buildQuestPool(questPoolTemplates) {
 function normalizeThemePackId(themePackId) {
   return themePackOptions.includes(themePackId)
     ? themePackId
-    : 'ethereal-forge';
+    : 'celestial-bazaar';
 }
 function normalizeAppConfig(appConfig) {
   return {
@@ -2126,7 +3005,7 @@ const server = http.createServer(async (req, res) => {
         },
         quests: [],
         themeMode: 'dark',
-        themePackId: 'ethereal-forge',
+        themePackId: 'celestial-bazaar',
         unlockedAchievementIds: [],
         sortOption: 'Newest first',
       });
