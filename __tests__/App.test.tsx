@@ -706,11 +706,11 @@ beforeEach(() => {
       },
       {
         id: 'crimson-vault',
-        name: 'Crimson Vault',
-        description: 'Crimson steel and violet vault.',
-        accentEnergy: 'Crimson Vault #DC143C',
-        surfaceTone: 'Vault Velvet',
-        previewSwatches: ['#DC143C', '#F29C38', '#271822'],
+        name: 'Blood Forge',
+        description: 'Blood-red steel and ember brass.',
+        accentEnergy: 'Blood Forge #D63C52',
+        surfaceTone: 'Blood Iron',
+        previewSwatches: ['#D63C52', '#D4A63A', '#8E2233'],
         statusLabel: 'Select',
       },
       {
