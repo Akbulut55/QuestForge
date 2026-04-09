@@ -139,6 +139,10 @@ export async function fetchRemoteThemeSanctum<T>(): Promise<T> {
   return requestJson<T>('/theme-sanctum');
 }
 
+export async function fetchRemoteThemePalette<T>(): Promise<T> {
+  return requestJson<T>('/theme-palette');
+}
+
 export async function saveRemoteGameState<T>(gameState: T): Promise<T> {
   return requestJson<T>('/game-state', {
     method: 'PUT',
@@ -281,6 +285,7 @@ export async function updateRemoteSortOption<TSortOption, TResponse>(
     body: JSON.stringify({ sortOption }),
   });
 }
+
 
 
 

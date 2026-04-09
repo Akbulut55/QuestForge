@@ -50,7 +50,309 @@ const achievementDefinitions = [
   'quest-master',
 ];
 const defaultQuestSectionOrder = ['main', 'side', 'completed'];
-const themePackOptions = ['ethereal-forge', 'luminous-paladin', 'void-drifter'];
+const themeCatalog = {
+  'ethereal-forge': {
+    name: 'Ethereal Forge',
+    description: 'Gold, cyan, forged slate',
+    accentEnergy: {
+      dark: 'Amber #FFBF00',
+      light: 'Sun Gold #EFB10A',
+    },
+    surfaceTone: {
+      dark: 'Deep Slate',
+      light: 'Ivory Slate',
+    },
+    previewSwatches: {
+      dark: ['#ffbf00', '#00d2fd', '#1c1b1b'],
+      light: ['#efb10a', '#11b8df', '#fffaf3'],
+    },
+    palette: {
+      dark: {
+        background: '#131313',
+        surfaceLow: '#0e0e0e',
+        surface: '#1c1b1b',
+        surfaceHigh: '#201f1f',
+        surfaceHighest: '#2a2a2a',
+        textPrimary: '#e5e2e1',
+        textMuted: '#d4c5ab',
+        amber: '#ffbf00',
+        amberSoft: '#ffe2ab',
+        blue: '#00d2fd',
+        blueSoft: '#a2e7ff',
+        success: '#63e28d',
+        ghostBorder: 'rgba(80, 69, 50, 0.24)',
+        subtitle: '#c4b9a6',
+        placeholder: '#8b816f',
+        buttonText: '#261a00',
+        buttonDisabled: '#8f7531',
+        activeBadgeBackground: 'rgba(255, 191, 0, 0.16)',
+        doneBadgeBackground: 'rgba(99, 226, 141, 0.12)',
+      },
+      light: {
+        background: '#f5efe5',
+        surfaceLow: '#faf4ea',
+        surface: '#fffaf3',
+        surfaceHigh: '#f0e6d6',
+        surfaceHighest: '#e8dbc8',
+        textPrimary: '#2f2419',
+        textMuted: '#8d6c35',
+        amber: '#efb10a',
+        amberSoft: '#f9d88f',
+        blue: '#11b8df',
+        blueSoft: '#52dfff',
+        success: '#2c9464',
+        ghostBorder: 'rgba(95, 73, 40, 0.14)',
+        subtitle: '#75614a',
+        placeholder: '#aa8f70',
+        buttonText: '#2f2419',
+        buttonDisabled: '#ceb68a',
+        activeBadgeBackground: 'rgba(239, 177, 10, 0.12)',
+        doneBadgeBackground: 'rgba(44, 148, 100, 0.10)',
+      },
+    },
+  },
+  'luminous-paladin': {
+    name: 'Luminous Paladin',
+    description: 'Gold, coral, marble',
+    accentEnergy: {
+      dark: 'Sunsteel #FFC145',
+      light: 'Sunsteel #F5AB2F',
+    },
+    surfaceTone: {
+      dark: 'Velvet Plate',
+      light: 'Ivory Plate',
+    },
+    previewSwatches: {
+      dark: ['#ffc145', '#ff7f6a', '#32202b'],
+      light: ['#f5ab2f', '#ea6b56', '#fff8f3'],
+    },
+    palette: {
+      dark: {
+        background: '#181116',
+        surfaceLow: '#261820',
+        surface: '#32202b',
+        surfaceHigh: '#432835',
+        surfaceHighest: '#573547',
+        textPrimary: '#fff5ef',
+        textMuted: '#ffcd6d',
+        amber: '#ffc145',
+        amberSoft: '#ffe3a6',
+        blue: '#ff7f6a',
+        blueSoft: '#ffb4a8',
+        success: '#87e0a2',
+        ghostBorder: 'rgba(255, 180, 168, 0.16)',
+        subtitle: '#d7b9c0',
+        placeholder: '#a7868f',
+        buttonText: '#351d00',
+        buttonDisabled: '#9e7f39',
+        activeBadgeBackground: 'rgba(255, 193, 69, 0.18)',
+        doneBadgeBackground: 'rgba(135, 224, 162, 0.16)',
+      },
+      light: {
+        background: '#fff4ef',
+        surfaceLow: '#ffe6da',
+        surface: '#fff8f3',
+        surfaceHigh: '#ffd3bf',
+        surfaceHighest: '#ffc1a6',
+        textPrimary: '#341c14',
+        textMuted: '#b3681e',
+        amber: '#f5ab2f',
+        amberSoft: '#ffd98e',
+        blue: '#ea6b56',
+        blueSoft: '#ffb39d',
+        success: '#2c9f67',
+        ghostBorder: 'rgba(234, 107, 86, 0.14)',
+        subtitle: '#8a6657',
+        placeholder: '#b38773',
+        buttonText: '#341c14',
+        buttonDisabled: '#d8ae75',
+        activeBadgeBackground: 'rgba(245, 171, 47, 0.12)',
+        doneBadgeBackground: 'rgba(44, 159, 103, 0.12)',
+      },
+    },
+  },
+  'void-drifter': {
+    name: 'Void Drifter',
+    description: 'Teal, starlight, indigo',
+    accentEnergy: {
+      dark: 'Nebula Cyan #3FE0B5',
+      light: 'Aether Teal #22C6A0',
+    },
+    surfaceTone: {
+      dark: 'Void Indigo',
+      light: 'Mist Glass',
+    },
+    previewSwatches: {
+      dark: ['#3fe0b5', '#57c7ff', '#122541'],
+      light: ['#22c6a0', '#2da9e2', '#f5fdff'],
+    },
+    palette: {
+      dark: {
+        background: '#08111f',
+        surfaceLow: '#0d1d31',
+        surface: '#122541',
+        surfaceHigh: '#1b3458',
+        surfaceHighest: '#274772',
+        textPrimary: '#eefbff',
+        textMuted: '#7ae7d0',
+        amber: '#3fe0b5',
+        amberSoft: '#9af6de',
+        blue: '#57c7ff',
+        blueSoft: '#aee9ff',
+        success: '#8de07b',
+        ghostBorder: 'rgba(87, 199, 255, 0.16)',
+        subtitle: '#aac8d9',
+        placeholder: '#7893a5',
+        buttonText: '#03251b',
+        buttonDisabled: '#4c9d84',
+        activeBadgeBackground: 'rgba(63, 224, 181, 0.18)',
+        doneBadgeBackground: 'rgba(141, 224, 123, 0.16)',
+      },
+      light: {
+        background: '#ecfbff',
+        surfaceLow: '#d9f5fb',
+        surface: '#f5fdff',
+        surfaceHigh: '#bfeff8',
+        surfaceHighest: '#9de3f0',
+        textPrimary: '#102433',
+        textMuted: '#0c8c79',
+        amber: '#22c6a0',
+        amberSoft: '#7ce9d2',
+        blue: '#2da9e2',
+        blueSoft: '#87dcff',
+        success: '#4cae5f',
+        ghostBorder: 'rgba(45, 169, 226, 0.14)',
+        subtitle: '#517181',
+        placeholder: '#7d9aa8',
+        buttonText: '#102433',
+        buttonDisabled: '#7dc1b0',
+        activeBadgeBackground: 'rgba(34, 198, 160, 0.12)',
+        doneBadgeBackground: 'rgba(76, 174, 95, 0.12)',
+      },
+    },
+  },
+  'shadow-weaver': {
+    name: 'Shadow Weaver',
+    description: 'Violet, orchid, obsidian',
+    accentEnergy: {
+      dark: 'Violet Arc #9F70FF',
+      light: 'Orchid Arc #8D5CFF',
+    },
+    surfaceTone: {
+      dark: 'Night Loom',
+      light: 'Lavender Haze',
+    },
+    previewSwatches: {
+      dark: ['#9f70ff', '#ff7ad7', '#24193c'],
+      light: ['#8d5cff', '#ec6fc6', '#fff8ff'],
+    },
+    palette: {
+      dark: {
+        background: '#140f1f',
+        surfaceLow: '#1b1430',
+        surface: '#24193c',
+        surfaceHigh: '#302052',
+        surfaceHighest: '#3c2a67',
+        textPrimary: '#f6efff',
+        textMuted: '#c7b3ff',
+        amber: '#9f70ff',
+        amberSoft: '#d6c1ff',
+        blue: '#ff7ad7',
+        blueSoft: '#ffb4ef',
+        success: '#7fe0b0',
+        ghostBorder: 'rgba(214, 193, 255, 0.18)',
+        subtitle: '#c9bfde',
+        placeholder: '#8e84a6',
+        buttonText: '#150d28',
+        buttonDisabled: '#7b63ab',
+        activeBadgeBackground: 'rgba(159, 112, 255, 0.18)',
+        doneBadgeBackground: 'rgba(127, 224, 176, 0.16)',
+      },
+      light: {
+        background: '#f9f3ff',
+        surfaceLow: '#f1e8ff',
+        surface: '#fff8ff',
+        surfaceHigh: '#e6d8ff',
+        surfaceHighest: '#d9c5ff',
+        textPrimary: '#2c1f46',
+        textMuted: '#7b54c7',
+        amber: '#8d5cff',
+        amberSoft: '#cdb7ff',
+        blue: '#ec6fc6',
+        blueSoft: '#f7b6e4',
+        success: '#2f9f78',
+        ghostBorder: 'rgba(141, 92, 255, 0.14)',
+        subtitle: '#74648e',
+        placeholder: '#9b8bb3',
+        buttonText: '#24173f',
+        buttonDisabled: '#baa6dc',
+        activeBadgeBackground: 'rgba(141, 92, 255, 0.12)',
+        doneBadgeBackground: 'rgba(47, 159, 120, 0.12)',
+      },
+    },
+  },
+  'verdant-rune': {
+    name: 'Verdant Rune',
+    description: 'Lime, jade, moss',
+    accentEnergy: {
+      dark: 'Rune Bloom #7ED957',
+      light: 'Rune Bloom #7BC64D',
+    },
+    surfaceTone: {
+      dark: 'Moss Slate',
+      light: 'Sage Canvas',
+    },
+    previewSwatches: {
+      dark: ['#7ed957', '#38c7a4', '#1d2b25'],
+      light: ['#7bc64d', '#27b391', '#fbfffa'],
+    },
+    palette: {
+      dark: {
+        background: '#0f1714',
+        surfaceLow: '#16211d',
+        surface: '#1d2b25',
+        surfaceHigh: '#27362f',
+        surfaceHighest: '#31453d',
+        textPrimary: '#eef7ef',
+        textMuted: '#b8d88a',
+        amber: '#7ed957',
+        amberSoft: '#c6f3a0',
+        blue: '#38c7a4',
+        blueSoft: '#8ef0d6',
+        success: '#66d992',
+        ghostBorder: 'rgba(142, 240, 214, 0.16)',
+        subtitle: '#bfd0bd',
+        placeholder: '#87998a',
+        buttonText: '#122017',
+        buttonDisabled: '#699860',
+        activeBadgeBackground: 'rgba(126, 217, 87, 0.16)',
+        doneBadgeBackground: 'rgba(56, 199, 164, 0.16)',
+      },
+      light: {
+        background: '#f1f9f1',
+        surfaceLow: '#e4f2e4',
+        surface: '#fbfffa',
+        surfaceHigh: '#d4ecd4',
+        surfaceHighest: '#c5e4c5',
+        textPrimary: '#1f3322',
+        textMuted: '#5c8a43',
+        amber: '#7bc64d',
+        amberSoft: '#d6f2ad',
+        blue: '#27b391',
+        blueSoft: '#88e7cf',
+        success: '#3a9d6e',
+        ghostBorder: 'rgba(39, 179, 145, 0.14)',
+        subtitle: '#607861',
+        placeholder: '#86a088',
+        buttonText: '#183021',
+        buttonDisabled: '#aac7ab',
+        activeBadgeBackground: 'rgba(123, 198, 77, 0.12)',
+        doneBadgeBackground: 'rgba(39, 179, 145, 0.12)',
+      },
+    },
+  },
+};
+const themePackOptions = Object.keys(themeCatalog);
 const rankThresholds = [
   { minimumXp: 2100, title: 'Ascendant' },
   { minimumXp: 1560, title: 'Mythic' },
@@ -1020,84 +1322,58 @@ function buildRealmCodex(gameState, appConfig) {
   };
 }
 
+function getThemePackDefinition(themePackId) {
+  return themeCatalog[normalizeThemePackId(themePackId)] ?? themeCatalog['ethereal-forge'];
+}
+
+function buildThemePalette(themePackId, themeMode) {
+  const normalizedThemeMode = themeMode === 'light' ? 'light' : 'dark';
+  const themePackDefinition = getThemePackDefinition(themePackId);
+
+  return themePackDefinition.palette[normalizedThemeMode];
+}
+
+function buildThemePaletteResponse(gameState) {
+  return {
+    themeMode: gameState.themeMode,
+    themePackId: normalizeThemePackId(gameState.themePackId),
+    themePalette: buildThemePalette(gameState.themePackId, gameState.themeMode),
+  };
+}
+
 function buildThemeSanctum(gameState, appConfig) {
   const activeThemePackId = normalizeThemePackId(gameState.themePackId);
-  const activeThemePack =
-    activeThemePackId === 'luminous-paladin'
-      ? {
-          name: 'Luminous Paladin',
-          description:
-            'A brighter holy-metal palette that lets the realm feel radiant without changing the screen structure.',
-          accentEnergy:
-            gameState.themeMode === 'dark' ? 'Sunsteel Ember' : 'Sunsteel Glow',
-          surfaceTone:
-            gameState.themeMode === 'dark' ? 'Velvet Plate' : 'Ivory Plate',
-        }
-      : activeThemePackId === 'void-drifter'
-        ? {
-            name: 'Void Drifter',
-            description:
-              'A colder cosmic palette that shifts the realm toward nebula blues and teal energy.',
-            accentEnergy:
-              gameState.themeMode === 'dark' ? 'Nebula Cyan' : 'Aether Teal',
-            surfaceTone:
-              gameState.themeMode === 'dark' ? 'Void Indigo' : 'Mist Glass',
-          }
-        : {
-            name: 'Ethereal Forge',
-            description:
-              'Gold & slate',
-            accentEnergy:
-              gameState.themeMode === 'dark'
-                ? 'Amber'
-                : 'Sun',
-            surfaceTone:
-              gameState.themeMode === 'dark'
-                ? 'Deep Stone'
-                : 'Ivory Glow',
-          };
+  const activeThemePack = getThemePackDefinition(activeThemePackId);
+  const normalizedThemeMode = gameState.themeMode === 'light' ? 'light' : 'dark';
+
   return {
     kicker: 'Theme Sanctum',
     title: 'The Color Forge',
     subtitle:
-      'A backend-guided reading of the realm palette currently shaping Quest Forge across every screen.',
+      'Choose the essence pack that now drives Quest Forge across every screen.',
     activeThemeLabel: activeThemePack.name,
     activeModeLabel:
       gameState.themeMode === 'dark' ? 'Dark Alchemist' : 'Light Alchemist',
-    accentEnergyLabel: activeThemePack.accentEnergy,
-    surfaceToneLabel: activeThemePack.surfaceTone,
-    realmNotesLabel: `${appConfig.configVersion}.0.0`,
+    accentEnergyLabel: activeThemePack.accentEnergy[normalizedThemeMode],
+    surfaceToneLabel: activeThemePack.surfaceTone[normalizedThemeMode],
+    accentPreviewColor: activeThemePack.previewSwatches[normalizedThemeMode][0],
+    realmNotesLabel: `v${appConfig.configVersion}`,
     availableEssencesTitle: 'Available Essences',
     availableEssencesIntro:
-      'These packs are described by the backend first so the app can evolve into a more configurable visual system over time.',
-    availableThemePacks: [
-      {
-        id: 'ethereal-forge',
-        name: 'Ethereal Forge',
-        description: 'Gold & slate',
-        accentEnergy: 'Amber Gold',
-        surfaceTone: 'Deep Slate',
-        statusLabel:
-          activeThemePackId === 'ethereal-forge' ? 'Current' : 'Dormant',
-      },
-      {
-        id: 'luminous-paladin',
-        name: 'Luminous Paladin',
-        description: 'Gold & marble',
-        accentEnergy: 'Sunsteel',
-        surfaceTone: 'Ivory Plate',
-        statusLabel:
-          activeThemePackId === 'luminous-paladin' ? 'Current' : 'Dormant',
-      },
-      {
-        id: 'void-drifter',
-        name: 'Void Drifter',
-        description: 'Teal & starlight',
-        accentEnergy: 'Nebula Cyan',
-        surfaceTone: 'Void Indigo',
-        statusLabel: activeThemePackId === 'void-drifter' ? 'Current' : 'Dormant',
-      },
-    ],
+      'Five Stitch-guided essence packs live in the backend and update the full app palette together.',
+    availableThemePacks: themePackOptions.map(themePackId => {
+      const themePackDefinition = getThemePackDefinition(themePackId);
+
+      return {
+        id: themePackId,
+        name: themePackDefinition.name,
+        description: themePackDefinition.description,
+        accentEnergy: themePackDefinition.accentEnergy[normalizedThemeMode],
+        surfaceTone: themePackDefinition.surfaceTone[normalizedThemeMode],
+        previewSwatches: themePackDefinition.previewSwatches[normalizedThemeMode],
+        statusLabel: activeThemePackId === themePackId ? 'Current' : 'Select',
+      };
+    }),
   };
 }
 
@@ -1759,6 +2035,19 @@ const server = http.createServer(async (req, res) => {
     } catch (error) {
       sendJson(res, 500, {
         error: 'Unable to read theme sanctum.',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+    return;
+  }
+
+  if (req.url === '/theme-palette' && req.method === 'GET') {
+    try {
+      const gameState = await readGameState();
+      sendJson(res, 200, buildThemePaletteResponse(gameState));
+    } catch (error) {
+      sendJson(res, 500, {
+        error: 'Unable to read theme palette.',
         details: error instanceof Error ? error.message : 'Unknown error',
       });
     }

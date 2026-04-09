@@ -50,6 +50,7 @@ jest.mock('../src/api/gameStateApi', () => ({
   fetchRemoteQuestDetails: jest.fn(),
   fetchRemoteQuestPool: jest.fn(),
   fetchRemoteRealmCodex: jest.fn(),
+  fetchRemoteThemePalette: jest.fn(),
   fetchRemoteThemeSanctum: jest.fn(),
   resetRemoteProgress: jest.fn(),
   resetRemoteQuestPool: jest.fn(),
@@ -81,6 +82,7 @@ import {
   fetchRemoteQuestDetails,
   fetchRemoteQuestPool,
   fetchRemoteRealmCodex,
+  fetchRemoteThemePalette,
   fetchRemoteThemeSanctum,
   resetRemoteProgress,
   resetRemoteQuestPool,
@@ -101,6 +103,7 @@ const mockFetchRemoteQuestDetails = fetchRemoteQuestDetails as jest.Mock;
 const mockFetchRemoteDailySuggestions = fetchRemoteDailySuggestions as jest.Mock;
 const mockFetchRemoteQuestPool = fetchRemoteQuestPool as jest.Mock;
 const mockFetchRemoteRealmCodex = fetchRemoteRealmCodex as jest.Mock;
+const mockFetchRemoteThemePalette = fetchRemoteThemePalette as jest.Mock;
 const mockFetchRemoteThemeSanctum = fetchRemoteThemeSanctum as jest.Mock;
 const mockSaveRemoteGameState = saveRemoteGameState as jest.Mock;
 const mockCreateRemoteQuest = createRemoteQuest as jest.Mock;
@@ -121,7 +124,12 @@ type Difficulty = 'Easy' | 'Medium' | 'Hard' | 'Epic';
 type Category = 'Main Quest' | 'Side Quest';
 type Status = 'Ready' | 'In Progress' | 'Completed' | 'Failed';
 type ThemeMode = 'dark' | 'light';
-type ThemePackId = 'ethereal-forge' | 'luminous-paladin' | 'void-drifter';
+type ThemePackId =
+  | 'ethereal-forge'
+  | 'luminous-paladin'
+  | 'void-drifter'
+  | 'shadow-weaver'
+  | 'verdant-rune';
 
 type TestQuest = {
   id: string;
@@ -594,18 +602,90 @@ beforeEach(() => {
     featureFlags: [],
     modules: [],
   });
+  mockFetchRemoteThemePalette.mockResolvedValue({
+    themeMode: mockBackendState.themeMode,
+    themePackId: mockBackendState.themePackId,
+    themePalette: {
+      background: '#131313',
+      surfaceLow: '#0e0e0e',
+      surface: '#1c1b1b',
+      surfaceHigh: '#201f1f',
+      surfaceHighest: '#2a2a2a',
+      textPrimary: '#e5e2e1',
+      textMuted: '#d4c5ab',
+      amber: '#ffbf00',
+      amberSoft: '#ffe2ab',
+      blue: '#00d2fd',
+      blueSoft: '#a2e7ff',
+      success: '#63e28d',
+      ghostBorder: 'rgba(80, 69, 50, 0.24)',
+      subtitle: '#c4b9a6',
+      placeholder: '#8b816f',
+      buttonText: '#261a00',
+      buttonDisabled: '#8f7531',
+      activeBadgeBackground: 'rgba(255, 191, 0, 0.16)',
+      doneBadgeBackground: 'rgba(99, 226, 141, 0.12)',
+    },
+  });
   mockFetchRemoteThemeSanctum.mockResolvedValue({
     kicker: 'Theme Sanctum',
     title: 'Theme Sanctum',
     subtitle: 'Theme summary.',
     activeThemeLabel: 'Ethereal Forge',
     activeModeLabel: 'Dark Alchemist',
-    accentEnergyLabel: 'Amber',
+    accentEnergyLabel: 'Amber #FFBF00',
+    accentPreviewColor: '#ffbf00',
     surfaceToneLabel: 'Deep Stone',
-    realmNotesLabel: '30.0.0',
+    realmNotesLabel: 'v30',
     availableEssencesTitle: 'Available Essences',
     availableEssencesIntro: 'Choose a palette.',
-    availableThemePacks: [],
+    availableThemePacks: [
+      {
+        id: 'ethereal-forge',
+        name: 'Ethereal Forge',
+        description: 'Gold, cyan, forged slate',
+        accentEnergy: 'Amber #FFBF00',
+        surfaceTone: 'Deep Slate',
+        previewSwatches: ['#ffbf00', '#00d2fd', '#1c1b1b'],
+        statusLabel: 'Current',
+      },
+      {
+        id: 'luminous-paladin',
+        name: 'Luminous Paladin',
+        description: 'Gold, coral, marble',
+        accentEnergy: 'Sunsteel #FFC145',
+        surfaceTone: 'Velvet Plate',
+        previewSwatches: ['#ffc145', '#ff7f6a', '#32202b'],
+        statusLabel: 'Select',
+      },
+      {
+        id: 'void-drifter',
+        name: 'Void Drifter',
+        description: 'Teal, starlight, indigo',
+        accentEnergy: 'Nebula Cyan #3FE0B5',
+        surfaceTone: 'Void Indigo',
+        previewSwatches: ['#3fe0b5', '#57c7ff', '#122541'],
+        statusLabel: 'Select',
+      },
+      {
+        id: 'shadow-weaver',
+        name: 'Shadow Weaver',
+        description: 'Violet, orchid, obsidian',
+        accentEnergy: 'Violet Arc #9F70FF',
+        surfaceTone: 'Night Loom',
+        previewSwatches: ['#9f70ff', '#ff7ad7', '#24193c'],
+        statusLabel: 'Select',
+      },
+      {
+        id: 'verdant-rune',
+        name: 'Verdant Rune',
+        description: 'Lime, jade, moss',
+        accentEnergy: 'Rune Bloom #7ED957',
+        surfaceTone: 'Moss Slate',
+        previewSwatches: ['#7ed957', '#38c7a4', '#1d2b25'],
+        statusLabel: 'Select',
+      },
+    ],
   });
   mockSaveRemoteGameState.mockImplementation(async (gameState: TestGameState) => {
     mockBackendState = normalizeState(gameState);

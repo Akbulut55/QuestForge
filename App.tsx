@@ -33,6 +33,7 @@ import {
   fetchRemoteQuestDetails,
   fetchRemoteQuestPool,
   fetchRemoteRealmCodex,
+  fetchRemoteThemePalette,
   fetchRemoteThemeSanctum,
   resetRemoteProgress,
   resetRemoteQuestPool,
@@ -82,7 +83,12 @@ type StatusFilter = 'All' | 'Ready' | 'In Progress';
 type HistoryPeriodFilter = 'All Time' | 'This Month' | 'This Year';
 type HistoryStatusFilter = 'All' | 'Completed' | 'Failed';
 type ThemeMode = 'dark' | 'light';
-type ThemePackId = 'ethereal-forge' | 'luminous-paladin' | 'void-drifter';
+type ThemePackId =
+  | 'ethereal-forge'
+  | 'luminous-paladin'
+  | 'void-drifter'
+  | 'shadow-weaver'
+  | 'verdant-rune';
 
 type Quest = {
   id: string;
@@ -240,6 +246,7 @@ type ThemeSanctumResponse = {
   activeThemeLabel: string;
   activeModeLabel: string;
   accentEnergyLabel: string;
+  accentPreviewColor: string;
   surfaceToneLabel: string;
   realmNotesLabel: string;
   availableEssencesTitle: string;
@@ -250,8 +257,15 @@ type ThemeSanctumResponse = {
     description: string;
     accentEnergy: string;
     surfaceTone: string;
+    previewSwatches: string[];
     statusLabel: string;
   }>;
+};
+
+type ThemePaletteResponse = {
+  themeMode: ThemeMode;
+  themePackId: ThemePackId;
+  themePalette: ThemePalette;
 };
 
 type QuestDetailsResponse = {
@@ -456,8 +470,103 @@ const voidDrifterThemes: Record<ThemeMode, ThemePalette> = {
   },
 };
 
+const shadowWeaverThemes: Record<ThemeMode, ThemePalette> = {
+  dark: {
+    background: '#140f1f',
+    surfaceLow: '#1b1430',
+    surface: '#24193c',
+    surfaceHigh: '#302052',
+    surfaceHighest: '#3c2a67',
+    textPrimary: '#f6efff',
+    textMuted: '#c7b3ff',
+    amber: '#9f70ff',
+    amberSoft: '#d6c1ff',
+    blue: '#ff7ad7',
+    blueSoft: '#ffb4ef',
+    success: '#7fe0b0',
+    ghostBorder: 'rgba(214, 193, 255, 0.18)',
+    subtitle: '#c9bfde',
+    placeholder: '#8e84a6',
+    buttonText: '#150d28',
+    buttonDisabled: '#7b63ab',
+    activeBadgeBackground: 'rgba(159, 112, 255, 0.18)',
+    doneBadgeBackground: 'rgba(127, 224, 176, 0.16)',
+  },
+  light: {
+    background: '#f9f3ff',
+    surfaceLow: '#f1e8ff',
+    surface: '#fff8ff',
+    surfaceHigh: '#e6d8ff',
+    surfaceHighest: '#d9c5ff',
+    textPrimary: '#2c1f46',
+    textMuted: '#7b54c7',
+    amber: '#8d5cff',
+    amberSoft: '#cdb7ff',
+    blue: '#ec6fc6',
+    blueSoft: '#f7b6e4',
+    success: '#2f9f78',
+    ghostBorder: 'rgba(141, 92, 255, 0.14)',
+    subtitle: '#74648e',
+    placeholder: '#9b8bb3',
+    buttonText: '#24173f',
+    buttonDisabled: '#baa6dc',
+    activeBadgeBackground: 'rgba(141, 92, 255, 0.12)',
+    doneBadgeBackground: 'rgba(47, 159, 120, 0.12)',
+  },
+};
+
+const verdantRuneThemes: Record<ThemeMode, ThemePalette> = {
+  dark: {
+    background: '#0f1714',
+    surfaceLow: '#16211d',
+    surface: '#1d2b25',
+    surfaceHigh: '#27362f',
+    surfaceHighest: '#31453d',
+    textPrimary: '#eef7ef',
+    textMuted: '#b8d88a',
+    amber: '#7ed957',
+    amberSoft: '#c6f3a0',
+    blue: '#38c7a4',
+    blueSoft: '#8ef0d6',
+    success: '#66d992',
+    ghostBorder: 'rgba(142, 240, 214, 0.16)',
+    subtitle: '#bfd0bd',
+    placeholder: '#87998a',
+    buttonText: '#122017',
+    buttonDisabled: '#699860',
+    activeBadgeBackground: 'rgba(126, 217, 87, 0.16)',
+    doneBadgeBackground: 'rgba(56, 199, 164, 0.16)',
+  },
+  light: {
+    background: '#f1f9f1',
+    surfaceLow: '#e4f2e4',
+    surface: '#fbfffa',
+    surfaceHigh: '#d4ecd4',
+    surfaceHighest: '#c5e4c5',
+    textPrimary: '#1f3322',
+    textMuted: '#5c8a43',
+    amber: '#7bc64d',
+    amberSoft: '#d6f2ad',
+    blue: '#27b391',
+    blueSoft: '#88e7cf',
+    success: '#3a9d6e',
+    ghostBorder: 'rgba(39, 179, 145, 0.14)',
+    subtitle: '#607861',
+    placeholder: '#86a088',
+    buttonText: '#183021',
+    buttonDisabled: '#aac7ab',
+    activeBadgeBackground: 'rgba(123, 198, 77, 0.12)',
+    doneBadgeBackground: 'rgba(39, 179, 145, 0.12)',
+  },
+};
+
 function normalizeThemePackId(themePackId: string | undefined): ThemePackId {
-  if (themePackId === 'luminous-paladin' || themePackId === 'void-drifter') {
+  if (
+    themePackId === 'luminous-paladin' ||
+    themePackId === 'void-drifter' ||
+    themePackId === 'shadow-weaver' ||
+    themePackId === 'verdant-rune'
+  ) {
     return themePackId;
   }
 
@@ -474,6 +583,14 @@ function getThemePalette(
 
   if (themePackId === 'void-drifter') {
     return voidDrifterThemes[themeMode];
+  }
+
+  if (themePackId === 'shadow-weaver') {
+    return shadowWeaverThemes[themeMode];
+  }
+
+  if (themePackId === 'verdant-rune') {
+    return verdantRuneThemes[themeMode];
   }
 
   return themes[themeMode];
@@ -2285,18 +2402,6 @@ function BottomNavigationBar({
   );
 }
 
-function getThemeAccentSwatchColor(activeThemeLabel: string) {
-  if (activeThemeLabel === 'Luminous Paladin') {
-    return '#c9b98c';
-  }
-
-  if (activeThemeLabel === 'Void Drifter') {
-    return '#22c4db';
-  }
-
-  return '#ffbf00';
-}
-
 function getQuestDetailComponents(questDetails: QuestDetailsResponse) {
   const paceGuidance =
     questDetails.difficultyLabel === 'Epic'
@@ -3475,7 +3580,12 @@ function ThemeSanctumScreen({
             <Text style={styles.heroEyebrow}>Active Theme</Text>
             <Text style={styles.themeHeroTitle}>{themeSanctum.activeThemeLabel}</Text>
           </View>
-          <View style={styles.themeSanctumMark} />
+          <View
+            style={[
+              styles.themeSanctumMark,
+              { backgroundColor: themeSanctum.accentPreviewColor },
+            ]}
+          />
         </View>
 
         <View style={styles.themeMetricGrid}>
@@ -3489,11 +3599,7 @@ function ThemeSanctumScreen({
               <View
                 style={[
                   styles.themeMetricAccentDot,
-                  {
-                    backgroundColor: getThemeAccentSwatchColor(
-                      themeSanctum.activeThemeLabel,
-                    ),
-                  },
+                  { backgroundColor: themeSanctum.accentPreviewColor },
                 ]}
               />
               <Text style={styles.themeMetricValue}>{themeSanctum.accentEnergyLabel}</Text>
@@ -3512,19 +3618,24 @@ function ThemeSanctumScreen({
 
       <View style={styles.formCard}>
         <Text style={styles.sectionTitle}>{themeSanctum.availableEssencesTitle}</Text>
+        <Text style={styles.formIntro}>{themeSanctum.availableEssencesIntro}</Text>
 
         {themeSanctum.availableThemePacks.map(themePack => {
           const isCurrent = themePack.statusLabel === 'Current';
-          const swatchStyle =
-            themePack.id === 'void-drifter'
-              ? styles.themePackSwatchVoid
-              : themePack.id === 'luminous-paladin'
-                ? styles.themePackSwatchLuminous
-                : styles.themePackSwatchForge;
 
           return (
             <View key={themePack.id} style={styles.themePackRow}>
-              <View style={[styles.themePackSwatch, swatchStyle]} />
+              <View style={styles.themePackSwatchStack}>
+                {themePack.previewSwatches.map((previewSwatch, index) => (
+                  <View
+                    key={`${themePack.id}-${previewSwatch}-${index}`}
+                    style={[
+                      styles.themePackSwatch,
+                      { backgroundColor: previewSwatch },
+                    ]}
+                  />
+                ))}
+              </View>
               <View style={styles.themePackCopy}>
                 <Text style={styles.themePackTitle}>{themePack.name}</Text>
                 <Text style={styles.themePackSubtitle}>{themePack.description}</Text>
@@ -4635,6 +4746,9 @@ function App() {
   const [isRefreshingQuestPool, setIsRefreshingQuestPool] = useState(false);
   const [themeSanctum, setThemeSanctum] = useState<ThemeSanctumResponse | null>(null);
   const [isRefreshingThemeSanctum, setIsRefreshingThemeSanctum] = useState(false);
+  const [remoteThemePalette, setRemoteThemePalette] = useState<ThemePalette>(() =>
+    getThemePalette('dark', 'ethereal-forge'),
+  );
   const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null);
   const [questDetails, setQuestDetails] = useState<QuestDetailsResponse | null>(null);
   const [isRefreshingQuestDetails, setIsRefreshingQuestDetails] = useState(false);
@@ -4648,7 +4762,8 @@ function App() {
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const isProcessingRemindersRef = useRef(false);
 
-  const currentTheme = getThemePalette(gameState.themeMode, gameState.themePackId);
+  const currentTheme =
+    remoteThemePalette ?? getThemePalette(gameState.themeMode, gameState.themePackId);
   const styles = createStyles(currentTheme);
   const questToEdit =
     editingQuestId === null
@@ -4709,6 +4824,14 @@ function App() {
     return nextThemeSanctum;
   };
 
+  const applyRemoteThemePalette = (
+    nextThemePaletteResponse: ThemePaletteResponse,
+  ) => {
+    setRemoteThemePalette(nextThemePaletteResponse.themePalette);
+
+    return nextThemePaletteResponse;
+  };
+
   const applyRemoteQuestDetails = (nextQuestDetails: QuestDetailsResponse) => {
     setQuestDetails(nextQuestDetails);
 
@@ -4747,6 +4870,15 @@ function App() {
     applyRemoteThemeSanctum(nextThemeSanctum);
 
     return nextThemeSanctum;
+  };
+
+  const refreshRemoteThemePalette = async () => {
+    const nextThemePaletteResponse =
+      await fetchRemoteThemePalette<ThemePaletteResponse>();
+
+    applyRemoteThemePalette(nextThemePaletteResponse);
+
+    return nextThemePaletteResponse;
   };
 
   const refreshRemoteQuestDetails = async (
@@ -4861,6 +4993,13 @@ function App() {
       const response = await request();
 
       applyRemoteGameState(response.gameState);
+      try {
+        await refreshRemoteThemePalette();
+      } catch {
+        setRemoteThemePalette(
+          getThemePalette(response.gameState.themeMode, response.gameState.themePackId),
+        );
+      }
       if (currentScreen === 'realm-codex') {
         await refreshRemoteRealmCodex();
       }
@@ -4889,12 +5028,15 @@ function App() {
       setBackendError(null);
 
       try {
-        const [remoteGameStateResponse, remoteAppConfigResponse, remoteDailySuggestionsResponse] =
-          await Promise.all([
-            fetchRemoteGameState<GameState>(),
-            fetchRemoteAppConfig<AppConfig>(),
-            fetchRemoteDailySuggestions<DailySuggestionsResponse>(),
-          ]);
+        const [
+          remoteGameStateResponse,
+          remoteAppConfigResponse,
+          remoteDailySuggestionsResponse,
+        ] = await Promise.all([
+          fetchRemoteGameState<GameState>(),
+          fetchRemoteAppConfig<AppConfig>(),
+          fetchRemoteDailySuggestions<DailySuggestionsResponse>(),
+        ]);
         const remoteGameState = normalizeStoredGameState(
           remoteGameStateResponse,
         );
@@ -4927,6 +5069,16 @@ function App() {
         applyRemoteGameState(nextGameState);
         applyRemoteAppConfig(remoteAppConfig);
         applyRemoteDailySuggestions(remoteDailySuggestionsResponse);
+        try {
+          const remoteThemePaletteResponse =
+            await fetchRemoteThemePalette<ThemePaletteResponse>();
+
+          applyRemoteThemePalette(remoteThemePaletteResponse);
+        } catch {
+          setRemoteThemePalette(
+            getThemePalette(nextGameState.themeMode, nextGameState.themePackId),
+          );
+        }
       } catch {
         if (!isMounted) {
           return;
@@ -6208,19 +6360,16 @@ function createStyles(theme: ThemePalette) {
       paddingHorizontal: 14,
       paddingVertical: 14,
     },
+    themePackSwatchStack: {
+      flexDirection: 'row',
+      gap: 8,
+    },
     themePackSwatch: {
-      borderRadius: 14,
-      height: 42,
-      width: 42,
-    },
-    themePackSwatchForge: {
-      backgroundColor: '#2f2540',
-    },
-    themePackSwatchLuminous: {
-      backgroundColor: '#b1a37c',
-    },
-    themePackSwatchVoid: {
-      backgroundColor: '#1d90a9',
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: theme.ghostBorder,
+      height: 26,
+      width: 26,
     },
     themePackCopy: {
       flex: 1,
