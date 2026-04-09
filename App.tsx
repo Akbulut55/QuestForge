@@ -4,6 +4,7 @@ import {
   Animated,
   AppState,
   type AppStateStatus,
+  PanResponder,
   Pressable,
   ScrollView,
   StatusBar,
@@ -51,6 +52,7 @@ type Status = 'Ready' | 'In Progress' | 'Completed' | 'Failed';
 type ScreenName =
   | 'quest-board'
   | 'add-quest'
+  | 'guild'
   | 'progress'
   | 'history'
   | 'streak'
@@ -58,6 +60,7 @@ type ScreenName =
   | 'realm-codex'
   | 'theme-sanctum'
   | 'quest-details';
+type PrimaryNavTab = 'quests' | 'forge' | 'guild' | 'profile';
 type RankTitle = string;
 type QuestTag = string;
 type QuestBoardSectionKey = 'main' | 'side' | 'completed';
@@ -498,6 +501,12 @@ const historyPeriodOptions: HistoryPeriodFilter[] = [
 const historyStatusOptions: Exclude<HistoryStatusFilter, 'All'>[] = [
   'Completed',
   'Failed',
+];
+const primaryScreenOrder: ScreenName[] = [
+  'quest-board',
+  'add-quest',
+  'guild',
+  'progress',
 ];
 const questTagOptions: QuestTag[] = [
   'General',
@@ -2160,6 +2169,134 @@ function ThemeToggle({
   );
 }
 
+function getActivePrimaryNavTab(screenName: ScreenName): PrimaryNavTab {
+  if (screenName === 'add-quest') {
+    return 'forge';
+  }
+
+  if (screenName === 'guild') {
+    return 'guild';
+  }
+
+  if (screenName === 'progress') {
+    return 'profile';
+  }
+
+  return 'quests';
+}
+
+function getAdjacentPrimaryScreen(
+  currentScreen: ScreenName,
+  direction: 'next' | 'previous',
+) {
+  const currentScreenIndex = primaryScreenOrder.indexOf(currentScreen);
+
+  if (currentScreenIndex === -1) {
+    return null;
+  }
+
+  const offset = direction === 'next' ? 1 : -1;
+  const nextScreen = primaryScreenOrder[currentScreenIndex + offset];
+
+  return nextScreen ?? null;
+}
+
+function BottomNavigationBar({
+  activeTab,
+  onNavigateToForge,
+  onNavigateToGuild,
+  onNavigateToProfile,
+  onNavigateToQuests,
+  styles,
+}: {
+  activeTab: PrimaryNavTab;
+  onNavigateToForge: () => void;
+  onNavigateToGuild: () => void;
+  onNavigateToProfile: () => void;
+  onNavigateToQuests: () => void;
+  styles: ReturnType<typeof createStyles>;
+}) {
+  const navItems: Array<{
+    glyph: string;
+    id: PrimaryNavTab;
+    label: string;
+    onPress: () => void;
+  }> = [
+    {
+      glyph: 'Q',
+      id: 'quests',
+      label: 'Quests',
+      onPress: onNavigateToQuests,
+    },
+    {
+      glyph: 'F',
+      id: 'forge',
+      label: 'Forge',
+      onPress: onNavigateToForge,
+    },
+    {
+      glyph: 'G',
+      id: 'guild',
+      label: 'Guild',
+      onPress: onNavigateToGuild,
+    },
+    {
+      glyph: 'P',
+      id: 'profile',
+      label: 'Profile',
+      onPress: onNavigateToProfile,
+    },
+  ];
+
+  return (
+    <View pointerEvents="box-none" style={styles.bottomNavShell}>
+      <View style={styles.bottomNavBar}>
+        {navItems.map(item => {
+          const isActive = item.id === activeTab;
+
+          return (
+            <Pressable
+              key={item.id}
+              onPress={item.onPress}
+              style={[
+                styles.bottomNavItem,
+                isActive && styles.bottomNavItemActive,
+              ]}
+              testID={`bottom-nav-${item.id}`}>
+              <Text
+                style={[
+                  styles.bottomNavGlyph,
+                  isActive && styles.bottomNavGlyphActive,
+                ]}>
+                {item.glyph}
+              </Text>
+              <Text
+                style={[
+                  styles.bottomNavLabel,
+                  isActive && styles.bottomNavLabelActive,
+                ]}>
+                {item.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function getThemeAccentSwatchColor(activeThemeLabel: string) {
+  if (activeThemeLabel === 'Luminous Paladin') {
+    return '#c9b98c';
+  }
+
+  if (activeThemeLabel === 'Void Drifter') {
+    return '#22c4db';
+  }
+
+  return '#ffbf00';
+}
+
 function getQuestDetailComponents(questDetails: QuestDetailsResponse) {
   const paceGuidance =
     questDetails.difficultyLabel === 'Epic'
@@ -2410,9 +2547,7 @@ function QuestBoardScreen({
   dailySuggestions,
   selectedSortOption,
   styles,
-  themeMode,
   onRefreshAppConfig,
-  onToggleTheme,
   onAddSuggestedQuest,
   onPrimaryQuestAction,
   onFailQuest,
@@ -2422,7 +2557,6 @@ function QuestBoardScreen({
   onNavigateToHistory,
   onNavigateToProgress,
   onNavigateToQuestPool,
-  onNavigateToStreak,
   onNavigateToRealmCodex,
   onNavigateToThemeSanctum,
   onSelectSortOption,
@@ -2436,9 +2570,7 @@ function QuestBoardScreen({
   dailySuggestions: SuggestedQuest[];
   selectedSortOption: SortOption;
   styles: ReturnType<typeof createStyles>;
-  themeMode: ThemeMode;
   onRefreshAppConfig: () => void;
-  onToggleTheme: () => void;
   onAddSuggestedQuest: (suggestion: SuggestedQuest) => void;
   onPrimaryQuestAction: (questId: string) => void;
   onFailQuest: (questId: string) => void;
@@ -2448,7 +2580,6 @@ function QuestBoardScreen({
   onNavigateToHistory: () => void;
   onNavigateToProgress: () => void;
   onNavigateToQuestPool: () => void;
-  onNavigateToStreak: () => void;
   onNavigateToRealmCodex: () => void;
   onNavigateToThemeSanctum: () => void;
   onSelectSortOption: (sortOption: SortOption) => void;
@@ -2465,6 +2596,9 @@ function QuestBoardScreen({
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const [isSuggestionsExpanded, setIsSuggestionsExpanded] = useState(false);
   const [isGuildHubExpanded, setIsGuildHubExpanded] = useState(false);
+  const [collapsedSectionKeys, setCollapsedSectionKeys] = useState<
+    Array<'main' | 'side'>
+  >([]);
   const [expandedQuestIds, setExpandedQuestIds] = useState<string[]>([]);
   const feedbackOpacity = useRef(new Animated.Value(0)).current;
   const feedbackTranslateY = useRef(new Animated.Value(-12)).current;
@@ -2544,7 +2678,20 @@ function QuestBoardScreen({
         : [...currentExpandedQuestIds, questId],
     );
   };
-  const questSections = appConfig.questSectionOrder
+  const handleToggleSection = (sectionKey: 'main' | 'side') => {
+    setCollapsedSectionKeys(currentCollapsedSectionKeys =>
+      currentCollapsedSectionKeys.includes(sectionKey)
+        ? currentCollapsedSectionKeys.filter(
+            currentSectionKey => currentSectionKey !== sectionKey,
+          )
+        : [...currentCollapsedSectionKeys, sectionKey],
+    );
+  };
+  const questSections: Array<{
+    key: 'main' | 'side';
+    quests: Quest[];
+    title: string;
+  }> = appConfig.questSectionOrder
     .filter(sectionKey => sectionKey !== 'completed')
     .map(sectionKey => {
     if (sectionKey === 'main') {
@@ -2588,11 +2735,6 @@ function QuestBoardScreen({
               {isRefreshingAppConfig ? '...' : 'Sync'}
             </Text>
           </Pressable>
-          <ThemeToggle
-            onToggleTheme={onToggleTheme}
-            styles={styles}
-            themeMode={themeMode}
-          />
         </View>
       </View>
 
@@ -2608,7 +2750,6 @@ function QuestBoardScreen({
               <Text style={styles.heroEyebrow}>Current Rank</Text>
               <Text style={styles.boardRankTitle}>{hero.rankTitle}</Text>
             </View>
-            <View style={styles.heroOrb} />
           </View>
 
           <View style={styles.boardRankMetaRow}>
@@ -2639,41 +2780,7 @@ function QuestBoardScreen({
               ]}
             />
           </View>
-          <Text style={styles.boardRankProgressNote}>{rankProgress.progressText}</Text>
-          <Text style={styles.heroTapHint}>Tap hero overview for profile</Text>
         </Pressable>
-
-        <View style={styles.boardMiniStatRow}>
-          <Pressable
-            onPress={onNavigateToStreak}
-            style={styles.boardMiniStatCard}
-            testID="hero-streak-button">
-            <Text style={styles.boardMiniStatLabel}>Streak</Text>
-            <Text style={[styles.boardMiniStatValue, styles.streakAccent]}>
-              {`${hero.streakCount}d`}
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={onNavigateToProgress}
-            style={styles.boardMiniStatCard}
-            testID="hero-next-rank-button">
-            <Text style={styles.boardMiniStatLabel}>Next Rank</Text>
-            <Text
-              numberOfLines={2}
-              style={[styles.boardMiniStatValue, styles.xpAccent]}>
-              {rankProgress.nextRankTitle}
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={onNavigateToProgress}
-            style={styles.boardMiniStatCard}
-            testID="hero-active-count-button">
-            <Text style={styles.boardMiniStatLabel}>Active</Text>
-            <Text style={[styles.boardMiniStatValue, styles.levelAccent]}>
-              {visibleQuests.length}
-            </Text>
-          </Pressable>
-        </View>
       </View>
 
       {completionFeedback ? (
@@ -2967,29 +3074,35 @@ function QuestBoardScreen({
 
       {questSections.map(section => (
         <View key={section.key} style={styles.section}>
-          <View style={styles.questSectionHeader}>
-            <View style={styles.questSectionSignal} />
-            <Text style={styles.sectionTitle}>{section.title}</Text>
-          </View>
-          {section.quests.map(quest => (
-            <QuestCard
-              key={quest.id}
-              isExpanded={expandedQuestIds.includes(quest.id)}
-              onFail={onFailQuest}
-              onPrimaryAction={
-                section.key === 'completed'
-                  ? undefined
-                  : onPrimaryQuestAction
-              }
-              onEdit={
-                appConfig.featureFlags.showAddQuestScreen ? onEditQuest : undefined
-              }
-              onOpenDetails={onOpenQuestDetails}
-              onToggleExpand={handleToggleQuestExpand}
-              quest={quest}
-              styles={styles}
-            />
-          ))}
+          <Pressable
+            onPress={() => handleToggleSection(section.key)}
+            style={styles.sectionHeaderRow}
+            testID={`toggle-board-section-${section.key}`}>
+            <View style={styles.questSectionHeader}>
+              <View style={styles.questSectionSignal} />
+              <Text style={styles.sectionTitle}>{section.title}</Text>
+            </View>
+            <Text style={styles.expandChevronIcon}>
+              {collapsedSectionKeys.includes(section.key) ? 'v' : '^'}
+            </Text>
+          </Pressable>
+          {collapsedSectionKeys.includes(section.key)
+            ? null
+            : section.quests.map(quest => (
+                <QuestCard
+                  key={quest.id}
+                  isExpanded={expandedQuestIds.includes(quest.id)}
+                  onFail={onFailQuest}
+                  onPrimaryAction={onPrimaryQuestAction}
+                  onEdit={
+                    appConfig.featureFlags.showAddQuestScreen ? onEditQuest : undefined
+                  }
+                  onOpenDetails={onOpenQuestDetails}
+                  onToggleExpand={handleToggleQuestExpand}
+                  quest={quest}
+                  styles={styles}
+                />
+              ))}
         </View>
       ))}
     </ScrollView>
@@ -3001,9 +3114,10 @@ function ProgressScreen({
   hero,
   quests,
   unlockedAchievementIds,
-  onBack,
   onNavigateToHistory,
+  onNavigateToRealmCodex,
   onNavigateToStreak,
+  onNavigateToThemeSanctum,
   onResetJourney,
   onToggleTheme,
   styles,
@@ -3013,9 +3127,10 @@ function ProgressScreen({
   hero: HeroProgress;
   quests: Quest[];
   unlockedAchievementIds: AchievementId[];
-  onBack: () => void;
   onNavigateToHistory: () => void;
+  onNavigateToRealmCodex: () => void;
   onNavigateToStreak: () => void;
+  onNavigateToThemeSanctum: () => void;
   onResetJourney: () => void;
   onToggleTheme: () => void;
   styles: ReturnType<typeof createStyles>;
@@ -3031,13 +3146,8 @@ function ProgressScreen({
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}>
       <View style={styles.screenHeader}>
-        <Pressable
-          onPress={onBack}
-          style={styles.backButton}
-          testID="back-from-progress-screen">
-          <Text style={styles.backButtonText}>Back</Text>
-        </Pressable>
-        <Text style={styles.screenLabel}>Quest Board</Text>
+        <View style={styles.screenHeaderSpacer} />
+        <View style={styles.screenHeaderSpacer} />
         <ThemeToggle
           onToggleTheme={onToggleTheme}
           styles={styles}
@@ -3148,6 +3258,18 @@ function ProgressScreen({
           <Text style={styles.secondaryActionText}>Quest History</Text>
         </Pressable>
         <Pressable
+          onPress={onNavigateToRealmCodex}
+          style={styles.secondaryActionButton}
+          testID="navigate-to-realm-codex-from-progress">
+          <Text style={styles.secondaryActionText}>Realm Codex</Text>
+        </Pressable>
+        <Pressable
+          onPress={onNavigateToThemeSanctum}
+          style={styles.secondaryActionButton}
+          testID="navigate-to-theme-sanctum-from-progress">
+          <Text style={styles.secondaryActionText}>Theme Sanctum</Text>
+        </Pressable>
+        <Pressable
           onPress={onNavigateToStreak}
           style={styles.secondaryActionButton}
           testID="navigate-to-streak-screen-from-progress">
@@ -3186,10 +3308,10 @@ function RealmCodexScreen({
   isRefreshingRealmCodex,
   onBack,
   onRefresh,
-  onToggleTheme,
+  onToggleTheme: _onToggleTheme,
   realmCodex,
   styles,
-  themeMode,
+  themeMode: _themeMode,
 }: {
   isRefreshingRealmCodex: boolean;
   onBack: () => void;
@@ -3213,12 +3335,8 @@ function RealmCodexScreen({
           testID="back-from-realm-codex">
           <Text style={styles.backButtonText}>Back</Text>
         </Pressable>
-        <Text style={styles.screenLabel}>Quest Board</Text>
-        <ThemeToggle
-          onToggleTheme={onToggleTheme}
-          styles={styles}
-          themeMode={themeMode}
-        />
+        <View style={styles.screenHeaderSpacer} />
+        <View style={styles.screenHeaderSpacer} />
       </View>
 
       <Text style={styles.kicker}>{realmCodex.kicker}</Text>
@@ -3362,9 +3480,9 @@ function ThemeSanctumScreen({
   onBack,
   onRefresh,
   onSelectThemePack,
-  onToggleTheme,
+  onToggleTheme: _onToggleTheme,
   styles,
-  themeMode,
+  themeMode: _themeMode,
   themeSanctum,
 }: {
   isRefreshingThemeSanctum: boolean;
@@ -3387,12 +3505,8 @@ function ThemeSanctumScreen({
           testID="back-from-theme-sanctum">
           <Text style={styles.backButtonText}>Back</Text>
         </Pressable>
-        <Text style={styles.screenLabel}>Quest Board</Text>
-        <ThemeToggle
-          onToggleTheme={onToggleTheme}
-          styles={styles}
-          themeMode={themeMode}
-        />
+        <View style={styles.screenHeaderSpacer} />
+        <View style={styles.screenHeaderSpacer} />
       </View>
 
       <Text style={styles.kicker}>{themeSanctum.kicker}</Text>
@@ -3415,7 +3529,19 @@ function ThemeSanctumScreen({
           </View>
           <View style={styles.themeMetricCard}>
             <Text style={styles.themeMetricLabel}>Accent Energy</Text>
-            <Text style={styles.themeMetricValue}>{themeSanctum.accentEnergyLabel}</Text>
+            <View style={styles.themeMetricAccentRow}>
+              <View
+                style={[
+                  styles.themeMetricAccentDot,
+                  {
+                    backgroundColor: getThemeAccentSwatchColor(
+                      themeSanctum.activeThemeLabel,
+                    ),
+                  },
+                ]}
+              />
+              <Text style={styles.themeMetricValue}>{themeSanctum.accentEnergyLabel}</Text>
+            </View>
           </View>
           <View style={styles.themeMetricCard}>
             <Text style={styles.themeMetricLabel}>Surface Tone</Text>
@@ -3423,7 +3549,7 @@ function ThemeSanctumScreen({
           </View>
           <View style={styles.themeMetricCard}>
             <Text style={styles.themeMetricLabel}>Realm Notes</Text>
-            <Text style={styles.themeMetricValue}>{themeSanctum.realmNotesLabel}</Text>
+            <Text style={styles.themeMetricValueCompact}>{themeSanctum.realmNotesLabel}</Text>
           </View>
         </View>
       </View>
@@ -3484,12 +3610,49 @@ function ThemeSanctumScreen({
   );
 }
 
+function GuildScreen({
+  onToggleTheme: _onToggleTheme,
+  styles,
+  themeMode: _themeMode,
+}: {
+  onToggleTheme: () => void;
+  styles: ReturnType<typeof createStyles>;
+  themeMode: ThemeMode;
+}) {
+  return (
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}>
+      <View style={styles.screenHeader}>
+        <View style={styles.screenHeaderSpacer} />
+        <View style={styles.screenHeaderSpacer} />
+        <View style={styles.screenHeaderSpacer} />
+      </View>
+
+      <Text style={styles.kicker}>Guild</Text>
+      <Text style={styles.title}>Guild Hall</Text>
+      <Text style={styles.subtitle}>
+        This wing is reserved for future guild systems, teams, and shared
+        progress tools.
+      </Text>
+
+      <View style={styles.emptyStateCard}>
+        <Text style={styles.emptyStateTitle}>Guild features are coming soon</Text>
+        <Text style={styles.emptyStateText}>
+          For now this tab marks the place where guild members, parties, and
+          shared goals will eventually live.
+        </Text>
+      </View>
+    </ScrollView>
+  );
+}
+
 function HistoryScreen({
   onBack,
-  onToggleTheme,
+  onToggleTheme: _onToggleTheme,
   quests,
   styles,
-  themeMode,
+  themeMode: _themeMode,
 }: {
   onBack: () => void;
   onToggleTheme: () => void;
@@ -3547,12 +3710,8 @@ function HistoryScreen({
           testID="back-from-history-screen">
           <Text style={styles.backButtonText}>Back</Text>
         </Pressable>
-        <Text style={styles.screenLabel}>Quest Board</Text>
-        <ThemeToggle
-          onToggleTheme={onToggleTheme}
-          styles={styles}
-          themeMode={themeMode}
-        />
+        <View style={styles.screenHeaderSpacer} />
+        <View style={styles.screenHeaderSpacer} />
       </View>
 
       <Text style={styles.kicker}>Quest History</Text>
@@ -3721,9 +3880,9 @@ function HistoryScreen({
 function StreakScreen({
   hero,
   onBack,
-  onToggleTheme,
+  onToggleTheme: _onToggleTheme,
   styles,
-  themeMode,
+  themeMode: _themeMode,
 }: {
   hero: HeroProgress;
   onBack: () => void;
@@ -3780,12 +3939,8 @@ function StreakScreen({
           testID="back-from-streak-screen">
           <Text style={styles.backButtonText}>Back</Text>
         </Pressable>
-        <Text style={styles.screenLabel}>Quest Board</Text>
-        <ThemeToggle
-          onToggleTheme={onToggleTheme}
-          styles={styles}
-          themeMode={themeMode}
-        />
+        <View style={styles.screenHeaderSpacer} />
+        <View style={styles.screenHeaderSpacer} />
       </View>
 
       <Text style={styles.kicker}>Streak Calendar</Text>
@@ -3891,10 +4046,10 @@ function QuestDetailsScreen({
   onPrimaryAction,
   onEdit,
   onFail,
-  onToggleTheme,
+  onToggleTheme: _onToggleTheme,
   questDetails,
   styles,
-  themeMode,
+  themeMode: _themeMode,
 }: {
   onBack: () => void;
   onPrimaryAction: (questId: string) => void;
@@ -3921,12 +4076,8 @@ function QuestDetailsScreen({
           testID="back-from-quest-details">
           <Text style={styles.backButtonText}>Back</Text>
         </Pressable>
-        <Text style={styles.screenLabel}>Quest Board</Text>
-        <ThemeToggle
-          onToggleTheme={onToggleTheme}
-          styles={styles}
-          themeMode={themeMode}
-        />
+        <View style={styles.screenHeaderSpacer} />
+        <View style={styles.screenHeaderSpacer} />
       </View>
 
       <Text style={styles.kicker}>{questDetails.kicker}</Text>
@@ -4104,18 +4255,16 @@ function QuestDetailsScreen({
 
 function AddQuestScreen({
   editorMode,
-  onBack,
   onSave,
   onSaveToPool,
   onDelete,
   poolTemplateToEdit,
   questToEdit,
-  onToggleTheme,
+  onToggleTheme: _onToggleTheme,
   styles,
-  themeMode,
+  themeMode: _themeMode,
 }: {
   editorMode: DraftEditorMode;
-  onBack: () => void;
   onSave: (questDraft: QuestDraft) => void;
   onSaveToPool: (questDraft: QuestDraft) => void;
   onDelete: (questId: string) => void;
@@ -4199,18 +4348,9 @@ function AddQuestScreen({
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}>
       <View style={styles.screenHeader}>
-        <Pressable
-          onPress={onBack}
-          style={styles.backButton}
-          testID="back-to-quest-board">
-          <Text style={styles.backButtonText}>Back</Text>
-        </Pressable>
-        <Text style={styles.screenLabel}>Quest Board</Text>
-        <ThemeToggle
-          onToggleTheme={onToggleTheme}
-          styles={styles}
-          themeMode={themeMode}
-        />
+        <View style={styles.screenHeaderSpacer} />
+        <View style={styles.screenHeaderSpacer} />
+        <View style={styles.screenHeaderSpacer} />
       </View>
 
       <Text style={styles.kicker}>
@@ -4380,10 +4520,10 @@ function QuestPoolScreen({
   onEditTemplate,
   onRefresh,
   onResetDefaults,
-  onToggleTheme,
+  onToggleTheme: _onToggleTheme,
   questPool,
   styles,
-  themeMode,
+  themeMode: _themeMode,
 }: {
   isRefreshingQuestPool: boolean;
   onAddTemplate: (template: SuggestedQuest, category: Category) => void;
@@ -4425,24 +4565,16 @@ function QuestPoolScreen({
           testID="back-from-quest-pool">
           <Text style={styles.backButtonText}>Back</Text>
         </Pressable>
-        <Text style={styles.screenLabel}>Quest Board</Text>
-        <ThemeToggle
-          onToggleTheme={onToggleTheme}
-          styles={styles}
-          themeMode={themeMode}
-        />
+        <View style={styles.screenHeaderSpacer} />
+        <View style={styles.screenHeaderSpacer} />
       </View>
 
       <Text style={styles.kicker}>{questPool.kicker}</Text>
       <Text style={styles.title}>{questPool.title}</Text>
       <Text style={styles.subtitle}>{questPool.subtitle}</Text>
 
-      <View style={styles.formCard}>
+      <View style={styles.questPoolToolbar}>
         <View style={styles.questPoolHeaderRow}>
-          <View style={styles.questPoolHeaderCopy}>
-            <Text style={styles.sectionTitle}>Template Archive</Text>
-            <Text style={styles.formHint}>Daily tasks ready to drop into the board.</Text>
-          </View>
           <View style={styles.filterHeaderActions}>
             <Pressable
               onPress={onResetDefaults}
@@ -5327,6 +5459,31 @@ function App() {
       setIsRefreshingAppConfig(false);
     }
   };
+  const activePrimaryNavTab = getActivePrimaryNavTab(currentScreen);
+  const primaryScreenPanResponder = PanResponder.create({
+    onMoveShouldSetPanResponder: (_, gestureState) =>
+      primaryScreenOrder.includes(currentScreen) &&
+      Math.abs(gestureState.dx) > 18 &&
+      Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
+    onPanResponderRelease: (_, gestureState) => {
+      if (
+        !primaryScreenOrder.includes(currentScreen) ||
+        Math.abs(gestureState.dx) < 72 ||
+        Math.abs(gestureState.dx) <= Math.abs(gestureState.dy)
+      ) {
+        return;
+      }
+
+      const nextScreen = getAdjacentPrimaryScreen(
+        currentScreen,
+        gestureState.dx < 0 ? 'next' : 'previous',
+      );
+
+      if (nextScreen) {
+        setCurrentScreen(nextScreen);
+      }
+    },
+  });
 
   return (
     <SafeAreaProvider>
@@ -5367,51 +5524,70 @@ function App() {
           ) : (
             <>
               {currentScreen === 'quest-board' ? (
-                <QuestBoardScreen
-                  appConfig={appConfig}
-                  completionFeedback={completionFeedback}
-                  dailySuggestionDateKey={dailySuggestionDateKey}
-                  dailySuggestions={dailySuggestions}
-                  hero={gameState.hero}
-                  isRefreshingAppConfig={isRefreshingAppConfig}
-                  onAddSuggestedQuest={handleAddSuggestedQuest}
-                  onPrimaryQuestAction={handleQuestPrimaryAction}
-                  onFailQuest={handleFailQuest}
-                  onEditQuest={questId => {
-                    setEditingQuestPoolTemplateId(null);
-                    setEditingQuestId(questId);
-                    setCurrentScreen('add-quest');
-                  }}
-                  onOpenQuestDetails={handleOpenQuestDetails}
-                  onNavigateToAddQuest={handleOpenAddQuest}
-                  onNavigateToHistory={handleOpenHistory}
-                  onNavigateToProgress={handleOpenProgress}
-                  onNavigateToQuestPool={handleOpenQuestPool}
-                  onNavigateToStreak={handleOpenStreak}
-                  onNavigateToRealmCodex={handleOpenRealmCodex}
-                  onNavigateToThemeSanctum={handleOpenThemeSanctum}
-                  onRefreshAppConfig={handleRefreshAppConfig}
-                  onSelectSortOption={handleSelectSortOption}
-                  onToggleTheme={handleToggleTheme}
-                  quests={gameState.quests}
-                  selectedSortOption={gameState.sortOption}
-                  styles={styles}
-                  themeMode={gameState.themeMode}
-                />
+                <View
+                  style={styles.primaryScreenShell}
+                  testID="primary-screen-shell"
+                  {...primaryScreenPanResponder.panHandlers}>
+                  <QuestBoardScreen
+                    appConfig={appConfig}
+                    completionFeedback={completionFeedback}
+                    dailySuggestionDateKey={dailySuggestionDateKey}
+                    dailySuggestions={dailySuggestions}
+                    hero={gameState.hero}
+                    isRefreshingAppConfig={isRefreshingAppConfig}
+                    onAddSuggestedQuest={handleAddSuggestedQuest}
+                    onPrimaryQuestAction={handleQuestPrimaryAction}
+                    onFailQuest={handleFailQuest}
+                    onEditQuest={questId => {
+                      setEditingQuestPoolTemplateId(null);
+                      setEditingQuestId(questId);
+                      setCurrentScreen('add-quest');
+                    }}
+                    onOpenQuestDetails={handleOpenQuestDetails}
+                    onNavigateToAddQuest={handleOpenAddQuest}
+                    onNavigateToHistory={handleOpenHistory}
+                    onNavigateToProgress={handleOpenProgress}
+                    onNavigateToQuestPool={handleOpenQuestPool}
+                    onNavigateToRealmCodex={handleOpenRealmCodex}
+                    onNavigateToThemeSanctum={handleOpenThemeSanctum}
+                    onRefreshAppConfig={handleRefreshAppConfig}
+                    onSelectSortOption={handleSelectSortOption}
+                    quests={gameState.quests}
+                    selectedSortOption={gameState.sortOption}
+                    styles={styles}
+                  />
+                </View>
               ) : currentScreen === 'progress' ? (
-                <ProgressScreen
-                  appConfig={appConfig}
-                  hero={gameState.hero}
-                  onBack={() => setCurrentScreen('quest-board')}
-                  onNavigateToHistory={handleOpenHistory}
-                  onNavigateToStreak={handleOpenStreak}
-                  onResetJourney={handleConfirmResetJourney}
-                  onToggleTheme={handleToggleTheme}
-                  quests={gameState.quests}
-                  styles={styles}
-                  themeMode={gameState.themeMode}
-                  unlockedAchievementIds={gameState.unlockedAchievementIds}
-                />
+                <View
+                  style={styles.primaryScreenShell}
+                  testID="primary-screen-shell"
+                  {...primaryScreenPanResponder.panHandlers}>
+                  <ProgressScreen
+                    appConfig={appConfig}
+                    hero={gameState.hero}
+                    onNavigateToHistory={handleOpenHistory}
+                    onNavigateToRealmCodex={handleOpenRealmCodex}
+                    onNavigateToStreak={handleOpenStreak}
+                    onNavigateToThemeSanctum={handleOpenThemeSanctum}
+                    onResetJourney={handleConfirmResetJourney}
+                    onToggleTheme={handleToggleTheme}
+                    quests={gameState.quests}
+                    styles={styles}
+                    themeMode={gameState.themeMode}
+                    unlockedAchievementIds={gameState.unlockedAchievementIds}
+                  />
+                </View>
+              ) : currentScreen === 'guild' ? (
+                <View
+                  style={styles.primaryScreenShell}
+                  testID="primary-screen-shell"
+                  {...primaryScreenPanResponder.panHandlers}>
+                  <GuildScreen
+                    onToggleTheme={handleToggleTheme}
+                    styles={styles}
+                    themeMode={gameState.themeMode}
+                  />
+                </View>
               ) : currentScreen === 'history' ? (
                 <HistoryScreen
                   onBack={() => setCurrentScreen('quest-board')}
@@ -5510,27 +5686,31 @@ function App() {
                   </View>
                 )
               ) : (
-                <AddQuestScreen
-                  editorMode={draftEditorMode}
-                  onBack={() => {
-                    if (draftEditorMode === 'quest-pool') {
-                      setEditingQuestPoolTemplateId(null);
-                      setCurrentScreen('quest-pool');
-                      return;
-                    }
-
-                    returnToBoard();
-                  }}
-                  onDelete={handleDeleteQuest}
-                  onSave={handleSaveQuest}
-                  onSaveToPool={handleSaveQuestPool}
-                  onToggleTheme={handleToggleTheme}
-                  poolTemplateToEdit={questPoolTemplateToEdit}
-                  questToEdit={questToEdit}
-                  styles={styles}
-                  themeMode={gameState.themeMode}
-                />
+                <View
+                  style={styles.primaryScreenShell}
+                  testID="primary-screen-shell"
+                  {...primaryScreenPanResponder.panHandlers}>
+                  <AddQuestScreen
+                    editorMode={draftEditorMode}
+                    onDelete={handleDeleteQuest}
+                    onSave={handleSaveQuest}
+                    onSaveToPool={handleSaveQuestPool}
+                    onToggleTheme={handleToggleTheme}
+                    poolTemplateToEdit={questPoolTemplateToEdit}
+                    questToEdit={questToEdit}
+                    styles={styles}
+                    themeMode={gameState.themeMode}
+                  />
+                </View>
               )}
+              <BottomNavigationBar
+                activeTab={activePrimaryNavTab}
+                onNavigateToForge={handleOpenAddQuest}
+                onNavigateToGuild={() => setCurrentScreen('guild')}
+                onNavigateToProfile={handleOpenProgress}
+                onNavigateToQuests={() => setCurrentScreen('quest-board')}
+                styles={styles}
+              />
               {reminderPrompt ? (
                 <ReminderPromptOverlay
                   onComplete={handleReminderCompleteQuest}
@@ -5588,12 +5768,16 @@ function createStyles(theme: ThemePalette) {
     },
     contentFrame: {
       flex: 1,
+      position: 'relative',
       zIndex: 1,
+    },
+    primaryScreenShell: {
+      flex: 1,
     },
     scrollContent: {
       paddingHorizontal: 22,
       paddingTop: 24,
-      paddingBottom: 56,
+      paddingBottom: 150,
     },
     loadingState: {
       alignItems: 'center',
@@ -5652,6 +5836,10 @@ function createStyles(theme: ThemePalette) {
       justifyContent: 'space-between',
       marginBottom: 18,
     },
+    screenHeaderSpacer: {
+      height: 44,
+      width: 56,
+    },
     themeToggleButton: {
       alignItems: 'center',
       backgroundColor: `${theme.blue}18`,
@@ -5683,6 +5871,63 @@ function createStyles(theme: ThemePalette) {
       color: theme.textPrimary,
       fontSize: 14,
       fontWeight: '700',
+    },
+    bottomNavShell: {
+      bottom: 18,
+      left: 18,
+      position: 'absolute',
+      right: 18,
+      zIndex: 12,
+    },
+    bottomNavBar: {
+      alignItems: 'stretch',
+      backgroundColor: `${theme.surface}f6`,
+      borderColor: `${theme.amber}55`,
+      borderRadius: 24,
+      borderWidth: 1,
+      flexDirection: 'row',
+      gap: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 10,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 14 },
+      shadowOpacity: 0.12,
+      shadowRadius: 22,
+    },
+    bottomNavItem: {
+      alignItems: 'center',
+      borderRadius: 18,
+      flex: 1,
+      justifyContent: 'center',
+      minHeight: 64,
+      paddingHorizontal: 8,
+      paddingVertical: 8,
+    },
+    bottomNavItemActive: {
+      backgroundColor: `${theme.amber}18`,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.22,
+      shadowRadius: 18,
+    },
+    bottomNavGlyph: {
+      color: theme.textMuted,
+      fontSize: 16,
+      fontWeight: '800',
+      marginBottom: 4,
+    },
+    bottomNavGlyphActive: {
+      color: theme.amberSoft,
+    },
+    bottomNavLabel: {
+      color: theme.textMuted,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 0.9,
+      textTransform: 'uppercase',
+    },
+    bottomNavLabelActive: {
+      color: theme.amberSoft,
     },
     screenLabel: {
       alignSelf: 'flex-start',
@@ -5891,12 +6136,16 @@ function createStyles(theme: ThemePalette) {
     },
     boardLevelChip: {
       alignSelf: 'flex-start',
-      backgroundColor: `${theme.amber}18`,
-      borderColor: `${theme.amber}4a`,
+      backgroundColor: theme.amber,
+      borderColor: `${theme.amberSoft}80`,
       borderRadius: 12,
       borderWidth: 1,
       paddingHorizontal: 14,
       paddingVertical: 8,
+      shadowColor: theme.amber,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.22,
+      shadowRadius: 14,
     },
     boardLevelChipText: {
       color: theme.buttonText,
@@ -6022,6 +6271,22 @@ function createStyles(theme: ThemePalette) {
       fontSize: 17,
       fontWeight: '700',
       lineHeight: 22,
+    },
+    themeMetricValueCompact: {
+      color: theme.textPrimary,
+      fontSize: 16,
+      fontWeight: '700',
+      lineHeight: 20,
+    },
+    themeMetricAccentRow: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 10,
+    },
+    themeMetricAccentDot: {
+      borderRadius: 999,
+      height: 12,
+      width: 12,
     },
     themePackRow: {
       alignItems: 'center',
@@ -6169,11 +6434,14 @@ function createStyles(theme: ThemePalette) {
       fontWeight: '800',
       lineHeight: 25,
     },
+    questPoolToolbar: {
+      marginTop: 26,
+    },
     questPoolHeaderRow: {
       alignItems: 'flex-start',
       flexDirection: 'row',
       gap: 12,
-      justifyContent: 'space-between',
+      justifyContent: 'flex-end',
     },
     questPoolHeaderCopy: {
       flex: 1,
@@ -6185,12 +6453,13 @@ function createStyles(theme: ThemePalette) {
       borderWidth: 1,
       color: theme.textPrimary,
       fontSize: 16,
-      marginTop: 18,
+      marginTop: 14,
       paddingHorizontal: 18,
-      paddingVertical: 14,
+      paddingVertical: 12,
     },
     questPoolChipRow: {
       gap: 10,
+      paddingTop: 14,
       paddingRight: 6,
     },
     questPoolChip: {

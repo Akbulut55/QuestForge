@@ -600,9 +600,9 @@ beforeEach(() => {
     subtitle: 'Theme summary.',
     activeThemeLabel: 'Ethereal Forge',
     activeModeLabel: 'Dark Alchemist',
-    accentEnergyLabel: 'Amber #FFBF00',
+    accentEnergyLabel: 'Amber',
     surfaceToneLabel: 'Deep Stone',
-    realmNotesLabel: 'System v31',
+    realmNotesLabel: '30.0.0',
     availableEssencesTitle: 'Available Essences',
     availableEssencesIntro: 'Choose a palette.',
     availableThemePacks: [],
@@ -948,6 +948,78 @@ test('shows a retry state when the backend is unavailable', async () => {
   });
 
   expect(getRenderText(tree!)).toContain('Quest Forge');
+});
+
+test('bottom navigation switches between the primary app screens', async () => {
+  const tree = await renderHydratedApp();
+
+  await ReactTestRenderer.act(async () => {
+    tree.root.findByProps({ testID: 'bottom-nav-forge' }).props.onPress();
+  });
+
+  expect(getRenderText(tree)).toContain('Shape Your Next Quest');
+
+  await ReactTestRenderer.act(async () => {
+    tree.root.findByProps({ testID: 'bottom-nav-guild' }).props.onPress();
+  });
+
+  expect(getRenderText(tree)).toContain('Guild Hall');
+
+  await ReactTestRenderer.act(async () => {
+    tree.root.findByProps({ testID: 'bottom-nav-profile' }).props.onPress();
+  });
+
+  expect(getRenderText(tree)).toContain('Quest Progress');
+
+  await ReactTestRenderer.act(async () => {
+    tree.root.findByProps({ testID: 'bottom-nav-quests' }).props.onPress();
+  });
+
+  expect(getRenderText(tree)).toContain('Daily Suggestions');
+});
+
+test('collapses quest sections and opens realm tools from profile', async () => {
+  const tree = await renderHydratedApp();
+
+  expect(getRenderText(tree)).toContain('Defeat the Laundry Dragon');
+
+  await ReactTestRenderer.act(async () => {
+    tree.root.findByProps({ testID: 'toggle-board-section-main' }).props.onPress();
+  });
+
+  expect(getRenderText(tree)).not.toContain('Defeat the Laundry Dragon');
+
+  await ReactTestRenderer.act(async () => {
+    tree.root.findByProps({ testID: 'toggle-board-section-main' }).props.onPress();
+  });
+
+  expect(getRenderText(tree)).toContain('Defeat the Laundry Dragon');
+
+  await ReactTestRenderer.act(async () => {
+    tree.root.findByProps({ testID: 'bottom-nav-profile' }).props.onPress();
+  });
+
+  await ReactTestRenderer.act(async () => {
+    tree.root
+      .findByProps({ testID: 'navigate-to-realm-codex-from-progress' })
+      .props.onPress();
+    await flushMicrotasks();
+  });
+
+  expect(getRenderText(tree)).toContain('Realm Codex');
+
+  await ReactTestRenderer.act(async () => {
+    tree.root.findByProps({ testID: 'bottom-nav-profile' }).props.onPress();
+  });
+
+  await ReactTestRenderer.act(async () => {
+    tree.root
+      .findByProps({ testID: 'navigate-to-theme-sanctum-from-progress' })
+      .props.onPress();
+    await flushMicrotasks();
+  });
+
+  expect(getRenderText(tree)).toContain('Theme Sanctum');
 });
 
 test('shows richer daily suggestions with descriptions and tags and can add one to the board', async () => {
