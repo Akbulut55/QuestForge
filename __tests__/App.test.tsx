@@ -4,7 +4,7 @@
 
 import React from 'react';
 import ReactTestRenderer from 'react-test-renderer';
-import { Alert } from 'react-native';
+import { Alert, BackHandler } from 'react-native';
 
 jest.mock('react-native-safe-area-context', () => {
   const mockReact = require('react');
@@ -368,6 +368,8 @@ let mockRemoteAppConfig = cloneState(defaultRemoteAppConfig);
 let mockDailySuggestions: SuggestedQuest[] | null = null;
 let mockQuestPool = cloneState(defaultSuggestionPool);
 let alertSpy: jest.SpyInstance;
+let backHandlerSpy: jest.SpyInstance;
+let hardwareBackHandler: (() => boolean | null | undefined) | null = null;
 
 function normalizeState(gameState: TestGameState): TestGameState {
   const normalizedQuests = gameState.quests.map(quest => {
@@ -530,6 +532,20 @@ async function renderHydratedApp() {
 
 beforeEach(() => {
   alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  hardwareBackHandler = null;
+  backHandlerSpy = jest
+    .spyOn(BackHandler, 'addEventListener')
+    .mockImplementation((_, handler) => {
+      hardwareBackHandler = handler;
+
+      return {
+        remove: () => {
+          if (hardwareBackHandler === handler) {
+            hardwareBackHandler = null;
+          }
+        },
+      } as never;
+    });
   mockBackendState = cloneState(defaultRemoteGameState);
   mockRemoteAppConfig = cloneState(defaultRemoteAppConfig);
   mockDailySuggestions = null;
@@ -692,9 +708,9 @@ beforeEach(() => {
         id: 'crimson-vault',
         name: 'Crimson Vault',
         description: 'Crimson steel and violet vault.',
-        accentEnergy: 'Crimson Vault #E5485D',
+        accentEnergy: 'Crimson Vault #DC143C',
         surfaceTone: 'Vault Velvet',
-        previewSwatches: ['#E5485D', '#7C8CFF', '#271822'],
+        previewSwatches: ['#DC143C', '#F29C38', '#271822'],
         statusLabel: 'Select',
       },
       {
@@ -973,6 +989,7 @@ beforeEach(() => {
 
 afterEach(() => {
   alertSpy.mockRestore();
+  backHandlerSpy.mockRestore();
 });
 
 test('loads persisted game state from AsyncStorage', async () => {
@@ -1130,6 +1147,43 @@ test('collapses quest sections and opens realm tools from profile', async () => 
   });
 
   expect(getRenderText(tree)).toContain('Theme Sanctum');
+});
+
+test('profile child screens keep profile selected and hardware back returns to profile', async () => {
+  const tree = await renderHydratedApp();
+
+  await ReactTestRenderer.act(async () => {
+    tree.root.findByProps({ testID: 'bottom-nav-profile' }).props.onPress();
+  });
+
+  await ReactTestRenderer.act(async () => {
+    tree.root
+      .findByProps({ testID: 'navigate-to-history-screen-from-progress' })
+      .props.onPress();
+  });
+
+  expect(getRenderText(tree)).toContain('Archive Of The Realm');
+  expect(
+    tree.root.findByProps({ testID: 'bottom-nav-profile' }).props.accessibilityState
+      .selected,
+  ).toBe(true);
+  expect(
+    tree.root.findByProps({ testID: 'bottom-nav-quests' }).props.accessibilityState
+      .selected,
+  ).toBe(false);
+
+  let didHandleBackPress = false;
+
+  await ReactTestRenderer.act(async () => {
+    didHandleBackPress = hardwareBackHandler?.() ?? false;
+  });
+
+  expect(didHandleBackPress).toBe(true);
+  expect(getRenderText(tree)).toContain('Hero Summary');
+  expect(
+    tree.root.findByProps({ testID: 'bottom-nav-profile' }).props.accessibilityState
+      .selected,
+  ).toBe(true);
 });
 
 test('renders theme sanctum even when preview swatches are missing', async () => {

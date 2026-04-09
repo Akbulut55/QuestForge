@@ -3,6 +3,7 @@ import {
   Alert,
   Animated,
   AppState,
+  BackHandler,
   type AppStateStatus,
   PanResponder,
   Pressable,
@@ -563,8 +564,8 @@ const questForgeThemePresets = {
       surfaceHighest: '#40283A',
       textPrimary: '#FFF7F9',
       textMuted: '#D4B7C2',
-      primaryAccent: '#E5485D',
-      primaryAccentSoft: '#5E1F2B',
+      primaryAccent: '#DC143C',
+      primaryAccentSoft: '#5A1828',
       secondaryAccent: '#F29C38',
       secondaryAccentSoft: '#5A3616',
       success: '#45C486',
@@ -581,8 +582,8 @@ const questForgeThemePresets = {
       surfaceHighest: '#EEF6FC',
       textPrimary: '#3A2028',
       textMuted: '#7D626C',
-      primaryAccent: '#CF2F49',
-      primaryAccentSoft: '#FFD6DE',
+      primaryAccent: '#C81E3A',
+      primaryAccentSoft: '#FFD7E1',
       secondaryAccent: '#D47A16',
       secondaryAccentSoft: '#F7DFC2',
       success: '#2DAA66',
@@ -778,7 +779,7 @@ const themePackPreviewSwatches: Record<ThemePackId, string[]> = {
   'sunrise-forge': ['#FF8A3D', '#FFD166', '#2C211C'],
   'arcade-nova': ['#44D1FF', '#FF4FD8', '#171F38'],
   'royal-tide': ['#4DB6FF', '#C792FF', '#19304A'],
-  'crimson-vault': ['#E5485D', '#7C8CFF', '#271822'],
+  'crimson-vault': ['#DC143C', '#F29C38', '#271822'],
   sunspire: ['#F2C94C', '#4DB6FF', '#282016'],
   'verdant-rune': ['#3FC17B', '#D7A6FF', '#163027'],
 };
@@ -2532,11 +2533,30 @@ function getActivePrimaryNavTab(screenName: ScreenName): PrimaryNavTab {
     return 'guild';
   }
 
-  if (screenName === 'progress') {
+  if (
+    screenName === 'progress' ||
+    screenName === 'history' ||
+    screenName === 'realm-codex' ||
+    screenName === 'theme-sanctum' ||
+    screenName === 'streak'
+  ) {
     return 'profile';
   }
 
   return 'quests';
+}
+
+function getProfileBackTarget(screenName: ScreenName) {
+  if (
+    screenName === 'history' ||
+    screenName === 'realm-codex' ||
+    screenName === 'theme-sanctum' ||
+    screenName === 'streak'
+  ) {
+    return 'progress';
+  }
+
+  return null;
 }
 
 function getAdjacentPrimaryScreen(
@@ -2611,6 +2631,8 @@ function BottomNavigationBar({
           return (
             <Pressable
               key={item.id}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isActive }}
               onPress={item.onPress}
               style={[
                 styles.bottomNavItem,
@@ -3817,12 +3839,6 @@ function ThemeSanctumScreen({
             <Text style={styles.heroEyebrow}>Active Theme</Text>
             <Text style={styles.themeHeroTitle}>{themeSanctum.activeThemeLabel}</Text>
           </View>
-          <View
-            style={[
-              styles.themeSanctumMark,
-              { backgroundColor: themeSanctum.accentPreviewColor },
-            ]}
-          />
         </View>
 
         <View style={styles.themeMetricGrid}>
@@ -5376,6 +5392,26 @@ function App() {
     };
   }, [gameState, isHydrated, backendError]);
 
+  useEffect(() => {
+    const hardwareBackSubscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      () => {
+        const backTarget = getProfileBackTarget(currentScreen);
+
+        if (backTarget) {
+          setCurrentScreen(backTarget);
+          return true;
+        }
+
+        return false;
+      },
+    );
+
+    return () => {
+      hardwareBackSubscription.remove();
+    };
+  }, [currentScreen]);
+
   const returnToBoard = () => {
     setEditingQuestId(null);
     setEditingQuestPoolTemplateId(null);
@@ -5889,7 +5925,7 @@ function App() {
                 </View>
               ) : currentScreen === 'history' ? (
                 <HistoryScreen
-                  onBack={() => setCurrentScreen('quest-board')}
+                  onBack={() => setCurrentScreen('progress')}
                   onToggleTheme={handleToggleTheme}
                   quests={gameState.quests}
                   styles={styles}
@@ -5898,7 +5934,7 @@ function App() {
               ) : currentScreen === 'streak' ? (
                 <StreakScreen
                   hero={gameState.hero}
-                  onBack={() => setCurrentScreen('quest-board')}
+                  onBack={() => setCurrentScreen('progress')}
                   onToggleTheme={handleToggleTheme}
                   styles={styles}
                   themeMode={gameState.themeMode}
@@ -5908,7 +5944,7 @@ function App() {
                   <QuestPoolScreen
                     isRefreshingQuestPool={isRefreshingQuestPool}
                     onAddTemplate={handleAddQuestPoolTemplate}
-                  onBack={() => setCurrentScreen('quest-board')}
+                    onBack={() => setCurrentScreen('quest-board')}
                     onEditTemplate={handleEditQuestPoolTemplate}
                     onRefresh={handleRefreshQuestPool}
                     onResetDefaults={handleResetQuestPoolDefaults}
@@ -5927,7 +5963,7 @@ function App() {
                 realmCodex ? (
                   <RealmCodexScreen
                     isRefreshingRealmCodex={isRefreshingRealmCodex}
-                    onBack={() => setCurrentScreen('quest-board')}
+                    onBack={() => setCurrentScreen('progress')}
                     onRefresh={handleRefreshRealmCodex}
                     onToggleTheme={handleToggleTheme}
                     realmCodex={realmCodex}
@@ -5944,7 +5980,7 @@ function App() {
                 themeSanctum ? (
                   <ThemeSanctumScreen
                     isRefreshingThemeSanctum={isRefreshingThemeSanctum}
-                    onBack={() => setCurrentScreen('quest-board')}
+                    onBack={() => setCurrentScreen('progress')}
                     onRefresh={handleRefreshThemeSanctum}
                     onSelectThemePack={handleSelectThemePack}
                     onToggleTheme={handleToggleTheme}
@@ -6534,8 +6570,6 @@ function createStyles(theme: ThemePalette) {
     },
     themeHeroHeader: {
       alignItems: 'flex-start',
-      flexDirection: 'row',
-      justifyContent: 'space-between',
       marginBottom: 18,
     },
     themeHeroTitle: {
@@ -6546,12 +6580,6 @@ function createStyles(theme: ThemePalette) {
       letterSpacing: -0.7,
       lineHeight: 34,
       maxWidth: 230,
-    },
-    themeSanctumMark: {
-      backgroundColor: `${theme.textMuted}22`,
-      borderRadius: 18,
-      height: 40,
-      width: 40,
     },
     themeMetricGrid: {
       flexDirection: 'row',
