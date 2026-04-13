@@ -110,3 +110,6 @@ npx tsc --noEmit
 npx eslint App.tsx backend/server.js src/api/gameStateApi.ts src/notifications/questNotifications.ts __tests__/App.test.tsx
 npm test -- --runInBand
 ```
+
+## Final Note
+This app was built to understand how a backend-driven app works.
